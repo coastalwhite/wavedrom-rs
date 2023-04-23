@@ -1,10 +1,16 @@
-use wavedrom_rs::Wave;
+use wavedrom_rs::{Figure, Wave};
 
 fn main() {
-    let wave = Wave {
-        name: String::from("Test"),
-        cycles: "12..11043...110..101001".parse().unwrap(),
-    };
+    let wave = Figure(vec![
+        Wave {
+            name: String::from("Test"),
+            cycles: "12..11043...110..101001".parse().unwrap(),
+        },
+        Wave {
+            name: String::from("Test"),
+            cycles: "0...1..2....3...5.1010.1".parse().unwrap(),
+        },
+    ]);
 
     let mut buff = String::new();
     wave.to_svg(&mut buff).unwrap();
