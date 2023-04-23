@@ -62,20 +62,20 @@ const TRANSITION_OFFSET: i32 = 2;
 
 #[derive(Debug, Clone)]
 pub enum PathAction {
-    MoveAbsolute(i32, i32),
+    MoveToAbsolute(i32, i32),
     MoveToRelative(i32, i32),
-    HorizontalRelative(i32),
-    LineRelative(i32, i32),
+    HLineToRelative(i32),
+    LineToRelative(i32, i32),
     Close,
 }
 
 impl PathAction {
     const fn h(dx: i32) -> Self {
-        Self::HorizontalRelative(dx)
+        Self::HLineToRelative(dx)
     }
 
     const fn l(dx: i32, dy: i32) -> Self {
-        Self::LineRelative(dx, dy)
+        Self::LineToRelative(dx, dy)
     }
 
     const fn m(dx: i32, dy: i32) -> Self {
@@ -88,13 +88,13 @@ impl PathAction {
 
     fn scale(&mut self, f: i32) {
         match self {
-            Self::MoveAbsolute(ref mut x, ref mut y)
+            Self::MoveToAbsolute(ref mut x, ref mut y)
             | Self::MoveToRelative(ref mut x, ref mut y)
-            | Self::LineRelative(ref mut x, ref mut y) => {
+            | Self::LineToRelative(ref mut x, ref mut y) => {
                 *x *= f;
                 *y *= f;
             }
-            Self::HorizontalRelative(ref mut x) => *x *= f,
+            Self::HLineToRelative(ref mut x) => *x *= f,
             Self::Close => {}
         }
     }
@@ -103,10 +103,10 @@ impl PathAction {
 impl std::fmt::Display for PathAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::MoveAbsolute(x, y) => write!(f, "M{x},{y}"),
+            Self::MoveToAbsolute(x, y) => write!(f, "M{x},{y}"),
             Self::MoveToRelative(dx, dy) => write!(f, "m{dx},{dy}"),
-            Self::HorizontalRelative(dx) => write!(f, "h{dx}"),
-            Self::LineRelative(dx, dy) => write!(f, "l{dx},{dy}"),
+            Self::HLineToRelative(dx) => write!(f, "h{dx}"),
+            Self::LineToRelative(dx, dy) => write!(f, "l{dx},{dy}"),
             Self::Close => write!(f, "z"),
         }
     }
@@ -124,7 +124,7 @@ impl PathD {
         Self {
             current_x: x,
             current_y: y,
-            actions: vec![PathAction::MoveAbsolute(x, y)],
+            actions: vec![PathAction::MoveToAbsolute(x, y)],
         }
     }
 
@@ -136,30 +136,30 @@ impl PathD {
         }
     }
 
-    pub fn h(&mut self, dx: i32) {
+    pub fn horizontal_line_to_relative(&mut self, dx: i32) {
         self.current_x += dx;
 
-        if let Some(PathAction::HorizontalRelative(ref mut last_dx)) = self.actions.last_mut() {
+        if let Some(PathAction::HLineToRelative(ref mut last_dx)) = self.actions.last_mut() {
             *last_dx += dx;
         } else {
             self.actions.push(PathAction::h(dx));
         }
     }
 
-    pub fn l(&mut self, dx: i32, dy: i32) {
+    pub fn line_to_relative(&mut self, dx: i32, dy: i32) {
         self.current_x += dx;
         self.current_y += dy;
 
         self.actions.push(PathAction::l(dx, dy));
     }
 
-    pub fn m(&mut self, dx: i32, dy: i32) {
+    pub fn move_to_relative(&mut self, dx: i32, dy: i32) {
         self.current_x += dx;
         self.current_y += dy;
 
         match self.actions.last_mut() {
             Some(
-                PathAction::MoveAbsolute(ref mut x, ref mut y)
+                PathAction::MoveToAbsolute(ref mut x, ref mut y)
                 | PathAction::MoveToRelative(ref mut x, ref mut y),
             ) => {
                 *x += dx;
@@ -169,7 +169,7 @@ impl PathD {
         }
     }
 
-    pub fn z(&mut self) {
+    pub fn close(&mut self) {
         self.current_x = 0;
         self.current_y = 0;
 
@@ -218,11 +218,11 @@ impl PathString {
             self.forward.actions.push(action);
         }
 
-        self.forward.z();
+        self.forward.close();
 
         self.groups.push((self.forward.take(), Some(number)));
 
-        self.forward.m(start_x, start_y)
+        self.forward.move_to_relative(start_x, start_y)
     }
 
     fn commit_without_back_line(&mut self) {
@@ -231,7 +231,7 @@ impl PathString {
 
         self.groups.push((self.forward.take(), None));
 
-        self.forward.m(start_x, start_y)
+        self.forward.move_to_relative(start_x, start_y)
     }
 }
 
@@ -240,91 +240,133 @@ impl PathState {
         use PathState::*;
 
         match (self, next) {
-            (Top, Top) | (Bottom, Bottom) => path_string.forward.h(TRANSITION_OFFSET * 2),
+            (Top, Top) | (Bottom, Bottom) => path_string
+                .forward
+                .horizontal_line_to_relative(TRANSITION_OFFSET * 2),
             (Box(a), Box(b)) if a == b => {
-                path_string.forward.h(TRANSITION_OFFSET * 2);
-                path_string.backward.h(TRANSITION_OFFSET * -2);
-            }
-            (Box(lhs), Box(_)) => {
-                path_string.forward.l(TRANSITION_OFFSET, CYCLE_HEIGHT / 2);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET * 2);
                 path_string
                     .backward
-                    .l(-1 * TRANSITION_OFFSET, CYCLE_HEIGHT / 2);
+                    .horizontal_line_to_relative(TRANSITION_OFFSET * -2);
+            }
+            (Box(lhs), Box(_)) => {
+                path_string
+                    .forward
+                    .line_to_relative(TRANSITION_OFFSET, CYCLE_HEIGHT / 2);
+                path_string
+                    .backward
+                    .line_to_relative(-1 * TRANSITION_OFFSET, CYCLE_HEIGHT / 2);
 
                 path_string.commit_with_back_line(*lhs);
 
                 path_string
                     .forward
-                    .l(TRANSITION_OFFSET, -1 * CYCLE_HEIGHT / 2);
+                    .line_to_relative(TRANSITION_OFFSET, -1 * CYCLE_HEIGHT / 2);
                 path_string
                     .backward
-                    .l(-1 * TRANSITION_OFFSET, -1 * CYCLE_HEIGHT / 2);
+                    .line_to_relative(-1 * TRANSITION_OFFSET, -1 * CYCLE_HEIGHT / 2);
             }
-            (Top, Bottom) => path_string.forward.l(TRANSITION_OFFSET * 2, CYCLE_HEIGHT),
+            (Top, Bottom) => path_string
+                .forward
+                .line_to_relative(TRANSITION_OFFSET * 2, CYCLE_HEIGHT),
             (Bottom, Top) => path_string
                 .forward
-                .l(TRANSITION_OFFSET * 2, -1 * CYCLE_HEIGHT),
+                .line_to_relative(TRANSITION_OFFSET * 2, -1 * CYCLE_HEIGHT),
             (Bottom, Box(_)) => {
-                path_string.forward.h(TRANSITION_OFFSET);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
 
                 path_string.commit_without_back_line();
 
-                path_string.forward.l(TRANSITION_OFFSET, -1 * CYCLE_HEIGHT);
-                path_string.backward.h(TRANSITION_OFFSET * -1);
-            }
-            (Top, Box(_)) => {
-                path_string.forward.h(TRANSITION_OFFSET);
-
-                path_string.commit_without_back_line();
-
-                path_string.forward.h(TRANSITION_OFFSET);
+                path_string
+                    .forward
+                    .line_to_relative(TRANSITION_OFFSET, -1 * CYCLE_HEIGHT);
                 path_string
                     .backward
-                    .l(TRANSITION_OFFSET * -1, -1 * CYCLE_HEIGHT);
+                    .horizontal_line_to_relative(TRANSITION_OFFSET * -1);
+            }
+            (Top, Box(_)) => {
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
+
+                path_string.commit_without_back_line();
+
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
+                path_string
+                    .backward
+                    .line_to_relative(TRANSITION_OFFSET * -1, -1 * CYCLE_HEIGHT);
             }
             (Box(lhs), Top) => {
-                path_string.forward.h(TRANSITION_OFFSET);
-                path_string.backward.l(TRANSITION_OFFSET * -1, CYCLE_HEIGHT);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
+                path_string
+                    .backward
+                    .line_to_relative(TRANSITION_OFFSET * -1, CYCLE_HEIGHT);
 
                 path_string.commit_with_back_line(*lhs);
 
-                path_string.forward.h(TRANSITION_OFFSET);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
             }
             (Box(lhs), Bottom) => {
                 path_string
                     .forward
-                    .l(TRANSITION_OFFSET * -1, 1 * CYCLE_HEIGHT);
-                path_string.backward.h(TRANSITION_OFFSET);
+                    .line_to_relative(TRANSITION_OFFSET * -1, 1 * CYCLE_HEIGHT);
+                path_string
+                    .backward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
 
                 path_string.commit_with_back_line(*lhs);
 
-                path_string.forward.h(TRANSITION_OFFSET);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
             }
         }
     }
 
     fn wave_path(&self, path_string: &mut PathString) {
         match self {
-            Self::Top | Self::Bottom => path_string.forward.h(CYCLE_WIDTH - TRANSITION_OFFSET * 2),
+            Self::Top | Self::Bottom => path_string
+                .forward
+                .horizontal_line_to_relative(CYCLE_WIDTH - TRANSITION_OFFSET * 2),
             Self::Box(_) => {
-                path_string.forward.h(CYCLE_WIDTH - TRANSITION_OFFSET * 2);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(CYCLE_WIDTH - TRANSITION_OFFSET * 2);
                 path_string
                     .backward
-                    .h(-1 * (CYCLE_WIDTH - TRANSITION_OFFSET * 2));
+                    .horizontal_line_to_relative(-1 * (CYCLE_WIDTH - TRANSITION_OFFSET * 2));
             }
         }
     }
 
     fn begin(&self, path_string: &mut PathString) {
         match self {
-            Self::Top => path_string.forward.h(TRANSITION_OFFSET),
+            Self::Top => path_string
+                .forward
+                .horizontal_line_to_relative(TRANSITION_OFFSET),
             Self::Bottom => {
-                path_string.forward.m(0, CYCLE_HEIGHT);
-                path_string.forward.h(TRANSITION_OFFSET);
+                path_string.forward.move_to_relative(0, CYCLE_HEIGHT);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
             }
             Self::Box(_) => {
-                path_string.forward.h(TRANSITION_OFFSET);
-                path_string.backward.h(TRANSITION_OFFSET);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
+                path_string
+                    .backward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
             }
         }
     }
@@ -332,12 +374,18 @@ impl PathState {
     fn end(&self, path_string: &mut PathString) {
         match self {
             Self::Top | Self::Bottom => {
-                path_string.forward.h(TRANSITION_OFFSET);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET);
                 path_string.commit_without_back_line();
             }
             Self::Box(lhs) => {
-                path_string.forward.h(TRANSITION_OFFSET * 2);
-                path_string.backward.h(TRANSITION_OFFSET * -2);
+                path_string
+                    .forward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET * 2);
+                path_string
+                    .backward
+                    .horizontal_line_to_relative(TRANSITION_OFFSET * -2);
                 path_string.commit_with_back_line(*lhs);
             }
         }
