@@ -10,3 +10,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "wavedrom"
 path = "src/main.rs"
+
+[dependencies]
+ttf-parser = "0.19.0"

@@ -1,5 +1,9 @@
 use std::str::FromStr;
 
+use self::outline_builder::{TextPath, TextPathSettings};
+
+mod outline_builder;
+
 pub struct Wave {
     pub name: String,
     pub cycles: Cycles,
@@ -435,7 +439,6 @@ impl Wave {
                 .collect(),
         );
 
-
         for (path, container_number) in wave_path.to_paths(20, 20).into_iter() {
             let fill = match container_number {
                 Some(0) => "#ff4040",
@@ -462,31 +465,69 @@ impl Figure {
             r#"<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">"#
         )?;
 
+        let Some(num_cycles) = self.0.iter().map(|w| w.cycles.0.len()).max() else {
+            write!(writer, "</svg>")?;
+            return Ok(());
+        };
 
-        if let Some(num_cycles) = self.0.iter().map(|w| w.cycles.0.len()).max() {
+        let face =
+            ttf_parser::Face::parse(include_bytes!("../JetBrainsMono-Medium.ttf"), 0).unwrap();
+        let text_path_settings = TextPathSettings {
+            face: &face,
+            font_size: CYCLE_HEIGHT as i16,
+            letter_spacing: 2,
+        };
+        let waves: Vec<(TextPath, &Wave)> = self
+            .0
+            .iter()
+            .map(|w| (TextPath::build(&w.name, &text_path_settings, 0, 0), w))
+            .collect();
+
+        let Some(text_width) = waves.iter().map(|(p, _)| p.bounding_box().width()).max() else {
+            write!(writer, "</svg>")?;
+            return Ok(());
+        };
+        let text_width = f32::from(text_width);
+        let text_width = text_width;
+
+        write!(
+            writer,
+            r##"<defs><g id="cl"><path fill="none" d="M0,0v{height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC" /></g></defs>"##,
+            height = 20 + ((self.0.len() as i32) * CYCLE_HEIGHT * 2),
+        )?;
+
+        let x_offset = text_width as i32;
+        write!(
+            writer,
+            r##"<g transform="translate({x_offset},{y})">"##,
+            y = 10
+        )?;
+        for i in 0..=num_cycles {
             write!(
                 writer,
-                r##"<defs><g id="cl"><path fill="none" d="M0,0v{height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC" /></g></defs>"##,
-                height = 20 + ((self.0.len() as i32) * CYCLE_HEIGHT * 2),
+                r##"<use transform="translate({x})" xlink:href="#cl" />"##,
+                x = 20 + (i as i32) * CYCLE_WIDTH,
+            )?;
+        }
+        write!(writer, r##"</g>"##)?;
+
+        for (i, (text_path, wave)) in waves.iter().enumerate() {
+            write!(
+                writer,
+                r##"<g transform="translate({x_offset},{y})">"##,
+                y = (i as i32) * CYCLE_WIDTH * 2
             )?;
 
-            write!(writer, r##"<g transform="translate(0,{y})">"##, y = 10)?;
-            for i in 0..=num_cycles {
-                write!(
-                    writer,
-                    r##"<use transform="translate({x})" xlink:href="#cl" />"##,
-                    x = 20 + (i as i32) * CYCLE_WIDTH,
-                )?;
-            }
+            write!(
+                writer,
+                r##"<g transform="translate(-{width},{y})"><path d="{data}" /></g>"##,
+                width = text_width,
+                y = CYCLE_HEIGHT * 2 - CYCLE_HEIGHT / 2 - 2,
+                data = text_path.data(),
+            )?;
+            wave.to_svg(writer)?;
+
             write!(writer, r##"</g>"##)?;
-
-            for (i, wave) in self.0.iter().enumerate() {
-                write!(writer, r##"<g transform="translate(0,{y})">"##, y = (i as i32) * CYCLE_WIDTH * 2)?;
-
-                wave.to_svg(writer)?;
-
-                write!(writer, r##"</g>"##)?;
-            }
         }
 
         write!(writer, "</svg>")?;
