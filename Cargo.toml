@@ -13,3 +13,16 @@ path = "src/main.rs"
 
 [dependencies]
 ttf-parser = "0.19.0"
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+optional = true
+
+[dependencies.serde_json]
+version = "1.0"
+optional = true
+
+[features]
+default = ["wavejson"]
+wavejson = ["serde", "serde_json"]

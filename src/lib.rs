@@ -3,6 +3,9 @@ use std::str::FromStr;
 mod path;
 mod svg;
 
+#[cfg(feature = "wavejson")]
+pub mod wavejson;
+
 use path::{PathState, WaveDimension, WavePath};
 
 pub use svg::ToSvg;
