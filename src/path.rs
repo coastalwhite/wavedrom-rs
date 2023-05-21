@@ -143,10 +143,13 @@ impl PathD {
     pub fn horizontal_line_to_relative(&mut self, dx: i32) {
         self.current_x += dx;
 
-        if let Some(PathAction::HLineToRelative(ref mut last_dx)) = self.actions.last_mut() {
-            *last_dx += dx;
-        } else {
-            self.actions.push(PathAction::h(dx));
+        match self.actions.last_mut() {
+            Some(PathAction::HLineToRelative(ref mut last_dx))
+                if dx.signum() == last_dx.signum() =>
+            {
+                *last_dx += dx
+            }
+            _ => self.actions.push(PathAction::h(dx)),
         }
     }
 
