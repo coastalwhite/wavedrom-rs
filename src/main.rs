@@ -3,6 +3,10 @@ use wavedrom_rs::{Figure, ToSvg, Wave};
 fn main() {
     let wave = Figure(vec![
         Wave {
+            name: String::from("Broken"),
+            cycles: "4013".parse().unwrap(),
+        },
+        Wave {
             name: String::from("T"),
             cycles: "12..11043...110..101001".parse().unwrap(),
         },

@@ -11,6 +11,7 @@ pub enum PathState {
 pub enum PathAction {
     MoveToAbsolute(i32, i32),
     MoveToRelative(i32, i32),
+    VLineNoStrokeToRelative(i32),
     HLineToRelative(i32),
     LineToRelative(i32, i32),
     Close,
@@ -109,6 +110,17 @@ impl PathAction {
     const fn z() -> Self {
         Self::Close
     }
+
+    pub fn no_stroke(&self) -> bool {
+        match self {
+            Self::MoveToAbsolute(..)
+            | Self::MoveToRelative(..)
+            | Self::HLineToRelative(..)
+            | Self::LineToRelative(..)
+            | Self::Close => false,
+            Self::VLineNoStrokeToRelative(..) => true,
+        }
+    }
 }
 
 impl std::fmt::Display for PathAction {
@@ -116,6 +128,7 @@ impl std::fmt::Display for PathAction {
         match self {
             Self::MoveToAbsolute(x, y) => write!(f, "M{x},{y}"),
             Self::MoveToRelative(dx, dy) => write!(f, "m{dx},{dy}"),
+            Self::VLineNoStrokeToRelative(dy) => write!(f, "v{dy}"),
             Self::HLineToRelative(dx) => write!(f, "h{dx}"),
             Self::LineToRelative(dx, dy) => write!(f, "l{dx},{dy}"),
             Self::Close => write!(f, "z"),
@@ -181,6 +194,11 @@ impl PathD {
         self.current_y = 0;
 
         self.actions.push(PathAction::z());
+    }
+
+    fn vertical_line_no_stroke_to_relative(&mut self, dy: i32) {
+        self.current_y += dy;
+        self.actions.push(PathAction::VLineNoStrokeToRelative(dy));
     }
 
     pub fn take(&mut self) -> PathD {
@@ -319,13 +337,12 @@ impl PathState {
                     .horizontal_line_to_relative(dimensions.transition_offset);
             }
             (Box(lhs), Bottom) => {
-                path_string.forward.line_to_relative(
-                    dimensions.transition_offset * -1,
-                    1 * dimensions.wave_height,
-                );
+                path_string
+                    .forward
+                    .line_to_relative(dimensions.transition_offset, 1 * dimensions.wave_height);
                 path_string
                     .backward
-                    .horizontal_line_to_relative(dimensions.transition_offset);
+                    .horizontal_line_to_relative(-1 * dimensions.transition_offset);
 
                 path_string.commit_with_back_line(*lhs);
 
@@ -371,7 +388,10 @@ impl PathState {
                     .horizontal_line_to_relative(dimensions.transition_offset);
                 path_string
                     .backward
-                    .horizontal_line_to_relative(dimensions.transition_offset);
+                    .vertical_line_no_stroke_to_relative(-1 * dimensions.wave_height);
+                path_string
+                    .backward
+                    .horizontal_line_to_relative(-1 * dimensions.transition_offset);
             }
         }
     }
@@ -387,10 +407,13 @@ impl PathState {
             Self::Box(lhs) => {
                 path_string
                     .forward
-                    .horizontal_line_to_relative(dimensions.transition_offset * 2);
+                    .horizontal_line_to_relative(1 * dimensions.transition_offset);
+                path_string
+                    .forward
+                    .vertical_line_no_stroke_to_relative(dimensions.wave_height);
                 path_string
                     .backward
-                    .horizontal_line_to_relative(dimensions.transition_offset * -2);
+                    .horizontal_line_to_relative(-1 * dimensions.transition_offset);
                 path_string.commit_with_back_line(*lhs);
             }
         }

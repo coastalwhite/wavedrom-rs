@@ -1,5 +1,7 @@
 use std::io;
 
+use crate::path::PathAction;
+
 use super::RenderedFigure;
 use super::path::{WavePath, WaveDimension};
 
@@ -99,11 +101,35 @@ impl<'a> ToSvg for SvgWavePath<'a> {
                 Some(1) => "#5499C7",
                 Some(2) => "#58D68D",
                 Some(3) => "#A569BD",
-                _ => "none",
+                Some(_) => unimplemented!(),
+                None => "none",
             };
+
+            let mut has_no_stroke = false;
             write!(writer, r##"<path fill="{fill}" d=""##)?;
-            for action in path.actions {
+            for action in &path.actions {
+                if action.no_stroke() {
+                    has_no_stroke = true;
+                }
                 write!(writer, "{action}")?;
+            }
+            
+            // If there is a `no_stroke` element, we need to divide up the filling and the
+            // stroking.
+            if has_no_stroke {
+                write!(writer, r##"" stroke="none"/>"##)?;
+
+                write!(writer, r##"<path fill="none" d=""##)?;
+                for action in &path.actions {
+                    match action {
+                        PathAction::VLineNoStrokeToRelative(dy) => write!(writer, "m0,{dy}")?,
+                        PathAction::Close => {},
+                        _ => write!(writer, "{action}")?,
+                    }
+                    // if !action.no_stroke() {
+                    //     write!(writer, "{action}")?;
+                    // }
+                }
             }
             write!(writer, r##"" stroke-width="1" stroke="#000"/>"##)?;
         }
