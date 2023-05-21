@@ -1,4 +1,4 @@
-use wavedrom_rs::{Figure, Wave};
+use wavedrom_rs::{Figure, ToSvg, Wave};
 
 fn main() {
     let wave = Figure(vec![
@@ -7,13 +7,24 @@ fn main() {
             cycles: "12..11043...110..101001".parse().unwrap(),
         },
         Wave {
-            name: String::from("AdsafkljjBC"),
+            name: String::from("Ads..........kgjlajflk....."),
+            cycles: "0...1..2....3...5.1010.1".parse().unwrap(),
+        },
+        Wave {
+            name: String::from("Ads..........kgjlajflk....."),
             cycles: "0...1..2....3...5.1010.1".parse().unwrap(),
         },
     ]);
 
-    let mut buff = String::new();
-    wave.to_svg(&mut buff).unwrap();
+    let figure = wave.render().unwrap();
 
-    std::fs::write("test.svg", buff).unwrap();
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open("test.svg")
+        .unwrap();
+
+    figure.write_svg(&mut file).unwrap();
 }

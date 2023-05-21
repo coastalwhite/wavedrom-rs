@@ -1,8 +1,11 @@
 use std::str::FromStr;
 
-use self::outline_builder::{TextPath, TextPathSettings};
+mod path;
+mod svg;
 
-mod outline_builder;
+use path::{PathState, WaveDimension, WavePath};
+
+pub use svg::ToSvg;
 
 pub struct Wave {
     pub name: String,
@@ -10,7 +13,6 @@ pub struct Wave {
 }
 
 pub struct Figure(pub Vec<Wave>);
-
 pub struct Cycles(pub Vec<CycleData>);
 
 impl FromStr for Cycles {
@@ -47,491 +49,246 @@ pub enum CycleData {
     Box(usize),
 }
 
-pub struct WavePath(Vec<PathState>);
+impl Default for FigurePadding {
+    fn default() -> Self {
+        Self {
+            figure_top: 8.,
+            figure_bottom: 8.,
+            figure_left: 8.,
+            figure_right: 8.,
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PathState {
-    Top,
-    Bottom,
-    Box(usize),
-}
-
-impl PathState {
-    fn has_back_line(&self) -> bool {
-        matches!(self, Self::Box(..))
-    }
-}
-
-const CYCLE_HEIGHT: i32 = 14;
-const CYCLE_WIDTH: i32 = 20;
-const TRANSITION_OFFSET: i32 = 2;
-
-#[derive(Debug, Clone)]
-pub enum PathAction {
-    MoveToAbsolute(i32, i32),
-    MoveToRelative(i32, i32),
-    HLineToRelative(i32),
-    LineToRelative(i32, i32),
-    Close,
-}
-
-impl PathAction {
-    const fn h(dx: i32) -> Self {
-        Self::HLineToRelative(dx)
-    }
-
-    const fn l(dx: i32, dy: i32) -> Self {
-        Self::LineToRelative(dx, dy)
-    }
-
-    const fn m(dx: i32, dy: i32) -> Self {
-        Self::MoveToRelative(dx, dy)
-    }
-
-    const fn z() -> Self {
-        Self::Close
-    }
-
-    fn scale(&mut self, f: i32) {
-        match self {
-            Self::MoveToAbsolute(ref mut x, ref mut y)
-            | Self::MoveToRelative(ref mut x, ref mut y)
-            | Self::LineToRelative(ref mut x, ref mut y) => {
-                *x *= f;
-                *y *= f;
-            }
-            Self::HLineToRelative(ref mut x) => *x *= f,
-            Self::Close => {}
+            schema_top: 8.,
+            schema_bottom: 8.,
         }
     }
 }
 
-impl std::fmt::Display for PathAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::MoveToAbsolute(x, y) => write!(f, "M{x},{y}"),
-            Self::MoveToRelative(dx, dy) => write!(f, "m{dx},{dy}"),
-            Self::HLineToRelative(dx) => write!(f, "h{dx}"),
-            Self::LineToRelative(dx, dy) => write!(f, "l{dx},{dy}"),
-            Self::Close => write!(f, "z"),
+impl Default for FigureSpacing {
+    fn default() -> Self {
+        Self {
+            textbox_to_schema: 16.,
+            line_to_line: 16.,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct PathD {
-    current_x: i32,
-    current_y: i32,
-    actions: Vec<PathAction>,
+pub struct FigurePadding {
+    figure_top: f64,
+    figure_bottom: f64,
+    figure_left: f64,
+    figure_right: f64,
+
+    schema_top: f64,
+    schema_bottom: f64,
 }
 
-impl PathD {
-    pub fn new(x: i32, y: i32) -> Self {
+#[derive(Debug, Clone)]
+pub struct FigureSpacing {
+    textbox_to_schema: f64,
+    line_to_line: f64,
+}
+
+impl From<&CycleData> for PathState {
+    fn from(value: &CycleData) -> Self {
+        match value {
+            CycleData::Top => PathState::Top,
+            CycleData::Bottom => PathState::Bottom,
+            CycleData::Box(usize) => PathState::Box(*usize),
+        }
+    }
+}
+
+pub struct RenderedFigure<'a> {
+    options: RenderOptions,
+
+    schema_height: f64,
+
+    textbox_width: f64,
+    schema_width: f64,
+
+    font_family: String,
+
+    num_cycles: u16,
+
+    lines: Vec<RenderedLine<'a>>,
+}
+
+pub struct RenderedLine<'a> {
+    text: &'a str,
+    text_width: f64,
+
+    path: WavePath,
+}
+
+#[derive(Debug, Clone)]
+pub struct RenderOptions {
+    pub font_size: f64,
+    pub paddings: FigurePadding,
+    pub spacings: FigureSpacing,
+    pub wave_dimensions: WaveDimension,
+}
+
+impl Default for RenderOptions {
+    fn default() -> Self {
         Self {
-            current_x: x,
-            current_y: y,
-            actions: vec![PathAction::MoveToAbsolute(x, y)],
-        }
-    }
-
-    pub fn new_without_position() -> Self {
-        Self {
-            current_x: 0,
-            current_y: 0,
-            actions: Vec::new(),
-        }
-    }
-
-    pub fn horizontal_line_to_relative(&mut self, dx: i32) {
-        self.current_x += dx;
-
-        if let Some(PathAction::HLineToRelative(ref mut last_dx)) = self.actions.last_mut() {
-            *last_dx += dx;
-        } else {
-            self.actions.push(PathAction::h(dx));
-        }
-    }
-
-    pub fn line_to_relative(&mut self, dx: i32, dy: i32) {
-        self.current_x += dx;
-        self.current_y += dy;
-
-        self.actions.push(PathAction::l(dx, dy));
-    }
-
-    pub fn move_to_relative(&mut self, dx: i32, dy: i32) {
-        self.current_x += dx;
-        self.current_y += dy;
-
-        match self.actions.last_mut() {
-            Some(
-                PathAction::MoveToAbsolute(ref mut x, ref mut y)
-                | PathAction::MoveToRelative(ref mut x, ref mut y),
-            ) => {
-                *x += dx;
-                *y += dy;
-            }
-            _ => self.actions.push(PathAction::m(dx, dy)),
-        }
-    }
-
-    pub fn close(&mut self) {
-        self.current_x = 0;
-        self.current_y = 0;
-
-        self.actions.push(PathAction::z());
-    }
-
-    pub fn take(&mut self) -> PathD {
-        let taken = PathD {
-            current_x: self.current_x,
-            current_y: self.current_y,
-            actions: self.actions.split_off(0),
-        };
-
-        self.current_x = 0;
-        self.current_y = 0;
-
-        taken
-    }
-
-    pub fn append(&mut self, d: &mut PathD) {
-        self.actions.append(&mut d.actions)
-    }
-}
-
-pub struct PathString {
-    forward: PathD,
-    backward: PathD,
-    groups: Vec<(PathD, Option<usize>)>,
-}
-
-impl PathString {
-    fn new(x: i32, y: i32) -> Self {
-        Self {
-            forward: PathD::new(x, y),
-            backward: PathD::new_without_position(),
-            groups: Vec::new(),
-        }
-    }
-
-    fn commit_with_back_line(&mut self, number: usize) {
-        let start_x = self.forward.current_x;
-        let start_y = self.forward.current_y;
-
-        // TODO: Optimize this.
-        for action in self.backward.take().actions.into_iter().rev() {
-            self.forward.actions.push(action);
-        }
-
-        self.forward.close();
-
-        self.groups.push((self.forward.take(), Some(number)));
-
-        self.forward.move_to_relative(start_x, start_y)
-    }
-
-    fn commit_without_back_line(&mut self) {
-        let start_x = self.forward.current_x;
-        let start_y = self.forward.current_y;
-
-        self.groups.push((self.forward.take(), None));
-
-        self.forward.move_to_relative(start_x, start_y)
-    }
-}
-
-impl PathState {
-    fn transition(&self, next: &Self, path_string: &mut PathString) {
-        use PathState::*;
-
-        match (self, next) {
-            (Top, Top) | (Bottom, Bottom) => path_string
-                .forward
-                .horizontal_line_to_relative(TRANSITION_OFFSET * 2),
-            (Box(a), Box(b)) if a == b => {
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET * 2);
-                path_string
-                    .backward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET * -2);
-            }
-            (Box(lhs), Box(_)) => {
-                path_string
-                    .forward
-                    .line_to_relative(TRANSITION_OFFSET, CYCLE_HEIGHT / 2);
-                path_string
-                    .backward
-                    .line_to_relative(-1 * TRANSITION_OFFSET, CYCLE_HEIGHT / 2);
-
-                path_string.commit_with_back_line(*lhs);
-
-                path_string
-                    .forward
-                    .line_to_relative(TRANSITION_OFFSET, -1 * CYCLE_HEIGHT / 2);
-                path_string
-                    .backward
-                    .line_to_relative(-1 * TRANSITION_OFFSET, -1 * CYCLE_HEIGHT / 2);
-            }
-            (Top, Bottom) => path_string
-                .forward
-                .line_to_relative(TRANSITION_OFFSET * 2, CYCLE_HEIGHT),
-            (Bottom, Top) => path_string
-                .forward
-                .line_to_relative(TRANSITION_OFFSET * 2, -1 * CYCLE_HEIGHT),
-            (Bottom, Box(_)) => {
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-
-                path_string.commit_without_back_line();
-
-                path_string
-                    .forward
-                    .line_to_relative(TRANSITION_OFFSET, -1 * CYCLE_HEIGHT);
-                path_string
-                    .backward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET * -1);
-            }
-            (Top, Box(_)) => {
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-
-                path_string.commit_without_back_line();
-
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-                path_string
-                    .backward
-                    .line_to_relative(TRANSITION_OFFSET * -1, -1 * CYCLE_HEIGHT);
-            }
-            (Box(lhs), Top) => {
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-                path_string
-                    .backward
-                    .line_to_relative(TRANSITION_OFFSET * -1, CYCLE_HEIGHT);
-
-                path_string.commit_with_back_line(*lhs);
-
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-            }
-            (Box(lhs), Bottom) => {
-                path_string
-                    .forward
-                    .line_to_relative(TRANSITION_OFFSET * -1, 1 * CYCLE_HEIGHT);
-                path_string
-                    .backward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-
-                path_string.commit_with_back_line(*lhs);
-
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-            }
-        }
-    }
-
-    fn wave_path(&self, path_string: &mut PathString) {
-        match self {
-            Self::Top | Self::Bottom => path_string
-                .forward
-                .horizontal_line_to_relative(CYCLE_WIDTH - TRANSITION_OFFSET * 2),
-            Self::Box(_) => {
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(CYCLE_WIDTH - TRANSITION_OFFSET * 2);
-                path_string
-                    .backward
-                    .horizontal_line_to_relative(-1 * (CYCLE_WIDTH - TRANSITION_OFFSET * 2));
-            }
-        }
-    }
-
-    fn begin(&self, path_string: &mut PathString) {
-        match self {
-            Self::Top => path_string
-                .forward
-                .horizontal_line_to_relative(TRANSITION_OFFSET),
-            Self::Bottom => {
-                path_string.forward.move_to_relative(0, CYCLE_HEIGHT);
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-            }
-            Self::Box(_) => {
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-                path_string
-                    .backward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-            }
-        }
-    }
-
-    fn end(&self, path_string: &mut PathString) {
-        match self {
-            Self::Top | Self::Bottom => {
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET);
-                path_string.commit_without_back_line();
-            }
-            Self::Box(lhs) => {
-                path_string
-                    .forward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET * 2);
-                path_string
-                    .backward
-                    .horizontal_line_to_relative(TRANSITION_OFFSET * -2);
-                path_string.commit_with_back_line(*lhs);
-            }
+            font_size: 10.,
+            paddings: FigurePadding::default(),
+            spacings: FigureSpacing::default(),
+            wave_dimensions: WaveDimension::default(),
         }
     }
 }
 
-impl WavePath {
-    fn to_paths(&self, x: i32, y: i32) -> Vec<(PathD, Option<usize>)> {
-        let mut state_iter = self.0.iter();
-        let Some(mut last_state) = state_iter.next() else {
-            return Vec::new();
-        };
-
-        let mut current_path_string = PathString::new(x, y);
-
-        last_state.begin(&mut current_path_string);
-
-        last_state.wave_path(&mut current_path_string);
-
-        for state in state_iter {
-            PathState::transition(&last_state, &state, &mut current_path_string);
-            state.wave_path(&mut current_path_string);
-
-            last_state = state;
-        }
-
-        last_state.end(&mut current_path_string);
-
-        current_path_string.groups
+impl<'a> RenderedFigure<'a> {
+    pub fn width(&self) -> f64 {
+        self.paddings().figure_left
+            + self.paddings().figure_right
+            + self.textbox_width
+            + self.schema_width
+            + self.spacings().textbox_to_schema
     }
-}
 
-impl Wave {
-    pub fn to_svg(&self, writer: &mut impl std::fmt::Write) -> Result<(), std::fmt::Error> {
-        let wave_path = WavePath(
-            self.cycles
-                .0
-                .clone()
-                .into_iter()
-                .map(|s| match s {
-                    CycleData::Top => PathState::Top,
-                    CycleData::Bottom => PathState::Bottom,
-                    CycleData::Box(usize) => PathState::Box(usize),
-                })
-                .collect(),
-        );
+    pub fn height(&self) -> f64 {
+        self.paddings().figure_top + self.paddings().figure_bottom + self.schema_height
+    }
 
-        for (path, container_number) in wave_path.to_paths(20, 20).into_iter() {
-            let fill = match container_number {
-                Some(0) => "#ff4040",
-                Some(1) => "#5499C7",
-                Some(2) => "#58D68D",
-                Some(3) => "#A569BD",
-                _ => "none",
-            };
-            write!(writer, r##"<path fill="{fill}" d=""##)?;
-            for action in path.actions {
-                write!(writer, "{action}")?;
-            }
-            write!(writer, r##"" stroke-width="1" stroke="#000"/>"##)?;
-        }
+    pub fn paddings(&self) -> &FigurePadding {
+        &self.options.paddings
+    }
 
-        Ok(())
+    pub fn spacings(&self) -> &FigureSpacing {
+        &self.options.spacings
+    }
+
+    pub fn wave_dimensions(&self) -> &WaveDimension {
+        &self.options.wave_dimensions
     }
 }
 
 impl Figure {
-    pub fn to_svg(&self, writer: &mut impl std::fmt::Write) -> Result<(), std::fmt::Error> {
-        write!(
-            writer,
-            r#"<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">"#
-        )?;
+    pub fn render_with_options(&self, options: RenderOptions) -> Result<RenderedFigure, ()> {
+        let RenderOptions {
+            font_size,
+            paddings,
+            spacings,
+            wave_dimensions,
+        } = &options;
 
-        let Some(num_cycles) = self.0.iter().map(|w| w.cycles.0.len()).max() else {
-            write!(writer, "</svg>")?;
-            return Ok(());
-        };
+        let num_lines = u32::try_from(self.0.len()).map_err(|_| ())?;
 
         let face =
-            ttf_parser::Face::parse(include_bytes!("../JetBrainsMono-Medium.ttf"), 0).unwrap();
-        let text_path_settings = TextPathSettings {
-            face: &face,
-            font_size: CYCLE_HEIGHT as i16,
-            letter_spacing: 2,
-        };
-        let waves: Vec<(TextPath, &Wave)> = self
+            // ttf_parser::Face::parse(include_bytes!("../JetBrainsMono-Medium.ttf"), 0).unwrap();
+            ttf_parser::Face::parse(include_bytes!("/usr/share/fonts/noto/NotoSansMono-Regular.ttf"), 0).unwrap();
+
+        let font_family = get_font_family_name(&face)
+            .map_or_else(|| "monospace".to_string(), |s| format!("{s}, monospace"));
+
+        let lines = self
             .0
             .iter()
-            .map(|w| (TextPath::build(&w.name, &text_path_settings, 0, 0), w))
-            .collect();
+            .map(|wave| RenderedLine {
+                text: &wave.name,
+                text_width: wave.get_text_width(&face, *font_size),
 
-        let Some(text_width) = waves.iter().map(|(p, _)| p.bounding_box().width()).max() else {
-            write!(writer, "</svg>")?;
-            return Ok(());
+                path: WavePath::new(wave.cycles.0.iter().map(PathState::from).collect()),
+            })
+            .collect::<Vec<RenderedLine>>();
+
+        let num_cycles = u16::try_from(lines.iter().map(|line| line.path.len()).max().unwrap_or(0))
+            .map_err(|_| ())?;
+
+        let textbox_width = lines
+            .iter()
+            .map(|line| line.text_width)
+            .max_by(|a, b| a.total_cmp(b))
+            .unwrap_or(0.0);
+        let schema_width = f64::from(num_cycles) * wave_dimensions.cycle_width_f64();
+
+        let schema_height: f64 = if num_lines == 0 {
+            0.
+        } else {
+            paddings.schema_top
+                + paddings.schema_bottom
+                + spacings.line_to_line * f64::from(num_lines - 1)
+                + wave_dimensions.wave_height_f64() * f64::from(num_lines)
         };
-        let text_width = f32::from(text_width);
-        let text_width = text_width;
 
-        write!(
-            writer,
-            r##"<defs><g id="cl"><path fill="none" d="M0,0v{height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC" /></g></defs>"##,
-            height = 20 + ((self.0.len() as i32) * CYCLE_HEIGHT * 2),
-        )?;
+        Ok(RenderedFigure {
+            options,
 
-        let x_offset = text_width as i32;
-        write!(
-            writer,
-            r##"<g transform="translate({x_offset},{y})">"##,
-            y = 10
-        )?;
-        for i in 0..=num_cycles {
-            write!(
-                writer,
-                r##"<use transform="translate({x})" xlink:href="#cl" />"##,
-                x = 20 + (i as i32) * CYCLE_WIDTH,
-            )?;
-        }
-        write!(writer, r##"</g>"##)?;
+            textbox_width,
 
-        for (i, (text_path, wave)) in waves.iter().enumerate() {
-            write!(
-                writer,
-                r##"<g transform="translate({x_offset},{y})">"##,
-                y = (i as i32) * CYCLE_WIDTH * 2
-            )?;
+            schema_width,
+            schema_height,
 
-            write!(
-                writer,
-                r##"<g transform="translate(-{width},{y})"><path d="{data}" /></g>"##,
-                width = text_width,
-                y = CYCLE_HEIGHT * 2 - CYCLE_HEIGHT / 2 - 2,
-                data = text_path.data(),
-            )?;
-            wave.to_svg(writer)?;
+            font_family,
 
-            write!(writer, r##"</g>"##)?;
-        }
+            num_cycles,
 
-        write!(writer, "</svg>")?;
+            lines,
+        })
+    }
 
-        Ok(())
+    #[inline]
+    pub fn render(&self) -> Result<RenderedFigure, ()> {
+        self.render_with_options(RenderOptions::default())
     }
 }
+
+impl Wave {
+    fn get_text_width(&self, face: &ttf_parser::Face, font_size: f64) -> f64 {
+        let width = self.name
+            .chars()
+            .map(|c| {
+                face.glyph_index(c).map_or_else(|| {
+                        eprintln!("[WARNING]: Failed to get glyph for '{c}'");
+                        0
+                }, |g| {
+                    u32::from(face.glyph_hor_advance(g).unwrap_or_else(|| {
+                        eprintln!(
+                            "[WARNING]: Failed to get length for glyph '{}' that represents character '{c}'",
+                            face.glyph_name(g).unwrap_or(&c.to_string())
+                        );
+                        0
+                    }))
+                })
+            })
+            .sum::<u32>();
+
+        let width = f64::from(width);
+
+        let pts_per_em = font_size / f64::from(face.units_per_em());
+        width * pts_per_em
+    }
+}
+
+fn name_to_string(name: ttf_parser::name::Name) -> Option<String> {
+    if !name.is_unicode() {
+        return None;
+    }
+
+    // Invalid UTF16 check
+    if name.name.len() % 2 != 0 {
+        return None;
+    }
+
+    let utf16_bytes = name
+        .name
+        .chunks_exact(2)
+        .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
+        .collect::<Vec<u16>>();
+
+    String::from_utf16(&utf16_bytes).ok()
+}
+
+fn get_font_family_name(face: &ttf_parser::Face) -> Option<String> {
+    for item in face.names() {
+        if item.name_id == 1 {
+            return name_to_string(item);
+        }
+    }
+
+    None
+}
+
