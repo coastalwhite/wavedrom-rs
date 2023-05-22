@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Figure, Wave};
+use crate::{Figure, Wave, WaveLine};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaveJson {
@@ -9,23 +9,34 @@ pub struct WaveJson {
 
 impl Into<Figure> for WaveJson {
     fn into(self) -> Figure {
-        Figure(
+        Figure::from_lines(
             self.signal
                 .into_iter()
-                .map(|signal| match signal {
-                    Signal::Group(_, _) => unimplemented!(),
-                    Signal::Item(item) => item.into(),
-                })
-                .collect(),
+                .map(WaveLine::from)
+                .collect::<Vec<WaveLine>>(),
         )
     }
 }
 
-impl Into<Wave> for SignalItem {
-    fn into(self) -> Wave {
+impl From<Signal> for WaveLine {
+    fn from(signal: Signal) -> Self {
+        match signal {
+            Signal::Group(signals) => WaveLine::Group(
+                signals
+                    .into_iter()
+                    .map(WaveLine::from)
+                    .collect::<Vec<WaveLine>>(),
+            ),
+            Signal::Item(item) => WaveLine::Wave(Wave::from(item)),
+        }
+    }
+}
+
+impl From<SignalItem> for Wave {
+    fn from(item: SignalItem) -> Wave {
         Wave {
-            name: self.name.unwrap_or_default(),
-            cycles: self.wave.unwrap_or_default().parse().unwrap(),
+            name: item.name.unwrap_or_default(),
+            cycles: item.wave.unwrap_or_default().parse().unwrap(),
         }
     }
 }
@@ -33,7 +44,7 @@ impl Into<Wave> for SignalItem {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Signal {
-    Group(Option<String>, Vec<Signal>),
+    Group(Vec<Signal>),
     Item(SignalItem),
 }
 
@@ -50,7 +61,6 @@ pub enum SignalData {
     One(String),
     Multiple(Vec<String>),
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -79,7 +89,10 @@ mod tests {
         let data = r#"
         {
             "signal": [
-                { "name": "abc", "wave": "120..." }
+                { "name": "abc", "wave": "120..." },
+                [
+                    { "name": "def", "wave": "00112200" }
+                ]
             ]
         }
         "#;
@@ -87,7 +100,7 @@ mod tests {
         let wavejson: WaveJson = serde_json::from_str(data).unwrap();
         let figure: Figure = wavejson.into();
 
-        let rendered = figure.render().unwrap();
+        let rendered = figure.assemble().unwrap();
 
         let mut file = std::fs::OpenOptions::new()
             .read(true)

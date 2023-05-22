@@ -1,7 +1,7 @@
 use wavedrom_rs::{Figure, ToSvg, Wave};
 
 fn main() {
-    let wave = Figure(vec![
+    let wave = Figure::from_lines(vec![
         Wave {
             name: String::from("Broken"),
             cycles: "4013".parse().unwrap(),
@@ -20,7 +20,7 @@ fn main() {
         },
     ]);
 
-    let figure = wave.render().unwrap();
+    let figure = wave.assemble().unwrap();
 
     let mut file = std::fs::OpenOptions::new()
         .read(true)

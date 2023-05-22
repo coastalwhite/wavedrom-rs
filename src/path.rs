@@ -9,12 +9,9 @@ pub enum PathState {
 
 #[derive(Debug, Clone)]
 pub enum PathCommand {
-    MoveAbsolute(i32, i32),
-    MoveRelative(i32, i32),
     LineVerticalNoStroke(i32),
     LineHorizontal(i32),
     Line(i32, i32),
-    Close,
 }
 
 #[derive(Debug, Clone)]
@@ -31,6 +28,9 @@ enum PathSegmentCloseStatus {
 
 #[derive(Debug, Clone)]
 pub struct WavePathSegment {
+    x: i32,
+    y: i32,
+
     close_status: PathSegmentCloseStatus,
     actions: Vec<PathCommand>,
 }
@@ -39,6 +39,10 @@ pub struct WavePathSegment {
 pub struct PathData {
     current_x: i32,
     current_y: i32,
+
+    start_x: i32,
+    start_y: i32,
+
     is_fully_stroked: bool,
     pub(crate) actions: Vec<PathCommand>,
 }
@@ -68,7 +72,7 @@ impl Default for WaveDimension {
 }
 
 #[derive(Debug, Clone)]
-pub struct RenderedWavePath {
+pub struct AssembledWavePath {
     segments: Vec<WavePathSegment>,
 }
 
@@ -98,6 +102,14 @@ impl WavePathSegment {
     pub fn actions(&self) -> &[PathCommand] {
         &self.actions
     }
+
+    pub fn x(&self) -> i32 {
+        self.x
+    }
+
+    pub fn y(&self) -> i32 {
+        self.y
+    }
 }
 
 impl WavePath {
@@ -111,10 +123,10 @@ impl WavePath {
         self.0.len()
     }
 
-    pub fn render_with_options(&self, options: &WaveDimension) -> RenderedWavePath {
+    pub fn render_with_options(&self, options: &WaveDimension) -> AssembledWavePath {
         let mut state_iter = self.0.iter();
         let Some(mut last_state) = state_iter.next() else {
-            return RenderedWavePath { segments: Vec::new() };
+            return AssembledWavePath { segments: Vec::new() };
         };
 
         let mut current_path_string = PathString::new(0, 0);
@@ -132,17 +144,17 @@ impl WavePath {
 
         last_state.end(&options, &mut current_path_string);
 
-        RenderedWavePath {
+        AssembledWavePath {
             segments: current_path_string.segments,
         }
     }
 
-    pub fn render(&self) -> RenderedWavePath {
+    pub fn render(&self) -> AssembledWavePath {
         self.render_with_options(&WaveDimension::default())
     }
 }
 
-impl RenderedWavePath {
+impl AssembledWavePath {
     pub fn segments(&self) -> &[WavePathSegment] {
         &self.segments
     }
@@ -151,25 +163,8 @@ impl RenderedWavePath {
 impl PathCommand {
     pub fn has_no_stroke(&self) -> bool {
         match self {
-            Self::MoveAbsolute(..)
-            | Self::MoveRelative(..)
-            | Self::LineHorizontal(..)
-            | Self::Line(..)
-            | Self::Close => false,
+            Self::LineHorizontal(..) | Self::Line(..) => false,
             Self::LineVerticalNoStroke(..) => true,
-        }
-    }
-}
-
-impl std::fmt::Display for PathCommand {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::MoveAbsolute(x, y) => write!(f, "M{x},{y}"),
-            Self::MoveRelative(dx, dy) => write!(f, "m{dx},{dy}"),
-            Self::LineVerticalNoStroke(dy) => write!(f, "v{dy}"),
-            Self::LineHorizontal(dx) => write!(f, "h{dx}"),
-            Self::Line(dx, dy) => write!(f, "l{dx},{dy}"),
-            Self::Close => write!(f, "z"),
         }
     }
 }
@@ -179,15 +174,10 @@ impl PathData {
         Self {
             current_x: x,
             current_y: y,
-            is_fully_stroked: true,
-            actions: vec![PathCommand::MoveAbsolute(x, y)],
-        }
-    }
 
-    pub fn new_without_position() -> Self {
-        Self {
-            current_x: 0,
-            current_y: 0,
+            start_x: x,
+            start_y: y,
+
             is_fully_stroked: true,
             actions: Vec::new(),
         }
@@ -213,48 +203,45 @@ impl PathData {
         self.actions.push(PathCommand::Line(dx, dy));
     }
 
-    pub fn move_to_relative(&mut self, dx: i32, dy: i32) {
-        self.current_x += dx;
-        self.current_y += dy;
-
-        match self.actions.last_mut() {
-            Some(
-                PathCommand::MoveAbsolute(ref mut x, ref mut y)
-                | PathCommand::MoveRelative(ref mut x, ref mut y),
-            ) => {
-                *x += dx;
-                *y += dy;
-            }
-            _ => self.actions.push(PathCommand::MoveRelative(dx, dy)),
-        }
-    }
-
-    pub fn close(&mut self) {
-        self.current_x = 0;
-        self.current_y = 0;
-
-        self.actions.push(PathCommand::Close);
-    }
-
     fn vertical_line_no_stroke(&mut self, dy: i32) {
         self.current_y += dy;
         self.is_fully_stroked = false;
         self.actions.push(PathCommand::LineVerticalNoStroke(dy));
     }
 
-    pub fn take(&mut self) -> PathData {
+    pub fn take_and_restart_at(&mut self, x: i32, y: i32) -> PathData {
         let taken = PathData {
             current_x: self.current_x,
             current_y: self.current_y,
+
+            start_x: self.start_x,
+            start_y: self.start_y,
+
             is_fully_stroked: self.is_fully_stroked,
             actions: self.actions.split_off(0),
         };
 
-        self.current_x = 0;
-        self.current_y = 0;
+        self.current_x = x;
+        self.current_y = y;
+
+        self.start_x = x;
+        self.start_y = y;
+
         self.is_fully_stroked = true;
 
         taken
+    }
+
+    fn restart_move_to(&mut self, x: i32, y: i32) {
+        self.current_x += x;
+        self.current_y += y;
+
+        self.start_x += x;
+        self.start_y += y;
+
+        if !self.actions.is_empty() {
+            self.actions.clear();
+        }
     }
 }
 
@@ -262,51 +249,58 @@ impl PathString {
     fn new(x: i32, y: i32) -> Self {
         Self {
             forward: PathData::new(x, y),
-            backward: PathData::new_without_position(),
+            backward: PathData::new(0, 0),
             segments: Vec::new(),
         }
     }
 
     fn commit_with_back_line(&mut self, number: usize) {
+        let segment_start_x = self.forward.start_x;
+        let segment_start_y = self.forward.start_y;
+
         let start_x = self.forward.current_x;
         let start_y = self.forward.current_y;
 
         let is_fully_stroked = self.forward.is_fully_stroked && self.backward.is_fully_stroked;
 
         // TODO: Optimize this.
-        for action in self.backward.take().actions.into_iter().rev() {
+        for action in self.backward.take_and_restart_at(0, 0).actions.into_iter().rev() {
             self.forward.actions.push(action);
         }
-
-        self.forward.close();
 
         let close_status = PathSegmentCloseStatus::Encased(PathSegmentEncasement {
             data_index: number,
             is_fully_stroked,
         });
-        let actions = self.forward.take().actions;
+
+        let actions = self.forward.take_and_restart_at(start_x, start_y).actions;
 
         self.segments.push(WavePathSegment {
+            x: segment_start_x,
+            y: segment_start_y,
+
             close_status,
             actions,
         });
-
-        self.forward.move_to_relative(start_x, start_y)
     }
 
     fn commit_without_back_line(&mut self) {
+        let segment_start_x = self.forward.start_x;
+        let segment_start_y = self.forward.start_y;
+
         let start_x = self.forward.current_x;
         let start_y = self.forward.current_y;
 
         let close_status = PathSegmentCloseStatus::Open;
-        let actions = self.forward.take().actions;
+        let actions = self.forward.take_and_restart_at(start_x, start_y).actions;
 
         self.segments.push(WavePathSegment {
+            x: segment_start_x,
+            y: segment_start_y,
+
             close_status,
             actions,
         });
-
-        self.forward.move_to_relative(start_x, start_y)
     }
 }
 
@@ -389,7 +383,7 @@ impl PathState {
         match self {
             Self::Top => path_string.forward.horizontal_line(t),
             Self::Bottom => {
-                path_string.forward.move_to_relative(0, h);
+                path_string.forward.restart_move_to(0, h);
                 path_string.forward.horizontal_line(t);
             }
             Self::Box(_) => {
