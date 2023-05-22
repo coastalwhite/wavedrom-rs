@@ -267,6 +267,8 @@ impl Wave {
 
         let width = f64::from(width);
 
+        // NOTE: Face::units_per_em guarantees the value to be non-zero. So this should never
+        // generate a divide-by-zero error.
         let pts_per_em = f64::from(font_size) / f64::from(face.units_per_em());
         let width = width * pts_per_em;
 
