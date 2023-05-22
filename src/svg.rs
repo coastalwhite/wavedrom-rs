@@ -1,17 +1,12 @@
 use std::io;
 
-use crate::path::PathAction;
+use crate::path::PathCommand;
 
+use super::path::RenderedWavePath;
 use super::RenderedFigure;
-use super::path::{WavePath, WaveDimension};
 
 pub trait ToSvg {
     fn write_svg(&self, io_writer: &mut impl io::Write) -> io::Result<()>;
-}
-
-struct SvgWavePath<'a> {
-    dimensions: &'a WaveDimension,
-    wave_path: &'a WavePath,
 }
 
 impl<'a> ToSvg for RenderedFigure<'a> {
@@ -39,11 +34,11 @@ impl<'a> ToSvg for RenderedFigure<'a> {
         let schema_x = self.textbox_width + self.spacings().textbox_to_schema;
 
         write!(writer, r##"<g transform="translate({schema_x})">"##,)?;
-        for i in 0..=self.num_cycles {
+        for i in 0..=u64::from(self.num_cycles) {
             write!(
                 writer,
                 r##"<use transform="translate({x})" xlink:href="#cl" />"##,
-                x = f64::from(i) * self.wave_dimensions().cycle_width_f64(),
+                x = i * u64::from(self.wave_dimensions().cycle_width)
             )?;
         }
         write!(writer, r##"</g>"##)?;
@@ -58,10 +53,10 @@ impl<'a> ToSvg for RenderedFigure<'a> {
                 r##"<g transform="translate(0,{y})">"##,
                 y = self.paddings().schema_top
                     + if i == 0 {
-                        0.0
+                        0
                     } else {
-                        self.wave_dimensions().wave_height_f64() * f64::from(i)
-                            + self.spacings().line_to_line * f64::from(i)
+                        u32::from(self.wave_dimensions().wave_height) * i
+                            + self.spacings().line_to_line * i
                     }
             )?;
 
@@ -70,15 +65,14 @@ impl<'a> ToSvg for RenderedFigure<'a> {
                 r##"<text dominant-baseline="middle" font-family="{font_family}pt" y="{y}pt" font-size="{font_size}px" letter-spacing="0"><tspan>{text}</tspan></text>"##,
                 font_family = self.font_family,
                 font_size = self.options.font_size,
-                y = self.wave_dimensions().wave_height_f64() / 2.0,
+                y = self.wave_dimensions().wave_height / 2,
                 text = line.text,
             )?;
 
             write!(writer, r##"<g transform="translate({schema_x})">"##,)?;
-            SvgWavePath {
-                dimensions: self.wave_dimensions(),
-                wave_path: &line.path,
-            }.write_svg(writer)?;
+            line.path
+                .render_with_options(&self.options.wave_dimensions)
+                .write_svg(writer)?;
             write!(writer, r##"</g>"##)?;
 
             write!(writer, r##"</g>"##)?;
@@ -90,45 +84,36 @@ impl<'a> ToSvg for RenderedFigure<'a> {
     }
 }
 
-impl<'a> ToSvg for SvgWavePath<'a> { 
-    fn write_svg(
-        &self,
-        writer: &mut impl io::Write,
-    ) -> io::Result<()> {
-        for (path, container_number) in self.wave_path.to_paths(self.dimensions).into_iter() {
-            let fill = match container_number {
-                Some(0) => "#ff4040",
-                Some(1) => "#5499C7",
-                Some(2) => "#58D68D",
-                Some(3) => "#A569BD",
-                Some(_) => unimplemented!(),
-                None => "none",
-            };
+impl ToSvg for RenderedWavePath {
+    fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
+        for segment in self.segments() {
+            let fill = segment
+                .data_index()
+                .map_or("none", |data_index| match data_index {
+                    0 => "#ff4040",
+                    1 => "#5499C7",
+                    2 => "#58D68D",
+                    3 => "#A569BD",
+                    _ => unimplemented!(),
+                });
 
-            let mut has_no_stroke = false;
             write!(writer, r##"<path fill="{fill}" d=""##)?;
-            for action in &path.actions {
-                if action.no_stroke() {
-                    has_no_stroke = true;
-                }
+            for action in segment.actions() {
                 write!(writer, "{action}")?;
             }
-            
+
             // If there is a `no_stroke` element, we need to divide up the filling and the
             // stroking.
-            if has_no_stroke {
+            if !segment.is_fully_stroked() {
                 write!(writer, r##"" stroke="none"/>"##)?;
 
                 write!(writer, r##"<path fill="none" d=""##)?;
-                for action in &path.actions {
+                for action in segment.actions() {
                     match action {
-                        PathAction::VLineNoStrokeToRelative(dy) => write!(writer, "m0,{dy}")?,
-                        PathAction::Close => {},
+                        PathCommand::LineVerticalNoStroke(dy) => write!(writer, "m0,{dy}")?,
+                        PathCommand::Close => {}
                         _ => write!(writer, "{action}")?,
                     }
-                    // if !action.no_stroke() {
-                    //     write!(writer, "{action}")?;
-                    // }
                 }
             }
             write!(writer, r##"" stroke-width="1" stroke="#000"/>"##)?;

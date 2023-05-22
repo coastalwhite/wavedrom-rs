@@ -6,8 +6,9 @@ mod svg;
 #[cfg(feature = "wavejson")]
 pub mod wavejson;
 
-use path::{PathState, WaveDimension, WavePath};
+use path::PathState;
 
+pub use path::{RenderedWavePath, WaveDimension, WavePath, WavePathSegment};
 pub use svg::ToSvg;
 
 pub struct Wave {
@@ -55,13 +56,13 @@ pub enum CycleData {
 impl Default for FigurePadding {
     fn default() -> Self {
         Self {
-            figure_top: 8.,
-            figure_bottom: 8.,
-            figure_left: 8.,
-            figure_right: 8.,
+            figure_top: 8,
+            figure_bottom: 8,
+            figure_left: 8,
+            figure_right: 8,
 
-            schema_top: 8.,
-            schema_bottom: 8.,
+            schema_top: 8,
+            schema_bottom: 8,
         }
     }
 }
@@ -69,27 +70,27 @@ impl Default for FigurePadding {
 impl Default for FigureSpacing {
     fn default() -> Self {
         Self {
-            textbox_to_schema: 16.,
-            line_to_line: 16.,
+            textbox_to_schema: 16,
+            line_to_line: 16,
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct FigurePadding {
-    figure_top: f64,
-    figure_bottom: f64,
-    figure_left: f64,
-    figure_right: f64,
+    pub figure_top: u32,
+    pub figure_bottom: u32,
+    pub figure_left: u32,
+    pub figure_right: u32,
 
-    schema_top: f64,
-    schema_bottom: f64,
+    pub schema_top: u32,
+    pub schema_bottom: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct FigureSpacing {
-    textbox_to_schema: f64,
-    line_to_line: f64,
+    pub textbox_to_schema: u32,
+    pub line_to_line: u32,
 }
 
 impl From<&CycleData> for PathState {
@@ -105,28 +106,28 @@ impl From<&CycleData> for PathState {
 pub struct RenderedFigure<'a> {
     options: RenderOptions,
 
-    schema_height: f64,
+    pub textbox_width: u32,
 
-    textbox_width: f64,
-    schema_width: f64,
+    pub schema_height: u32,
+    pub schema_width: u32,
 
     font_family: String,
 
-    num_cycles: u16,
+    num_cycles: u32,
 
     lines: Vec<RenderedLine<'a>>,
 }
 
 pub struct RenderedLine<'a> {
     text: &'a str,
-    text_width: f64,
+    text_width: u32,
 
     path: WavePath,
 }
 
 #[derive(Debug, Clone)]
 pub struct RenderOptions {
-    pub font_size: f64,
+    pub font_size: u32,
     pub paddings: FigurePadding,
     pub spacings: FigureSpacing,
     pub wave_dimensions: WaveDimension,
@@ -135,7 +136,7 @@ pub struct RenderOptions {
 impl Default for RenderOptions {
     fn default() -> Self {
         Self {
-            font_size: 10.,
+            font_size: 10,
             paddings: FigurePadding::default(),
             spacings: FigureSpacing::default(),
             wave_dimensions: WaveDimension::default(),
@@ -144,7 +145,7 @@ impl Default for RenderOptions {
 }
 
 impl<'a> RenderedFigure<'a> {
-    pub fn width(&self) -> f64 {
+    pub fn width(&self) -> u32 {
         self.paddings().figure_left
             + self.paddings().figure_right
             + self.textbox_width
@@ -152,7 +153,7 @@ impl<'a> RenderedFigure<'a> {
             + self.spacings().textbox_to_schema
     }
 
-    pub fn height(&self) -> f64 {
+    pub fn height(&self) -> u32 {
         self.paddings().figure_top + self.paddings().figure_bottom + self.schema_height
     }
 
@@ -170,13 +171,13 @@ impl<'a> RenderedFigure<'a> {
 }
 
 impl Figure {
-    pub fn render_with_options(&self, options: RenderOptions) -> Result<RenderedFigure, ()> {
+    pub fn render_with_options(&self, options: &RenderOptions) -> Result<RenderedFigure, ()> {
         let RenderOptions {
             font_size,
             paddings,
             spacings,
             wave_dimensions,
-        } = &options;
+        } = options;
 
         let num_lines = u32::try_from(self.0.len()).map_err(|_| ())?;
 
@@ -198,24 +199,29 @@ impl Figure {
             })
             .collect::<Vec<RenderedLine>>();
 
-        let num_cycles = u16::try_from(lines.iter().map(|line| line.path.len()).max().unwrap_or(0))
-            .map_err(|_| ())?;
+        let num_cycles = lines.iter().map(|line| line.path.len()).max().unwrap_or(0);
+        let num_cycles = u32::try_from(num_cycles).map_err(|_| ())?;
 
         let textbox_width = lines
             .iter()
             .map(|line| line.text_width)
-            .max_by(|a, b| a.total_cmp(b))
-            .unwrap_or(0.0);
-        let schema_width = f64::from(num_cycles) * wave_dimensions.cycle_width_f64();
+            .max()
+            .unwrap_or_default();
 
-        let schema_height: f64 = if num_lines == 0 {
-            0.
+        // Error when there are too many cycles
+        let schema_width = num_cycles * u32::from(wave_dimensions.cycle_width);
+
+        let schema_height = if num_lines == 0 {
+            0
         } else {
             paddings.schema_top
                 + paddings.schema_bottom
-                + spacings.line_to_line * f64::from(num_lines - 1)
-                + wave_dimensions.wave_height_f64() * f64::from(num_lines)
+                + spacings.line_to_line * (num_lines - 1)
+                + u32::from(wave_dimensions.wave_height) * num_lines
         };
+
+        // TODO: Does this clone need to be here?
+        let options = options.clone();
 
         Ok(RenderedFigure {
             options,
@@ -235,12 +241,12 @@ impl Figure {
 
     #[inline]
     pub fn render(&self) -> Result<RenderedFigure, ()> {
-        self.render_with_options(RenderOptions::default())
+        self.render_with_options(&RenderOptions::default())
     }
 }
 
 impl Wave {
-    fn get_text_width(&self, face: &ttf_parser::Face, font_size: f64) -> f64 {
+    fn get_text_width(&self, face: &ttf_parser::Face, font_size: u32) -> u32 {
         let width = self.name
             .chars()
             .map(|c| {
@@ -261,8 +267,10 @@ impl Wave {
 
         let width = f64::from(width);
 
-        let pts_per_em = font_size / f64::from(face.units_per_em());
-        width * pts_per_em
+        let pts_per_em = f64::from(font_size) / f64::from(face.units_per_em());
+        let width = width * pts_per_em;
+
+        width.ceil() as u32
     }
 }
 
@@ -294,4 +302,3 @@ fn get_font_family_name(face: &ttf_parser::Face) -> Option<String> {
 
     None
 }
-
