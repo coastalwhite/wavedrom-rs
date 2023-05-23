@@ -109,19 +109,20 @@ mod tests {
         let data = r#"
         {
             "signal": [
-                { "name": "abc", "wave": "120..." },
+                { "name": "", "wave": "120..." },
                 [
                     "xyz",
-                    { "name": "def", "wave": "00112200" },
+                    { "name": "xyxjaflksjdsfajsladkgjalkfjsdlkfa", "wave": "00112200" },
                     [
                         "XYZ",
-                        { "name": "def", "wave": "00112200" },
-                        { "name": "def", "wave": "00112200" }
+                        { "name": "", "wave": "00112200" },
+                        { "name": "", "wave": "00112200" }
                     ]
                 ]
             ]
         }
         "#;
+
 
         let wavejson: WaveJson = serde_json::from_str(data).unwrap();
         let figure: Figure = wavejson.into();

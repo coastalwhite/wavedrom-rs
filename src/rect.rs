@@ -1,27 +1,32 @@
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Point(pub u32, pub u32);
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Rect {
-    x: f64,
-    y: f64,
-    width: f64,
-    height: f64,
+    pub location: Point,
+    pub dimension: Point,
+}
+
+impl Point {
+    pub fn x(self) -> u32 {
+        self.0
+    }
+    pub fn y(self) -> u32 {
+        self.1
+    }
 }
 
 impl Rect {
-    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Rect {
-        Self {
-            x,
-            y,
-            width,
-            height,
-        }
+    pub fn x(&self) -> u32 {
+        self.location.0
     }
-
-    pub fn new_with_vertices(x1: f64, y1: f64, x2: f64, y2: f64) -> Rect {
-        Self {
-            x: x1,
-            y: y1,
-            width: x2 - x1,
-            height: y2 - y1,
-        }
+    pub fn y(&self) -> u32 {
+        self.location.1
+    }
+    pub fn w(&self) -> u32 {
+        self.dimension.0
+    }
+    pub fn h(&self) -> u32 {
+        self.dimension.1
     }
 }

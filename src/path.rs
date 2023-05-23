@@ -64,9 +64,9 @@ pub struct WaveDimension {
 impl Default for WaveDimension {
     fn default() -> Self {
         Self {
-            wave_height: 16,
-            cycle_width: 20,
-            transition_offset: 2,
+            wave_height: 24,
+            cycle_width: 32,
+            transition_offset: 4,
         }
     }
 }

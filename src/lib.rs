@@ -44,20 +44,21 @@ impl WaveLine {
             Self::Wave(wave) => {
                 lines.push(AssembledLine {
                     text: &wave.name,
-                    group_depth: depth,
+                    depth,
                     path: WavePath::new(wave.cycles.0.iter().map(PathState::from).collect()),
                 });
+
                 depth
             }
             Self::Group(WaveLineGroup(label, wave_lines)) => {
-                match group_label_at_depth.get_mut(depth as usize) {
-                    None => group_label_at_depth.push(label.is_some()),
-                    Some(label_at_level) => *label_at_level |= label.is_some(),
-                }
-
                 // TODO: Do something smarter here.
                 if depth > 4 {
                     return depth;
+                }
+
+                match group_label_at_depth.get_mut(depth as usize) {
+                    None => group_label_at_depth.push(label.is_some()),
+                    Some(label_at_level) => *label_at_level |= label.is_some(),
                 }
 
                 let mut max_depth = depth + 1;
@@ -146,18 +147,29 @@ pub struct AssembledFigure<'a> {
     groups: Vec<WaveGroup<'a>>,
 }
 
+impl<'a> AssembledFigure<'a> {
+    #[inline]
+    fn amount_labels_before(&self, depth: u32) -> u32 {
+        self.group_label_at_depth
+            .iter()
+            .take(depth as usize)
+            .filter(|x| **x)
+            .count() as u32
+    }
+}
+
 struct WaveGroup<'a> {
     depth: u32,
 
     label: Option<&'a str>,
-    
+
     start: u32,
     end: u32,
 }
 
 pub struct AssembledLine<'a> {
     text: &'a str,
-    group_depth: u32,
+    depth: u32,
     path: WavePath,
 }
 
