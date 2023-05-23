@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Figure, Wave, WaveLine};
+use crate::{Figure, Wave, WaveLine, WaveLineGroup};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaveJson {
@@ -21,12 +21,25 @@ impl Into<Figure> for WaveJson {
 impl From<Signal> for WaveLine {
     fn from(signal: Signal) -> Self {
         match signal {
-            Signal::Group(signals) => WaveLine::Group(
-                signals
+            Signal::Group(items) => {
+                let mut label = None;
+
+                let items = items
                     .into_iter()
-                    .map(WaveLine::from)
-                    .collect::<Vec<WaveLine>>(),
-            ),
+                    .filter_map(|item| match item {
+                        SignalGroupItem::String(s) => {
+                            if label.is_none() {
+                                label = Some(s);
+                            }
+
+                            None
+                        }
+                        SignalGroupItem::Item(line) => Some(WaveLine::from(line)),
+                    })
+                    .collect::<Vec<WaveLine>>();
+
+                WaveLine::Group(WaveLineGroup(label, items))
+            }
             Signal::Item(item) => WaveLine::Wave(Wave::from(item)),
         }
     }
@@ -44,8 +57,15 @@ impl From<SignalItem> for Wave {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Signal {
-    Group(Vec<Signal>),
+    Group(Vec<SignalGroupItem>),
     Item(SignalItem),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SignalGroupItem {
+    String(String),
+    Item(Signal),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,10 +96,10 @@ mod tests {
         }
         "#;
 
-        let wavejson: WaveJson = serde_json::from_str(data).unwrap();
+        let _wavejson: WaveJson = serde_json::from_str(data).unwrap();
 
-        dbg!(wavejson);
-        assert!(false);
+        // dbg!(wavejson);
+        // assert!(false);
     }
 
     #[test]
@@ -91,7 +111,13 @@ mod tests {
             "signal": [
                 { "name": "abc", "wave": "120..." },
                 [
-                    { "name": "def", "wave": "00112200" }
+                    "xyz",
+                    { "name": "def", "wave": "00112200" },
+                    [
+                        "XYZ",
+                        { "name": "def", "wave": "00112200" },
+                        { "name": "def", "wave": "00112200" }
+                    ]
                 ]
             ]
         }
@@ -111,7 +137,5 @@ mod tests {
             .unwrap();
 
         rendered.write_svg(&mut file).unwrap();
-
-        assert!(false);
     }
 }

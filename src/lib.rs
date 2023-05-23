@@ -19,9 +19,11 @@ pub struct Wave {
 
 pub struct Figure(Vec<WaveLine>);
 pub enum WaveLine {
-    Group(Vec<WaveLine>),
+    Group(WaveLineGroup),
     Wave(Wave),
 }
+
+pub struct WaveLineGroup(Option<String>, Vec<WaveLine>);
 pub struct Cycles(pub Vec<CycleData>);
 
 impl From<Wave> for WaveLine {
@@ -31,22 +33,28 @@ impl From<Wave> for WaveLine {
 }
 
 impl WaveLine {
-    fn render_into_buffers<'a>(
+    fn render_into<'a>(
         &'a self,
-        lines_buffer: &'_ mut Vec<AssembledLine<'a>>,
-        groups_buffer: &'_ mut Vec<WaveGroup>,
+        lines: &'_ mut Vec<AssembledLine<'a>>,
+        groups: &'_ mut Vec<WaveGroup<'a>>,
+        group_label_at_depth: &mut Vec<bool>,
         depth: u32,
     ) -> u32 {
         match self {
             Self::Wave(wave) => {
-                lines_buffer.push(AssembledLine {
+                lines.push(AssembledLine {
                     text: &wave.name,
                     group_depth: depth,
                     path: WavePath::new(wave.cycles.0.iter().map(PathState::from).collect()),
                 });
                 depth
             }
-            Self::Group(wave_lines) => {
+            Self::Group(WaveLineGroup(label, wave_lines)) => {
+                match group_label_at_depth.get_mut(depth as usize) {
+                    None => group_label_at_depth.push(label.is_some()),
+                    Some(label_at_level) => *label_at_level |= label.is_some(),
+                }
+
                 // TODO: Do something smarter here.
                 if depth > 4 {
                     return depth;
@@ -54,22 +62,20 @@ impl WaveLine {
 
                 let mut max_depth = depth + 1;
 
-                let group_start = lines_buffer.len();
+                let group_start = lines.len();
                 for wave_line in wave_lines {
-                    let group_depth = wave_line.render_into_buffers(
-                        lines_buffer,
-                        groups_buffer,
-                        depth + 1,
-                    );
+                    let group_depth =
+                        wave_line.render_into(lines, groups, group_label_at_depth, depth + 1);
 
                     if group_depth > max_depth {
                         max_depth = group_depth;
                     }
                 }
-                let group_end = lines_buffer.len();
+                let group_end = lines.len();
 
-                groups_buffer.push(WaveGroup {
+                groups.push(WaveGroup {
                     depth,
+                    label: label.as_ref().map(|s| &s[..]),
                     start: group_start as u32,
                     end: group_end as u32,
                 });
@@ -132,13 +138,19 @@ impl From<&CycleData> for PathState {
 
 pub struct AssembledFigure<'a> {
     num_cycles: u32,
+
+    group_label_at_depth: Vec<bool>,
     max_group_depth: u32,
+
     lines: Vec<AssembledLine<'a>>,
-    groups: Vec<WaveGroup>,
+    groups: Vec<WaveGroup<'a>>,
 }
 
-struct WaveGroup {
+struct WaveGroup<'a> {
     depth: u32,
+
+    label: Option<&'a str>,
+    
     start: u32,
     end: u32,
 }
@@ -149,7 +161,7 @@ pub struct AssembledLine<'a> {
     path: WavePath,
 }
 
-impl WaveGroup {
+impl WaveGroup<'_> {
     fn len(&self) -> u32 {
         self.end - self.start
     }
@@ -157,18 +169,22 @@ impl WaveGroup {
     fn is_empty(&self) -> bool {
         self.start == self.end
     }
-}
 
+    fn label(&self) -> Option<&str> {
+        self.label
+    }
+}
 
 impl Figure {
     pub fn assemble_with_options(&self) -> Result<AssembledFigure, ()> {
         let mut lines = Vec::with_capacity(self.0.len());
         let mut groups = Vec::new();
+        let mut group_label_at_depth = Vec::new();
 
         let max_group_depth = self
             .0
             .iter()
-            .map(|line| line.render_into_buffers(&mut lines, &mut groups, 0))
+            .map(|line| line.render_into(&mut lines, &mut groups, &mut group_label_at_depth, 0))
             .max()
             .unwrap_or_default();
 
@@ -178,6 +194,7 @@ impl Figure {
         Ok(AssembledFigure {
             num_cycles,
 
+            group_label_at_depth,
             max_group_depth,
 
             lines,

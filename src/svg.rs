@@ -1,7 +1,8 @@
 use std::io;
 
 use crate::path::PathCommand;
-use crate::WaveDimension;
+use crate::rect::Rect;
+use crate::{WaveDimension, WaveGroup};
 
 use super::path::AssembledWavePath;
 use super::AssembledFigure;
@@ -32,6 +33,16 @@ pub struct GroupIndicatorDimension {
     width: u32,
 
     spacing: u32,
+
+    label_spacing: u32,
+    label_fontsize: u32,
+}
+
+pub struct SvgBoundingBoxes {
+    figure: Rect,
+    group_indicators: Rect,
+    textbox: Rect,
+    schema: Rect,
 }
 
 impl Default for GroupIndicatorDimension {
@@ -41,6 +52,9 @@ impl Default for GroupIndicatorDimension {
             padding_bottom: 0,
             width: 4,
             spacing: 4,
+
+            label_spacing: 4,
+            label_fontsize: 8,
         }
     }
 }
@@ -151,6 +165,9 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         let groupbox_width = (self.max_group_depth > 0).then(|| {
             self.max_group_depth * group_indicator_dimensions.width
                 + (self.max_group_depth - 1) * group_indicator_dimensions.spacing
+                + self.group_label_at_depth.iter().filter(|x| **x).count() as u32
+                    * (group_indicator_dimensions.label_spacing
+                        + group_indicator_dimensions.label_fontsize)
         });
 
         let figure_width = paddings.figure_left
@@ -178,10 +195,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             padding_y = paddings.figure_top,
         )?;
 
-        let textbox_x = groupbox_width.map_or(0, |w| {
-            // TODO: Make adjustable
-            w + spacings.textbox_to_schema
-        });
+        let textbox_x = groupbox_width.map_or(0, |w| w + spacings.groupbox_to_textbox);
         let schema_x = textbox_x + textbox_width + spacings.textbox_to_schema;
 
         write!(writer, r##"<g transform="translate({schema_x})">"##,)?;
@@ -201,12 +215,19 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
             let height = group.len() * u32::from(wave_dimensions.wave_height)
                 + (group.len() - 1) * spacings.line_to_line;
-            let x = if group.depth == 0 {
-                0
-            } else {
-                group.depth
-                    * (group_indicator_dimensions.width + group_indicator_dimensions.spacing)
-            };
+            let x = self
+                .group_label_at_depth
+                .iter()
+                .take((group.depth + 1) as usize)
+                .filter(|x| **x)
+                .count() as u32
+                * (group_indicator_dimensions.label_spacing
+                    + group_indicator_dimensions.label_fontsize)
+                + if group.depth == 0 {
+                    0
+                } else {
+                    group.depth * group_indicator_dimensions.width
+                };
             let y = paddings.schema_top
                 + if group.start == 0 {
                     0
@@ -214,6 +235,31 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                     group.start * u32::from(wave_dimensions.wave_height)
                         + group.start * spacings.line_to_line
                 };
+
+            if let Some(label) = group.label {
+                let x = if group.depth == 0 {
+                    0
+                } else {
+                    self.group_label_at_depth
+                        .iter()
+                        .take(group.depth as usize)
+                        .filter(|x| **x)
+                        .count() as u32
+                        * (group_indicator_dimensions.label_spacing
+                            + group_indicator_dimensions.label_fontsize)
+                        + group.depth * group_indicator_dimensions.width
+                };
+
+                // let label_width = get_text_width(label, &face, 8);
+                write!(
+                    writer,
+                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}px" letter-spacing="0" transform="rotate(270)"><tspan>{label}</tspan></text></g>"##,
+                    font_size = group_indicator_dimensions.label_fontsize,
+                    x = x + group_indicator_dimensions.label_spacing + 2,
+                    y = y + height / 2,
+                    // y = wave_dimensions.wave_height / 2,
+                )?;
+            }
 
             write!(
                 writer,
