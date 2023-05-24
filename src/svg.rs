@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::path::PathCommand;
+use crate::path::{PathCommand, PathSegmentBackground};
 use crate::WaveDimension;
 
 use super::path::AssembledWavePath;
@@ -198,10 +198,12 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         )?;
 
         // Define the cycle-to-cycle background hint lines
-        write!(
-            writer,
-            r##"<defs><g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs>"##,
-        )?;
+        write!(writer, "<defs>")?;
+        if self.has_undefined {
+            write!(writer, r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)"><line x1="0" y="0" x2="0" y2="10" stroke="#000" stroke-width="1"/></pattern>"##)?;
+        }
+        write!(writer, r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g>"##)?;
+        write!(writer, "</defs>")?;
 
         // Figure container
         write!(
@@ -288,7 +290,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             if !line.text.is_empty() {
                 write!(
                     writer,
-                    r##"<text dominant-baseline="middle" font-family="{font_family}" y="{y}pt" font-size="{font_size}px" letter-spacing="0"><tspan>{text}</tspan></text>"##,
+                    r##"<g transform="translate(0,{y})"><text dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}px" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
                     font_size = font_size,
                     y = wave_dimensions.wave_height / 2,
                     text = line.text,
@@ -323,15 +325,15 @@ impl ToSvg for AssembledWavePath {
         _: &Self::Options,
     ) -> io::Result<()> {
         for segment in self.segments() {
-            let fill = segment
-                .data_index()
-                .map_or("none", |data_index| match data_index {
-                    0 => "#ff4040",
-                    1 => "#5499C7",
-                    2 => "#58D68D",
-                    3 => "#A569BD",
-                    _ => unimplemented!(),
-                });
+            let fill = match segment.background() {
+                Some(PathSegmentBackground::Index(0)) => "#ff4040",
+                Some(PathSegmentBackground::Index(1)) => "#5499C7",
+                Some(PathSegmentBackground::Index(2)) => "#58D68D",
+                Some(PathSegmentBackground::Index(3)) => "#A569BD",
+                Some(PathSegmentBackground::Index(_)) => unimplemented!(),
+                Some(PathSegmentBackground::Undefined) => "url(#x-bg)",
+                None => "none",
+            };
 
             let x = segment.x();
             let y = segment.y();

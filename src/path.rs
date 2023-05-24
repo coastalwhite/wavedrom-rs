@@ -5,7 +5,13 @@ pub enum PathState {
     Top,
     Bottom,
     Middle,
-    Box(usize),
+    Box(BoxData),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BoxData {
+    Index(usize),
+    Undefined,
 }
 
 #[derive(Debug, Clone)]
@@ -15,9 +21,24 @@ pub enum PathCommand {
     Line(i32, i32),
 }
 
+impl From<BoxData> for PathSegmentBackground {
+    fn from(data: BoxData) -> Self {
+        match data {
+            BoxData::Index(i) => Self::Index(i),
+            BoxData::Undefined => Self::Undefined,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum PathSegmentBackground {
+    Index(usize),
+    Undefined,
+}
+
 #[derive(Debug, Clone)]
 struct PathSegmentEncasement {
-    data_index: usize,
+    background: PathSegmentBackground,
     is_fully_stroked: bool,
 }
 
@@ -82,10 +103,10 @@ impl WavePathSegment {
         matches!(self.close_status, PathSegmentCloseStatus::Open)
     }
 
-    pub fn data_index(&self) -> Option<usize> {
+    pub fn background(&self) -> Option<&PathSegmentBackground> {
         match self.close_status {
-            PathSegmentCloseStatus::Encased(PathSegmentEncasement { data_index, .. }) => {
-                Some(data_index)
+            PathSegmentCloseStatus::Encased(PathSegmentEncasement { ref background, .. }) => {
+                Some(background)
             }
             _ => None,
         }
@@ -255,7 +276,7 @@ impl PathString {
         }
     }
 
-    fn commit_with_back_line(&mut self, number: usize) {
+    fn commit_with_back_line(&mut self, background: PathSegmentBackground) {
         let segment_start_x = self.forward.start_x;
         let segment_start_y = self.forward.start_y;
 
@@ -265,12 +286,18 @@ impl PathString {
         let is_fully_stroked = self.forward.is_fully_stroked && self.backward.is_fully_stroked;
 
         // TODO: Optimize this.
-        for action in self.backward.take_and_restart_at(0, 0).actions.into_iter().rev() {
+        for action in self
+            .backward
+            .take_and_restart_at(0, 0)
+            .actions
+            .into_iter()
+            .rev()
+        {
             self.forward.actions.push(action);
         }
 
         let close_status = PathSegmentCloseStatus::Encased(PathSegmentEncasement {
-            data_index: number,
+            background,
             is_fully_stroked,
         });
 
@@ -313,7 +340,9 @@ impl PathState {
         use PathState::*;
 
         match (self, next) {
-            (Top, Top) | (Bottom, Bottom) | (Middle, Middle) => path_string.forward.horizontal_line(t * 2),
+            (Top, Top) | (Bottom, Bottom) | (Middle, Middle) => {
+                path_string.forward.horizontal_line(t * 2)
+            }
             (Box(a), Box(b)) if a == b => {
                 path_string.forward.horizontal_line(t * 2);
                 path_string.backward.horizontal_line(-t * 2);
@@ -322,7 +351,7 @@ impl PathState {
                 path_string.forward.line(t, h / 2);
                 path_string.backward.line(-t, h / 2);
 
-                path_string.commit_with_back_line(*lhs);
+                path_string.commit_with_back_line((*lhs).into());
 
                 path_string.forward.line(t, -h / 2);
                 path_string.backward.line(-t, -h / 2);
@@ -361,7 +390,7 @@ impl PathState {
                 path_string.forward.horizontal_line(t);
                 path_string.backward.line(-t, h);
 
-                path_string.commit_with_back_line(*lhs);
+                path_string.commit_with_back_line((*lhs).into());
 
                 path_string.forward.horizontal_line(t);
             }
@@ -369,7 +398,7 @@ impl PathState {
                 path_string.forward.line(t, h / 2);
                 path_string.backward.line(-t, h / 2);
 
-                path_string.commit_with_back_line(*lhs);
+                path_string.commit_with_back_line((*lhs).into());
 
                 path_string.forward.horizontal_line(t);
             }
@@ -377,7 +406,7 @@ impl PathState {
                 path_string.forward.line(t, h);
                 path_string.backward.horizontal_line(-t);
 
-                path_string.commit_with_back_line(*lhs);
+                path_string.commit_with_back_line((*lhs).into());
 
                 path_string.forward.horizontal_line(t);
             }
@@ -389,7 +418,9 @@ impl PathState {
         let w = i32::from(dimensions.cycle_width);
 
         match self {
-            Self::Top | Self::Bottom | Self::Middle => path_string.forward.horizontal_line(w - t * 2),
+            Self::Top | Self::Bottom | Self::Middle => {
+                path_string.forward.horizontal_line(w - t * 2)
+            }
             Self::Box(_) => {
                 path_string.forward.horizontal_line(w - t * 2);
                 path_string.backward.horizontal_line(t * 2 - w);
@@ -432,7 +463,7 @@ impl PathState {
                 path_string.forward.horizontal_line(t);
                 path_string.forward.vertical_line_no_stroke(h);
                 path_string.backward.horizontal_line(-t);
-                path_string.commit_with_back_line(*lhs);
+                path_string.commit_with_back_line((*lhs).into());
             }
         }
     }

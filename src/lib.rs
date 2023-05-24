@@ -12,6 +12,8 @@ use path::PathState;
 pub use path::{AssembledWavePath, WaveDimension, WavePath, WavePathSegment};
 pub use svg::ToSvg;
 
+use self::path::BoxData;
+
 pub struct Wave {
     pub name: String,
     pub cycles: Cycles,
@@ -38,10 +40,15 @@ impl WaveLine {
         lines: &'_ mut Vec<AssembledLine<'a>>,
         groups: &'_ mut Vec<WaveGroup<'a>>,
         group_label_at_depth: &mut Vec<bool>,
+        has_undefined: &mut bool,
         depth: u32,
     ) -> u32 {
         match self {
             Self::Wave(wave) => {
+                if wave.cycles.0.contains(&CycleData::Undefined) {
+                    *has_undefined = true;
+                }
+
                 lines.push(AssembledLine {
                     text: &wave.name,
                     depth,
@@ -66,7 +73,7 @@ impl WaveLine {
                 let group_start = lines.len();
                 for wave_line in wave_lines {
                     let group_depth =
-                        wave_line.render_into(lines, groups, group_label_at_depth, depth + 1);
+                        wave_line.render_into(lines, groups, group_label_at_depth, has_undefined, depth + 1);
 
                     if group_depth > max_depth {
                         max_depth = group_depth;
@@ -105,6 +112,7 @@ impl FromStr for Cycles {
                 '1' => CycleData::Top,
                 '0' => CycleData::Bottom,
                 'z' | 'Z' => CycleData::Middle,
+                'x' | 'X' => CycleData::Undefined,
                 '2' => CycleData::Box(0),
                 '3' => CycleData::Box(1),
                 '4' => CycleData::Box(2),
@@ -126,6 +134,7 @@ pub enum CycleData {
     Top,
     Bottom,
     Middle,
+    Undefined,
     Box(usize),
 }
 
@@ -135,13 +144,16 @@ impl From<&CycleData> for PathState {
             CycleData::Top => PathState::Top,
             CycleData::Bottom => PathState::Bottom,
             CycleData::Middle => PathState::Middle,
-            CycleData::Box(usize) => PathState::Box(*usize),
+            CycleData::Undefined => PathState::Box(BoxData::Undefined),
+            CycleData::Box(usize) => PathState::Box(BoxData::Index(*usize)),
         }
     }
 }
 
 pub struct AssembledFigure<'a> {
     num_cycles: u32,
+
+    has_undefined: bool,
 
     group_label_at_depth: Vec<bool>,
     max_group_depth: u32,
@@ -196,10 +208,12 @@ impl Figure {
         let mut groups = Vec::new();
         let mut group_label_at_depth = Vec::new();
 
+        let mut has_undefined = false;
+
         let max_group_depth = self
             .0
             .iter()
-            .map(|line| line.render_into(&mut lines, &mut groups, &mut group_label_at_depth, 0))
+            .map(|line| line.render_into(&mut lines, &mut groups, &mut group_label_at_depth, &mut has_undefined, 0))
             .max()
             .unwrap_or_default();
 
@@ -208,6 +222,8 @@ impl Figure {
 
         Ok(AssembledFigure {
             num_cycles,
+
+            has_undefined,
 
             group_label_at_depth,
             max_group_depth,
