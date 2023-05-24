@@ -50,6 +50,12 @@ impl From<SignalItem> for Wave {
         Wave {
             name: item.name.unwrap_or_default(),
             cycles: item.wave.unwrap_or_default().parse().unwrap(),
+            data: item
+                .data
+                .map_or_else(Vec::new, |signal_data| match signal_data {
+                    SignalData::One(data) => vec![data],
+                    SignalData::Multiple(data) => data,
+                }),
         }
     }
 }
@@ -121,11 +127,18 @@ mod tests {
                 { "name": "z0z1z2zzzxz", "wave": "z0z1z2zzzxz" },
                 { "name": "x0x1x2xzxxx", "wave": "x0x1x2xzxxx" },
                 {},
-                { "name": "012345zx", "wave": "012345zx" }
+                { "name": "012345zx", "wave": "012345zx" },
+                {
+                    "name": "02....3...0",
+                    "wave": "02....3...0",
+                    "data": [
+                        "0xDEAD",
+                        "0xBEEF"
+                    ]
+                }
             ]
         }
         "#;
-
 
         let wavejson: WaveJson = serde_json::from_str(data).unwrap();
         let figure: Figure = wavejson.into();

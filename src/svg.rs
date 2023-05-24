@@ -305,6 +305,20 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             line.path
                 .render_with_options(&wave_dimensions)
                 .write_svg(writer)?;
+
+            for (start, end, text) in line.data.iter() {
+                let Some(text) = text else {
+                    continue;
+                };
+
+                write!(
+                    writer,
+                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
+                    font_size = font_size,
+                    x = (start + end) * u32::from(wave_dimensions.cycle_width) / 2,
+                    y = wave_dimensions.wave_height / 2,
+                )?;
+            }
             write!(writer, r##"</g>"##)?;
 
             write!(writer, r##"</g>"##)?;

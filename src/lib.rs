@@ -17,6 +17,7 @@ use self::path::BoxData;
 pub struct Wave {
     pub name: String,
     pub cycles: Cycles,
+    pub data: Vec<String>,
 }
 
 pub struct Figure(Vec<WaveLine>);
@@ -53,6 +54,7 @@ impl WaveLine {
                     text: &wave.name,
                     depth,
                     path: WavePath::new(wave.cycles.0.iter().map(PathState::from).collect()),
+                    data: get_data_locations(wave),
                 });
 
                 depth
@@ -72,8 +74,13 @@ impl WaveLine {
 
                 let group_start = lines.len();
                 for wave_line in wave_lines {
-                    let group_depth =
-                        wave_line.render_into(lines, groups, group_label_at_depth, has_undefined, depth + 1);
+                    let group_depth = wave_line.render_into(
+                        lines,
+                        groups,
+                        group_label_at_depth,
+                        has_undefined,
+                        depth + 1,
+                    );
 
                     if group_depth > max_depth {
                         max_depth = group_depth;
@@ -182,10 +189,84 @@ struct WaveGroup<'a> {
     end: u32,
 }
 
+fn get_data_locations(wave: &Wave) -> Vec<(u32, u32, Option<&str>)> {
+    // Temporary
+
+    struct Current {
+        start: u32,
+        idx: usize,
+    }
+
+    let mut items = Vec::new();
+    let mut current = None;
+    for (offset, cycle) in (0..u32::MAX).zip(wave.cycles.0.iter()) {
+        use CycleData::*;
+
+        match (&current, cycle) {
+            (
+                Some(Current {
+                    idx: current_idx, ..
+                }),
+                Box(idx),
+            ) if current_idx == idx => {}
+            (
+                Some(Current {
+                    idx: current_idx,
+                    start,
+                }),
+                Box(idx),
+            ) => {
+                items.push((
+                    *start,
+                    offset,
+                    wave.data.get(*current_idx).as_ref().map(|s| &s[..]),
+                ));
+                current = Some(Current {
+                    start: offset,
+                    idx: *idx,
+                });
+            }
+            (
+                Some(Current {
+                    idx: current_idx,
+                    start,
+                }),
+                _,
+            ) => {
+                items.push((
+                    *start,
+                    offset,
+                    wave.data.get(*current_idx).as_ref().map(|s| &s[..]),
+                ));
+                current = None;
+            }
+
+            (None, Box(idx)) => {
+                current = Some(Current {
+                    start: offset,
+                    idx: *idx,
+                })
+            }
+            (None, _) => {}
+        }
+    }
+
+    if let Some(Current { idx, start }) = current {
+        items.push((
+            start,
+            wave.cycles.0.len() as u32,
+            wave.data.get(idx).as_ref().map(|s| &s[..]),
+        ));
+    }
+
+    items
+}
+
 pub struct AssembledLine<'a> {
     text: &'a str,
     depth: u32,
     path: WavePath,
+    data: Vec<(u32, u32, Option<&'a str>)>,
 }
 
 impl WaveGroup<'_> {
@@ -213,7 +294,15 @@ impl Figure {
         let max_group_depth = self
             .0
             .iter()
-            .map(|line| line.render_into(&mut lines, &mut groups, &mut group_label_at_depth, &mut has_undefined, 0))
+            .map(|line| {
+                line.render_into(
+                    &mut lines,
+                    &mut groups,
+                    &mut group_label_at_depth,
+                    &mut has_undefined,
+                    0,
+                )
+            })
             .max()
             .unwrap_or_default();
 
