@@ -118,8 +118,10 @@ impl FromStr for Cycles {
             let state = match c {
                 '1' => CycleData::Top,
                 '0' => CycleData::Bottom,
-                'z' | 'Z' => CycleData::Middle,
-                'x' | 'X' => CycleData::Undefined,
+                'z' => CycleData::Middle,
+                'x' => CycleData::Undefined,
+                'p' | 'P' => CycleData::PosedgeClock,
+                'n' | 'N' => CycleData::NegedgeClock,
                 '2' => CycleData::Box(0),
                 '3' => CycleData::Box(1),
                 '4' => CycleData::Box(2),
@@ -142,8 +144,21 @@ pub enum CycleData {
     Bottom,
     Middle,
     Undefined,
-    
+    PosedgeClock,
+    NegedgeClock,
     Box(usize),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ClockEdge {
+    Positive,
+    Negative,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CycleClock {
+    edge: ClockEdge,
+    has_arrows: bool,
 }
 
 impl From<&CycleData> for PathState {
@@ -153,6 +168,8 @@ impl From<&CycleData> for PathState {
             CycleData::Bottom => PathState::Bottom,
             CycleData::Middle => PathState::Middle,
             CycleData::Undefined => PathState::Box(BoxData::Undefined),
+            CycleData::PosedgeClock => PathState::PosedgeClock,
+            CycleData::NegedgeClock => PathState::NegedgeClock,
             CycleData::Box(usize) => PathState::Box(BoxData::Index(*usize)),
         }
     }

@@ -361,6 +361,7 @@ impl ToSvg for AssembledWavePath {
             for action in segment.actions() {
                 match action {
                     PathCommand::LineVerticalNoStroke(dy) => write!(writer, "v{dy}"),
+                    PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
                     PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
                     PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
                     PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}"),
@@ -377,6 +378,7 @@ impl ToSvg for AssembledWavePath {
                 for action in segment.actions() {
                     match action {
                         PathCommand::LineVerticalNoStroke(dy) => write!(writer, "m0,{dy}"),
+                        PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
                         PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
                         PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
                         PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}"),

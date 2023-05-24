@@ -105,14 +105,22 @@ mod tests {
                     { "name": "1", "wave": "1" },
                     { "name": "2", "wave": "2" },
                     { "name": "z", "wave": "z" },
-                    { "name": "x", "wave": "x" }
+                    { "name": "x", "wave": "x" },
+                    { "name": "p", "wave": "p" },
+                    { "name": "P", "wave": "P" },
+                    { "name": "n", "wave": "n" },
+                    { "name": "N", "wave": "N" }
                 ],
                 [
-                    { "name": "0001020z0x0", "wave": "0001020z0x0" },
-                    { "name": "1011121z1x1", "wave": "1011121z1x1" },
-                    { "name": "2021222z2x2", "wave": "2021222z2x2" },
-                    { "name": "z0z1z2zzzxz", "wave": "z0z1z2zzzxz" },
-                    { "name": "x0x1x2xzxxx", "wave": "x0x1x2xzxxx" }
+                    { "name": "0001020z0x0p0P0n0N0", "wave": "0001020z0x0p0P0n0N0" },
+                    { "name": "1011121z1x1p0P0n0N0", "wave": "1011121z1x1p1P1n1N1" },
+                    { "name": "2021222z2x2p2P2n2N2", "wave": "2021222z2x2p2P2n2N2" },
+                    { "name": "z0z1z2zzzxzpzPznzNz", "wave": "z0z1z2zzzxzpzPznzNz" },
+                    { "name": "x0x1x2xzxxxpxPxnxNx", "wave": "x0x1x2xzxxxpxPxnxNx" },
+                    { "name": "p0p1p2pzpxpppPpnpNp", "wave": "p0p1p2pzpxpppPpnpNp" },
+                    { "name": "P0P1P2PzPxPpPPPnPNP", "wave": "P0P1P2PzPxPpPPPnPNP" },
+                    { "name": "n0n1n2nznxnpnPnnnNn", "wave": "n0n1n2nznxnpnPnnnNn" },
+                    { "name": "N0N1N2NzNxNpNPNnNNN", "wave": "N0N1N2NzNxNpNPNnNNN" }
                 ],
                 [
                     { "name": "012345zx", "wave": "012345zx" },
@@ -128,6 +136,7 @@ mod tests {
             ]
         }
         "#;
+
 
         let wavejson: WaveJson = serde_json::from_str(data).unwrap();
         let figure: Figure = wavejson.into();

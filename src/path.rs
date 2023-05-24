@@ -6,6 +6,8 @@ pub enum PathState {
     Bottom,
     Middle,
     Box(BoxData),
+    PosedgeClock,
+    NegedgeClock,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -16,6 +18,7 @@ pub enum BoxData {
 
 #[derive(Debug, Clone)]
 pub enum PathCommand {
+    LineVertical(i32),
     LineVerticalNoStroke(i32),
     LineHorizontal(i32),
     Line(i32, i32),
@@ -88,7 +91,7 @@ impl Default for WaveDimension {
     fn default() -> Self {
         Self {
             wave_height: 24,
-            cycle_width: 32,
+            cycle_width: 48,
             transition_offset: 4,
         }
     }
@@ -190,7 +193,10 @@ impl AssembledWavePath {
 impl PathCommand {
     pub fn has_no_stroke(&self) -> bool {
         match self {
-            Self::LineHorizontal(..) | Self::Line(..) | Self::Curve(..) => false,
+            Self::LineHorizontal(..)
+            | Self::Line(..)
+            | Self::Curve(..)
+            | Self::LineVertical(..) => false,
             Self::LineVerticalNoStroke(..) => true,
         }
     }
@@ -234,7 +240,8 @@ impl PathData {
         self.current_x += dx;
         self.current_y += dy;
 
-        self.actions.push(PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy));
+        self.actions
+            .push(PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy));
     }
 
     fn vertical_line_no_stroke(&mut self, dy: i32) {
@@ -276,6 +283,21 @@ impl PathData {
         if !self.actions.is_empty() {
             self.actions.clear();
         }
+    }
+
+    fn vertical_line(&mut self, dy: i32) {
+        self.current_y += dy;
+
+        // There are currently no actions that merge this
+        // match self.actions.last_mut() {
+        //     Some(PathCommand::LineHorizontal(ref mut last_dx))
+        //         if dx.signum() == last_dx.signum() =>
+        //     {
+        //         *last_dx += dx
+        //     }
+        //     _ => self.actions.push(PathCommand::LineHorizontal(dx)),
+        // }
+        self.actions.push(PathCommand::LineVertical(dy));
     }
 }
 
@@ -370,10 +392,14 @@ impl PathState {
             }
             (Top, Bottom) => path_string.forward.line(t * 2, h),
             (Top, Middle) => path_string.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2),
-            (Middle, Top) => path_string.forward.curve(0, -h / 2, t, -h / 2, t * 2, -h / 2),
+            (Middle, Top) => path_string
+                .forward
+                .curve(0, -h / 2, t, -h / 2, t * 2, -h / 2),
             (Middle, Bottom) => path_string.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2),
             (Bottom, Top) => path_string.forward.line(t * 2, -h),
-            (Bottom, Middle) => path_string.forward.curve(0, -h / 2, t, -h / 2, t * 2, -h / 2),
+            (Bottom, Middle) => path_string
+                .forward
+                .curve(0, -h / 2, t, -h / 2, t * 2, -h / 2),
             (Bottom, Box(_)) => {
                 path_string.forward.horizontal_line(t);
 
@@ -408,7 +434,9 @@ impl PathState {
             }
             (Box(lhs), Middle) => {
                 path_string.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2);
-                path_string.backward.curve(-t * 2 + t, 0, -t * 2, 0, -t * 2, h / 2);
+                path_string
+                    .backward
+                    .curve(-t * 2 + t, 0, -t * 2, 0, -t * 2, h / 2);
 
                 path_string.commit_with_back_line((*lhs).into());
             }
@@ -420,16 +448,93 @@ impl PathState {
 
                 path_string.forward.horizontal_line(t);
             }
+            (PosedgeClock, PosedgeClock) => {}
+            (NegedgeClock, NegedgeClock) => {}
+            (PosedgeClock, NegedgeClock) => path_string.forward.vertical_line(-h),
+            (NegedgeClock, PosedgeClock) => path_string.forward.vertical_line(h),
+            (Box(lhs), PosedgeClock) => {
+                path_string.forward.line(t, h);
+                path_string.backward.horizontal_line(-t);
+
+                path_string.commit_with_back_line((*lhs).into());
+            }
+            (Box(lhs), NegedgeClock) => {
+                path_string.forward.horizontal_line(t);
+                path_string.backward.line(-t, h);
+
+                path_string.commit_with_back_line((*lhs).into());
+            }
+            (Bottom, PosedgeClock) => {
+                path_string.forward.horizontal_line(t);
+            }
+            (Bottom, NegedgeClock) => {
+                path_string.forward.line(t, -h);
+            }
+            (Middle, PosedgeClock) => {
+                path_string.forward.line(t, h / 2);
+            }
+            (Middle, NegedgeClock) => {
+                path_string.forward.line(t, -h / 2);
+            }
+            (Top, PosedgeClock) => {
+                path_string.forward.line(t, h);
+            }
+            (Top, NegedgeClock) => {
+                path_string.forward.horizontal_line(t);
+            }
+            (PosedgeClock, Box(_)) => {
+                path_string.commit_without_back_line();
+
+                path_string.forward.line(t, -h);
+                path_string.backward.horizontal_line(-t);
+            }
+            (NegedgeClock, Box(_)) => {
+                path_string.commit_without_back_line();
+
+                path_string.forward.horizontal_line(t);
+                path_string.backward.line(-t, -h);
+            }
+            (PosedgeClock, Bottom) => {
+                path_string.forward.horizontal_line(t);
+            }
+            (NegedgeClock, Bottom) => {
+                path_string.forward.line(t, h);
+            }
+            (PosedgeClock, Middle) => {
+                path_string.forward.line(t, -h / 2);
+            }
+            (NegedgeClock, Middle) => {
+                path_string.forward.line(t, h / 2);
+            }
+            (PosedgeClock, Top) => {
+                path_string.forward.line(t, -h);
+            }
+            (NegedgeClock, Top) => {
+                path_string.forward.horizontal_line(t);
+            }
         }
     }
 
     fn wave_path(&self, dimensions: &WaveDimension, path_string: &mut PathString) {
         let t = i32::from(dimensions.transition_offset);
+        let h = i32::from(dimensions.wave_height);
         let w = i32::from(dimensions.cycle_width);
 
         match self {
             Self::Top | Self::Bottom | Self::Middle => {
                 path_string.forward.horizontal_line(w - t * 2)
+            }
+            Self::PosedgeClock => {
+                path_string.forward.vertical_line(-h);
+                path_string.forward.horizontal_line(w / 2);
+                path_string.forward.vertical_line(h);
+                path_string.forward.horizontal_line(w / 2);
+            }
+            Self::NegedgeClock => {
+                path_string.forward.vertical_line(h);
+                path_string.forward.horizontal_line(w / 2);
+                path_string.forward.vertical_line(-h);
+                path_string.forward.horizontal_line(w / 2);
             }
             Self::Box(_) => {
                 path_string.forward.horizontal_line(w - t * 2);
@@ -444,6 +549,8 @@ impl PathState {
 
         match self {
             Self::Top => path_string.forward.horizontal_line(t),
+            Self::PosedgeClock => path_string.forward.restart_move_to(0, h),
+            Self::NegedgeClock => {}
             Self::Bottom => {
                 path_string.forward.restart_move_to(0, h);
                 path_string.forward.horizontal_line(t);
@@ -469,6 +576,7 @@ impl PathState {
                 path_string.forward.horizontal_line(t);
                 path_string.commit_without_back_line();
             }
+            Self::PosedgeClock | Self::NegedgeClock => path_string.commit_without_back_line(),
             Self::Box(lhs) => {
                 path_string.forward.horizontal_line(t);
                 path_string.forward.vertical_line_no_stroke(h);
