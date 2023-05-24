@@ -1,7 +1,7 @@
 use std::io;
 
 use crate::path::{PathCommand, PathSegmentBackground};
-use crate::WaveDimension;
+use crate::{ClockEdge, ClockEdgeMarker, Marker, TextMarker, WaveDimension};
 
 use super::path::AssembledWavePath;
 use super::AssembledFigure;
@@ -200,9 +200,15 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         // Define the cycle-to-cycle background hint lines
         write!(writer, "<defs>")?;
         if self.has_undefined {
-            write!(writer, r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)"><line x1="0" y="0" x2="0" y2="10" stroke="#000" stroke-width="1"/></pattern>"##)?;
+            write!(
+                writer,
+                r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)"><line x1="0" y="0" x2="0" y2="10" stroke="#000" stroke-width="1"/></pattern>"##
+            )?;
         }
-        write!(writer, r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g>"##)?;
+        write!(
+            writer,
+            r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g>"##
+        )?;
         write!(writer, "</defs>")?;
 
         // Figure container
@@ -273,9 +279,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         }
 
         for (i, line) in self.lines.iter().enumerate() {
-            if line.is_empty() {
-
-            }
+            if line.is_empty() {}
 
             let Ok(i) = u32::try_from(i) else {
                 break;
@@ -310,18 +314,42 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 .render_with_options(&wave_dimensions)
                 .write_svg(writer)?;
 
-            for (start, end, text) in line.data.iter() {
-                let Some(text) = text else {
-                    continue;
-                };
+            for marker in line.markers.iter() {
+                match marker {
+                    Marker::Text(TextMarker {
+                        box_start,
+                        box_end,
+                        text,
+                    }) => {
+                        write!(
+                            writer,
+                            r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
+                            font_size = font_size,
+                            x = (box_start + box_end) * u32::from(wave_dimensions.cycle_width) / 2,
+                            y = wave_dimensions.wave_height / 2,
+                        )?;
+                    }
+                    Marker::ClockEdge(ClockEdgeMarker { x, edge }) => {
+                        let x = *x;
+                        let y = u32::from(wave_dimensions.wave_height) / 2;
 
-                write!(
-                    writer,
-                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
-                    font_size = font_size,
-                    x = (start + end) * u32::from(wave_dimensions.cycle_width) / 2,
-                    y = wave_dimensions.wave_height / 2,
-                )?;
+                        let points = match edge {
+                            ClockEdge::Positive => [-4, 4, 0, -4, 4, 4],
+                            ClockEdge::Negative => [-4, -4, 0, 4, 4, -4],
+                        };
+
+                        write!(
+                            writer,
+                            r##"<g transform="translate({x},{y})"><path d="M{x1},{y1}L{x2},{y2},L{x3},{y3}z" fill="#000" stroke="none"/></g>"##,
+                            x1 = points[0],
+                            y1 = points[1],
+                            x2 = points[2],
+                            y2 = points[3],
+                            x3 = points[4],
+                            y3 = points[5],
+                        )?;
+                    }
+                }
             }
             write!(writer, r##"</g>"##)?;
 
@@ -364,7 +392,9 @@ impl ToSvg for AssembledWavePath {
                     PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
                     PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
                     PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
-                    PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}"),
+                    PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => {
+                        write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}")
+                    }
                 }?
             }
 
@@ -381,7 +411,9 @@ impl ToSvg for AssembledWavePath {
                         PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
                         PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
                         PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
-                        PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}"),
+                        PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => {
+                            write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}")
+                        }
                     }?
                 }
             } else if !segment.is_open() {
