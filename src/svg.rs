@@ -52,7 +52,7 @@ impl Default for GroupIndicatorDimension {
             spacing: 4,
 
             label_spacing: 5,
-            label_fontsize: 11,
+            label_fontsize: 14,
         }
     }
 }
@@ -69,7 +69,7 @@ pub struct RenderOptions {
 impl Default for RenderOptions {
     fn default() -> Self {
         Self {
-            font_size: 11,
+            font_size: 14,
             paddings: FigurePadding::default(),
             spacings: FigureSpacing::default(),
             wave_dimensions: WaveDimension::default(),
@@ -257,7 +257,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 // let label_width = get_text_width(label, &face, 8);
                 write!(
                     writer,
-                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}px" letter-spacing="0" transform="rotate(270)"><tspan>{label}</tspan></text></g>"##,
+                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0" transform="rotate(270)"><tspan>{label}</tspan></text></g>"##,
                     font_size = group_indicator_dimensions.label_fontsize,
                     x = x + group_indicator_dimensions.label_spacing + 2,
                     y = y + height / 2,
@@ -290,7 +290,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             if !line.text.is_empty() {
                 write!(
                     writer,
-                    r##"<g transform="translate(0,{y})"><text dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}px" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
+                    r##"<g transform="translate(0,{y})"><text dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
                     font_size = font_size,
                     y = wave_dimensions.wave_height / 2,
                     text = line.text,
@@ -402,6 +402,8 @@ fn get_text_width(s: &str, face: &ttf_parser::Face, font_size: u32) -> u32 {
     // generate a divide-by-zero error.
     let pts_per_em = f64::from(font_size) / f64::from(face.units_per_em());
     let width = width * pts_per_em;
+
+    dbg!(width);
 
     width.ceil() as u32
 }
