@@ -114,12 +114,14 @@ mod tests {
                 { "name": "2", "wave": "2" },
                 { "name": "z", "wave": "z" },
                 { "name": "x", "wave": "x" },
-
+                {},
                 { "name": "0001020z0x0", "wave": "0001020z0x0" },
                 { "name": "1011121z1x1", "wave": "1011121z1x1" },
                 { "name": "2021222z2x2", "wave": "2021222z2x2" },
                 { "name": "z0z1z2zzzxz", "wave": "z0z1z2zzzxz" },
-                { "name": "x0x1x2xzxxx", "wave": "x0x1x2xzxxx" }
+                { "name": "x0x1x2xzxxx", "wave": "x0x1x2xzxxx" },
+                {},
+                { "name": "012345zx", "wave": "012345zx" }
             ]
         }
         "#;
