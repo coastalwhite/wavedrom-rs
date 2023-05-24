@@ -175,6 +175,10 @@ impl WavePath {
     pub fn render(&self) -> AssembledWavePath {
         self.render_with_options(&WaveDimension::default())
     }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl AssembledWavePath {

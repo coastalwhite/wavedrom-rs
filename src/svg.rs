@@ -273,6 +273,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         }
 
         for (i, line) in self.lines.iter().enumerate() {
+            if line.is_empty() {
+
+            }
+
             let Ok(i) = u32::try_from(i) else {
                 break;
             };

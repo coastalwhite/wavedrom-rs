@@ -93,49 +93,38 @@ mod tests {
     use super::*;
 
     #[test]
-    fn load_basic() {
-        let data = r#"
-        {
-            "signal": [
-                { "name": "abc", "wave": "123" }
-            ]
-        }
-        "#;
-
-        let _wavejson: WaveJson = serde_json::from_str(data).unwrap();
-
-        // dbg!(wavejson);
-        // assert!(false);
-    }
-
-    #[test]
-    fn to_svg() {
+    fn groups() {
         use crate::svg::ToSvg;
 
         let data = r#"
         {
             "signal": [
-                { "name": "0", "wave": "0" },
-                { "name": "1", "wave": "1" },
-                { "name": "2", "wave": "2" },
-                { "name": "z", "wave": "z" },
-                { "name": "x", "wave": "x" },
-                {},
-                { "name": "0001020z0x0", "wave": "0001020z0x0" },
-                { "name": "1011121z1x1", "wave": "1011121z1x1" },
-                { "name": "2021222z2x2", "wave": "2021222z2x2" },
-                { "name": "z0z1z2zzzxz", "wave": "z0z1z2zzzxz" },
-                { "name": "x0x1x2xzxxx", "wave": "x0x1x2xzxxx" },
-                {},
-                { "name": "012345zx", "wave": "012345zx" },
-                {
-                    "name": "02....3...0",
-                    "wave": "02....3...0",
-                    "data": [
-                        "0xDEAD",
-                        "0xBEEF"
-                    ]
-                }
+                [
+                    "xyz",
+                    { "name": "0", "wave": "0" },
+                    { "name": "1", "wave": "1" },
+                    { "name": "2", "wave": "2" },
+                    { "name": "z", "wave": "z" },
+                    { "name": "x", "wave": "x" }
+                ],
+                [
+                    { "name": "0001020z0x0", "wave": "0001020z0x0" },
+                    { "name": "1011121z1x1", "wave": "1011121z1x1" },
+                    { "name": "2021222z2x2", "wave": "2021222z2x2" },
+                    { "name": "z0z1z2zzzxz", "wave": "z0z1z2zzzxz" },
+                    { "name": "x0x1x2xzxxx", "wave": "x0x1x2xzxxx" }
+                ],
+                [
+                    { "name": "012345zx", "wave": "012345zx" },
+                    {
+                        "name": "02....3...0",
+                        "wave": "02....3...0",
+                        "data": [
+                            "0xDEAD",
+                            "0xBEEF"
+                        ]
+                    }
+                ]
             ]
         }
         "#;
@@ -155,4 +144,52 @@ mod tests {
 
         rendered.write_svg(&mut file).unwrap();
     }
+
+    // #[test]
+    // fn to_svg() {
+    //     use crate::svg::ToSvg;
+    //
+    //     let data = r#"
+    //     {
+    //         "signal": [
+    //             { "name": "0", "wave": "0" },
+    //             { "name": "1", "wave": "1" },
+    //             { "name": "2", "wave": "2" },
+    //             { "name": "z", "wave": "z" },
+    //             { "name": "x", "wave": "x" },
+    //             {},
+    //             { "name": "0001020z0x0", "wave": "0001020z0x0" },
+    //             { "name": "1011121z1x1", "wave": "1011121z1x1" },
+    //             { "name": "2021222z2x2", "wave": "2021222z2x2" },
+    //             { "name": "z0z1z2zzzxz", "wave": "z0z1z2zzzxz" },
+    //             { "name": "x0x1x2xzxxx", "wave": "x0x1x2xzxxx" },
+    //             {},
+    //             { "name": "012345zx", "wave": "012345zx" },
+    //             {
+    //                 "name": "02....3...0",
+    //                 "wave": "02....3...0",
+    //                 "data": [
+    //                     "0xDEAD",
+    //                     "0xBEEF"
+    //                 ]
+    //             }
+    //         ]
+    //     }
+    //     "#;
+    //
+    //     let wavejson: WaveJson = serde_json::from_str(data).unwrap();
+    //     let figure: Figure = wavejson.into();
+    //
+    //     let rendered = figure.assemble().unwrap();
+    //
+    //     let mut file = std::fs::OpenOptions::new()
+    //         .read(true)
+    //         .write(true)
+    //         .truncate(true)
+    //         .create(true)
+    //         .open("test.svg")
+    //         .unwrap();
+    //
+    //     rendered.write_svg(&mut file).unwrap();
+    // }
 }

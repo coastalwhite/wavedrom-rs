@@ -142,6 +142,7 @@ pub enum CycleData {
     Bottom,
     Middle,
     Undefined,
+    
     Box(usize),
 }
 
@@ -267,6 +268,12 @@ pub struct AssembledLine<'a> {
     depth: u32,
     path: WavePath,
     data: Vec<(u32, u32, Option<&'a str>)>,
+}
+
+impl AssembledLine<'_> {
+    fn is_empty(&self) -> bool {
+        self.path.is_empty() && self.text.is_empty()
+    }
 }
 
 impl WaveGroup<'_> {
