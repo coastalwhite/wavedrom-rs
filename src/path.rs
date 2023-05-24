@@ -19,6 +19,7 @@ pub enum PathCommand {
     LineVerticalNoStroke(i32),
     LineHorizontal(i32),
     Line(i32, i32),
+    Curve(i32, i32, i32, i32, i32, i32),
 }
 
 impl From<BoxData> for PathSegmentBackground {
@@ -185,7 +186,7 @@ impl AssembledWavePath {
 impl PathCommand {
     pub fn has_no_stroke(&self) -> bool {
         match self {
-            Self::LineHorizontal(..) | Self::Line(..) => false,
+            Self::LineHorizontal(..) | Self::Line(..) | Self::Curve(..) => false,
             Self::LineVerticalNoStroke(..) => true,
         }
     }
@@ -223,6 +224,13 @@ impl PathData {
         self.current_y += dy;
 
         self.actions.push(PathCommand::Line(dx, dy));
+    }
+
+    pub fn curve(&mut self, cdx1: i32, cdy1: i32, cdx2: i32, cdy2: i32, dx: i32, dy: i32) {
+        self.current_x += dx;
+        self.current_y += dy;
+
+        self.actions.push(PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy));
     }
 
     fn vertical_line_no_stroke(&mut self, dy: i32) {
@@ -357,11 +365,11 @@ impl PathState {
                 path_string.backward.line(-t, -h / 2);
             }
             (Top, Bottom) => path_string.forward.line(t * 2, h),
-            (Top, Middle) => path_string.forward.line(t * 2, h / 2),
-            (Middle, Top) => path_string.forward.line(t * 2, -h / 2),
-            (Middle, Bottom) => path_string.forward.line(t * 2, h / 2),
+            (Top, Middle) => path_string.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2),
+            (Middle, Top) => path_string.forward.curve(0, -h / 2, t, -h / 2, t * 2, -h / 2),
+            (Middle, Bottom) => path_string.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2),
             (Bottom, Top) => path_string.forward.line(t * 2, -h),
-            (Bottom, Middle) => path_string.forward.line(t * 2, -h / 2),
+            (Bottom, Middle) => path_string.forward.curve(0, -h / 2, t, -h / 2, t * 2, -h / 2),
             (Bottom, Box(_)) => {
                 path_string.forward.horizontal_line(t);
 
@@ -395,12 +403,10 @@ impl PathState {
                 path_string.forward.horizontal_line(t);
             }
             (Box(lhs), Middle) => {
-                path_string.forward.line(t, h / 2);
-                path_string.backward.line(-t, h / 2);
+                path_string.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2);
+                path_string.backward.curve(-t * 2 + t, 0, -t * 2, 0, -t * 2, h / 2);
 
                 path_string.commit_with_back_line((*lhs).into());
-
-                path_string.forward.horizontal_line(t);
             }
             (Box(lhs), Bottom) => {
                 path_string.forward.line(t, h);
