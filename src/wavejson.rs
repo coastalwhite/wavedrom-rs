@@ -109,16 +109,15 @@ mod tests {
         let data = r#"
         {
             "signal": [
-                { "name": "", "wave": "120..." },
-                [
-                    "xyz",
-                    { "name": "xyxjaflksjdsfajsladkgjalkfjsdlkfa", "wave": "00112200" },
-                    [
-                        "XYZ",
-                        { "name": "", "wave": "00112200" },
-                        { "name": "", "wave": "00112200" }
-                    ]
-                ]
+                { "name": "0", "wave": "0" },
+                { "name": "1", "wave": "1" },
+                { "name": "2", "wave": "2" },
+                { "name": "z", "wave": "z" },
+
+                { "name": "0001020z0", "wave": "0001020z0" },
+                { "name": "1011121z1", "wave": "1011121z1" },
+                { "name": "2021222z2", "wave": "2021222z2" },
+                { "name": "z0z1z2zzz", "wave": "z0z1z2zzz" }
             ]
         }
         "#;

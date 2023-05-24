@@ -104,6 +104,7 @@ impl FromStr for Cycles {
             let state = match c {
                 '1' => CycleData::Top,
                 '0' => CycleData::Bottom,
+                'z' | 'Z' => CycleData::Middle,
                 '2' => CycleData::Box(0),
                 '3' => CycleData::Box(1),
                 '4' => CycleData::Box(2),
@@ -124,6 +125,7 @@ impl FromStr for Cycles {
 pub enum CycleData {
     Top,
     Bottom,
+    Middle,
     Box(usize),
 }
 
@@ -132,6 +134,7 @@ impl From<&CycleData> for PathState {
         match value {
             CycleData::Top => PathState::Top,
             CycleData::Bottom => PathState::Bottom,
+            CycleData::Middle => PathState::Middle,
             CycleData::Box(usize) => PathState::Box(*usize),
         }
     }
