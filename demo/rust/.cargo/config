@@ -1,0 +1,3 @@
+[build]
+target = "wasm32-unknown-unknown"
+rustflags = ["-C", "link-arg=-zstack-size=16000"]

@@ -7,19 +7,27 @@ pub struct WaveJson {
     pub signal: Vec<Signal>,
 }
 
-impl Into<Figure> for WaveJson {
-    fn into(self) -> Figure {
-        Figure::from_lines(
-            self.signal
-                .into_iter()
-                .map(WaveLine::from)
-                .collect::<Vec<WaveLine>>(),
-        )
+impl WaveJson {
+    pub fn from_str(s: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(s)
     }
 }
 
-impl From<Signal> for WaveLine {
-    fn from(signal: Signal) -> Self {
+impl TryFrom<WaveJson> for Figure {
+    type Error = ();
+    fn try_from(value: WaveJson) -> Result<Self, Self::Error> {
+        Ok(Figure::from_lines(
+            value.signal
+                .into_iter()
+                .map(WaveLine::try_from)
+                .collect::<Result<Vec<WaveLine>, ()>>()?,
+        ))
+    }
+}
+
+impl TryFrom<Signal> for WaveLine {
+    type Error = ();
+    fn try_from(signal: Signal) -> Result<Self, Self::Error> {
         match signal {
             Signal::Group(items) => {
                 let mut label = None;
@@ -34,29 +42,31 @@ impl From<Signal> for WaveLine {
 
                             None
                         }
-                        SignalGroupItem::Item(line) => Some(WaveLine::from(line)),
+                        SignalGroupItem::Item(line) => Some(WaveLine::try_from(line)),
                     })
-                    .collect::<Vec<WaveLine>>();
+                    .collect::<Result<Vec<WaveLine>, ()>>()?;
 
-                WaveLine::Group(WaveLineGroup(label, items))
+                Ok(WaveLine::Group(WaveLineGroup(label, items)))
             }
-            Signal::Item(item) => WaveLine::Wave(Wave::from(item)),
+            Signal::Item(item) => Ok(WaveLine::Wave(Wave::try_from(item)?)),
         }
     }
 }
 
-impl From<SignalItem> for Wave {
-    fn from(item: SignalItem) -> Wave {
-        Wave {
+impl TryFrom<SignalItem> for Wave {
+    type Error = ();
+
+    fn try_from(item: SignalItem) -> Result<Self, Self::Error> {
+        Ok(Wave {
             name: item.name.unwrap_or_default(),
-            cycles: item.wave.unwrap_or_default().parse().unwrap(),
+            cycles: item.wave.unwrap_or_default().parse().map_err(|_| ())?,
             data: item
                 .data
                 .map_or_else(Vec::new, |signal_data| match signal_data {
                     SignalData::One(data) => vec![data],
                     SignalData::Multiple(data) => data,
                 }),
-        }
+        })
     }
 }
 
