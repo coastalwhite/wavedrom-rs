@@ -310,7 +310,7 @@ impl PathData {
             start_y: self.start_y,
 
             is_fully_stroked: self.is_fully_stroked,
-            actions: self.actions.split_off(0),
+            actions: std::mem::take(&mut self.actions),
         };
 
         self.current_x = x;
