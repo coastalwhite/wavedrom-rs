@@ -1,7 +1,7 @@
 use std::io;
 
-use crate::path::{PathCommand, PathSegmentBackground};
-use crate::{ClockEdge, ClockEdgeMarker, Marker, TextMarker, WaveDimension};
+use crate::path::{ClockEdgeMarker, PathCommand, PathSegmentBackground};
+use crate::{ClockEdge, WaveOptions};
 
 use super::path::AssembledWavePath;
 use super::AssembledFigure;
@@ -62,7 +62,7 @@ pub struct RenderOptions {
     pub font_size: u32,
     pub paddings: FigurePadding,
     pub spacings: FigureSpacing,
-    pub wave_dimensions: WaveDimension,
+    pub wave_dimensions: WaveOptions,
     pub group_indicator_dimensions: GroupIndicatorDimension,
 }
 
@@ -72,7 +72,7 @@ impl Default for RenderOptions {
             font_size: 14,
             paddings: FigurePadding::default(),
             spacings: FigureSpacing::default(),
-            wave_dimensions: WaveDimension::default(),
+            wave_dimensions: WaveOptions::default(),
             group_indicator_dimensions: GroupIndicatorDimension::default(),
         }
     }
@@ -136,7 +136,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         let face =
             // ttf_parser::Face::parse(include_bytes!("../JetBrainsMono-Medium.ttf"), 0).unwrap();
             // ttf_parser::Face::parse(include_bytes!("/usr/share/fonts/noto/NotoSansMono-Regular.ttf"), 0).unwrap();
-            ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap();
+            ttf_parser::Face::parse(include_bytes!("../helvetica.otf"), 0).unwrap();
 
         let font_family = get_font_family_name(&face).unwrap_or_else(|| "monospace".to_string());
 
@@ -312,45 +312,8 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             )?;
             line.path
                 .render_with_options(&wave_dimensions)
-                .write_svg(writer)?;
+                .write_svg_with_options(writer, &wave_dimensions)?;
 
-            for marker in line.markers.iter() {
-                match marker {
-                    Marker::Text(TextMarker {
-                        box_start,
-                        box_end,
-                        text,
-                    }) => {
-                        write!(
-                            writer,
-                            r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
-                            font_size = font_size,
-                            x = (box_start + box_end) * u32::from(wave_dimensions.cycle_width) / 2,
-                            y = wave_dimensions.wave_height / 2,
-                        )?;
-                    }
-                    Marker::ClockEdge(ClockEdgeMarker { x, edge }) => {
-                        let x = *x;
-                        let y = u32::from(wave_dimensions.wave_height) / 2;
-
-                        let points = match edge {
-                            ClockEdge::Positive => [-4, 4, 0, -4, 4, 4],
-                            ClockEdge::Negative => [-4, -4, 0, 4, 4, -4],
-                        };
-
-                        write!(
-                            writer,
-                            r##"<g transform="translate({x},{y})"><path d="M{x1},{y1}L{x2},{y2},L{x3},{y3}z" fill="#000" stroke="none"/></g>"##,
-                            x1 = points[0],
-                            y1 = points[1],
-                            x2 = points[2],
-                            y2 = points[3],
-                            x3 = points[4],
-                            y3 = points[5],
-                        )?;
-                    }
-                }
-            }
             write!(writer, r##"</g>"##)?;
 
             write!(writer, r##"</g>"##)?;
@@ -363,12 +326,12 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 }
 
 impl ToSvg for AssembledWavePath {
-    type Options = ();
+    type Options = WaveOptions;
 
     fn write_svg_with_options(
         &self,
         writer: &mut impl io::Write,
-        _: &Self::Options,
+        options: &Self::Options,
     ) -> io::Result<()> {
         for segment in self.segments() {
             let fill = match segment.background() {
@@ -420,6 +383,37 @@ impl ToSvg for AssembledWavePath {
                 write!(writer, "z")?;
             }
             write!(writer, r##"" stroke-width="1" stroke="#000"/>"##)?;
+
+            if let Some(marker_text) = segment.marker_text() {
+                write!(
+                    writer,
+                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
+                    font_family = options.font_family,
+                    font_size = options.font_size,
+                    text = marker_text,
+                    x = segment.x() + segment.width() / 2,
+                    y = options.wave_height / 2,
+                )?;
+            }
+
+            for ClockEdgeMarker { x, edge } in segment.clock_edge_markers() {
+                let x = *x;
+                let y = u32::from(options.wave_height) / 2;
+
+                let [x1, y1, x2, y2, x3, y3] = match edge {
+                    // (-4, 4) -> (0, -4) -> (4, 4)
+                    ClockEdge::Positive => [-4, 4, 4, -8, 4, 8],
+
+                    // (-4, -4) -> (0, 4) -> (4, -4)
+                    ClockEdge::Negative => [-4, -4, 4, 8, 4, -8],
+                };
+
+
+                write!(
+                    writer,
+                    r##"<path d="M{x},{y}m{x1},{y1}l{x2},{y2}l{x3},{y3}h-8z" fill="#000" stroke="none"/>"##,
+                )?;
+            }
         }
 
         Ok(())
@@ -454,8 +448,6 @@ fn get_text_width(s: &str, face: &ttf_parser::Face, font_size: u32) -> u32 {
     // generate a divide-by-zero error.
     let pts_per_em = f64::from(font_size) / f64::from(face.units_per_em());
     let width = width * pts_per_em;
-
-    dbg!(width);
 
     width.ceil() as u32
 }

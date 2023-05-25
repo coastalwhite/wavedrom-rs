@@ -9,10 +9,10 @@ pub mod wavejson;
 
 use path::PathState;
 
-pub use path::{AssembledWavePath, WaveDimension, WavePath, WavePathSegment};
+pub use path::{AssembledWavePath, WaveOptions, WavePath, WavePathSegment};
 pub use svg::ToSvg;
 
-use self::path::BoxData;
+use self::path::{BoxData, IndexBoxData};
 
 pub struct Wave {
     pub name: String,
@@ -53,8 +53,13 @@ impl WaveLine {
                 lines.push(AssembledLine {
                     text: &wave.name,
                     depth,
-                    path: WavePath::new(wave.cycles.0.iter().map(PathState::from).collect()),
-                    markers: get_markers(wave),
+                    path: WavePath::new(
+                        wave.cycles
+                            .0
+                            .iter()
+                            .map(|c| c.to_path_state(&wave.data[..]))
+                            .collect(),
+                    ),
                 });
 
                 depth
@@ -169,16 +174,19 @@ pub struct CycleClock {
     has_arrows: bool,
 }
 
-impl From<&CycleData> for PathState {
-    fn from(value: &CycleData) -> Self {
-        match value {
+impl CycleData {
+    fn to_path_state<'a>(&self, data: &'a [String]) -> PathState<'a> {
+        match self {
             CycleData::Top => PathState::Top,
             CycleData::Bottom => PathState::Bottom,
             CycleData::Middle => PathState::Middle,
             CycleData::Undefined => PathState::Box(BoxData::Undefined),
-            CycleData::PosedgeClock(_) => PathState::PosedgeClock,
-            CycleData::NegedgeClock(_) => PathState::NegedgeClock,
-            CycleData::Box(usize) => PathState::Box(BoxData::Index(*usize)),
+            CycleData::PosedgeClock(marker) => PathState::PosedgeClock(*marker),
+            CycleData::NegedgeClock(marker) => PathState::NegedgeClock(*marker),
+            CycleData::Box(index) => PathState::Box(BoxData::Index(IndexBoxData::new(
+                *index,
+                data.get(*index).map(|s| &s[..]),
+            ))),
         }
     }
 }
@@ -215,123 +223,10 @@ struct WaveGroup<'a> {
     end: u32,
 }
 
-fn get_markers(wave: &Wave) -> Vec<Marker> {
-    // Temporary
-
-    struct Current {
-        start: u32,
-        idx: usize,
-    }
-
-    let mut items = Vec::new();
-    let mut current = None;
-    for (offset, cycle) in (0..u32::MAX).zip(wave.cycles.0.iter()) {
-        use CycleData::*;
-
-        if let CycleData::PosedgeClock(EdgeMarker::Arrow) = cycle {
-            items.push(Marker::ClockEdge(ClockEdgeMarker {
-                x: offset * 48,
-                edge: ClockEdge::Positive,
-            }));
-        }
-
-        if let CycleData::NegedgeClock(EdgeMarker::Arrow) = cycle {
-            items.push(Marker::ClockEdge(ClockEdgeMarker {
-                x: offset * 48,
-                edge: ClockEdge::Negative,
-            }));
-        }
-
-        match (&current, cycle) {
-            (
-                Some(Current {
-                    idx: current_idx, ..
-                }),
-                Box(idx),
-            ) if current_idx == idx => {}
-            (
-                Some(Current {
-                    idx: current_idx,
-                    start,
-                }),
-                Box(idx),
-            ) => {
-                if let Some(text) = wave.data.get(*current_idx).as_ref() {
-                    let text = &text[..];
-                    items.push(Marker::Text(TextMarker {
-                        box_start: *start,
-                        box_end: offset,
-                        text,
-                    }));
-                }
-                current = Some(Current {
-                    start: offset,
-                    idx: *idx,
-                });
-            }
-            (
-                Some(Current {
-                    idx: current_idx,
-                    start,
-                }),
-                _,
-            ) => {
-                if let Some(text) = wave.data.get(*current_idx).as_ref() {
-                    let text = &text[..];
-                    items.push(Marker::Text(TextMarker {
-                        box_start: *start,
-                        box_end: offset,
-                        text,
-                    }));
-                }
-                current = None;
-            }
-
-            (None, Box(idx)) => {
-                current = Some(Current {
-                    start: offset,
-                    idx: *idx,
-                })
-            }
-            (None, _) => {}
-        }
-    }
-
-    if let Some(Current { idx, start }) = current {
-        if let Some(text) = wave.data.get(idx).as_ref() {
-            let text = &text[..];
-            items.push(Marker::Text(TextMarker {
-                box_start: start,
-                box_end: wave.cycles.0.len() as u32,
-                text,
-            }));
-        }
-    }
-
-    items
-}
-
 pub struct AssembledLine<'a> {
     text: &'a str,
     depth: u32,
-    path: WavePath,
-    markers: Vec<Marker<'a>>,
-}
-
-pub enum Marker<'a> {
-    Text(TextMarker<'a>),
-    ClockEdge(ClockEdgeMarker),
-}
-
-pub struct TextMarker<'a> {
-    box_start: u32,
-    box_end: u32,
-    text: &'a str,
-}
-
-pub struct ClockEdgeMarker {
-    x: u32,
-    edge: ClockEdge,
+    path: WavePath<'a>,
 }
 
 impl AssembledLine<'_> {
