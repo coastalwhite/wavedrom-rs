@@ -149,7 +149,7 @@ mod tests {
 
 
         let wavejson: WaveJson = serde_json::from_str(data).unwrap();
-        let figure: Figure = wavejson.into();
+        let figure: Figure = wavejson.try_into().unwrap();
 
         let rendered = figure.assemble().unwrap();
 
