@@ -136,7 +136,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         let face =
             // ttf_parser::Face::parse(include_bytes!("../JetBrainsMono-Medium.ttf"), 0).unwrap();
             // ttf_parser::Face::parse(include_bytes!("/usr/share/fonts/noto/NotoSansMono-Regular.ttf"), 0).unwrap();
-            ttf_parser::Face::parse(include_bytes!("../helvetica.otf"), 0).unwrap();
+            ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap();
 
         let font_family = get_font_family_name(&face).unwrap_or_else(|| "monospace".to_string());
 
@@ -203,6 +203,24 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             write!(
                 writer,
                 r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)"><line x1="0" y="0" x2="0" y2="10" stroke="#000" stroke-width="1"/></pattern>"##
+            )?;
+        }
+        {
+            // (-4, 4) -> (0, -4) -> (4, 4)
+            let [x1, y1, x2, y2, x3, y3] = [-4, 4, 4, -8, 4, 8];
+
+            write!(
+                writer,
+                r##"<g id="pei"><path d="M{x1},{y1}l{x2},{y2}l{x3},{y3}h-8z" fill="#000" stroke="none"/></g>"##,
+            )?;
+        }
+        {
+            // (-4, -4) -> (0, 4) -> (4, -4)
+            let [x1, y1, x2, y2, x3, y3] = [-4, -4, 4, 8, 4, -8];
+
+            write!(
+                writer,
+                r##"<g id="nei"><path d="M{x1},{y1}l{x2},{y2}l{x3},{y3}h-8z" fill="#000" stroke="none"/></g>"##,
             )?;
         }
         write!(
@@ -311,7 +329,6 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 schema_x = textbox_x.map_or(0, |textbox_x| schema_x - textbox_x)
             )?;
             line.path
-                .render_with_options(&wave_dimensions)
                 .write_svg_with_options(writer, &wave_dimensions)?;
 
             write!(writer, r##"</g>"##)?;
@@ -335,10 +352,10 @@ impl ToSvg for AssembledWavePath {
     ) -> io::Result<()> {
         for segment in self.segments() {
             let fill = match segment.background() {
-                Some(PathSegmentBackground::Index(0)) => "#ff4040",
-                Some(PathSegmentBackground::Index(1)) => "#5499C7",
-                Some(PathSegmentBackground::Index(2)) => "#58D68D",
-                Some(PathSegmentBackground::Index(3)) => "#A569BD",
+                Some(PathSegmentBackground::Index(2)) => "#ff4040",
+                Some(PathSegmentBackground::Index(3)) => "#5499C7",
+                Some(PathSegmentBackground::Index(4)) => "#58D68D",
+                Some(PathSegmentBackground::Index(5)) => "#A569BD",
                 Some(PathSegmentBackground::Index(_)) => unimplemented!(),
                 Some(PathSegmentBackground::Undefined) => "url(#x-bg)",
                 None => "none",
@@ -361,10 +378,14 @@ impl ToSvg for AssembledWavePath {
                 }?
             }
 
+            if segment.background().is_some() {
+                write!(writer, r##"z"##)?;
+            }
+
             // If there is a `no_stroke` element, we need to divide up the filling and the
             // stroking.
-            if !segment.is_fully_stroked() && !segment.is_open() {
-                write!(writer, r##"z" stroke="none"/>"##)?;
+            if !segment.is_fully_stroked() {
+                write!(writer, r##"" stroke="none"/>"##)?;
 
                 write!(writer, r##"<path fill="none" d=""##)?;
                 write!(writer, "M{x},{y}")?;
@@ -379,8 +400,6 @@ impl ToSvg for AssembledWavePath {
                         }
                     }?
                 }
-            } else if !segment.is_open() {
-                write!(writer, "z")?;
             }
             write!(writer, r##"" stroke-width="1" stroke="#000"/>"##)?;
 
@@ -400,19 +419,20 @@ impl ToSvg for AssembledWavePath {
                 let x = *x;
                 let y = u32::from(options.wave_height) / 2;
 
-                let [x1, y1, x2, y2, x3, y3] = match edge {
-                    // (-4, 4) -> (0, -4) -> (4, 4)
-                    ClockEdge::Positive => [-4, 4, 4, -8, 4, 8],
-
-                    // (-4, -4) -> (0, 4) -> (4, -4)
-                    ClockEdge::Negative => [-4, -4, 4, 8, 4, -8],
+                match edge {
+                    ClockEdge::Positive => {
+                        write!(
+                            writer,
+                            r##"<use transform="translate({x},{y})" xlink:href="#pei"/>"##,
+                        )?;
+                    },
+                    ClockEdge::Negative => {
+                        write!(
+                            writer,
+                            r##"<use transform="translate({x},{y})" xlink:href="#nei"/>"##,
+                        )?;
+                    },
                 };
-
-
-                write!(
-                    writer,
-                    r##"<path d="M{x},{y}m{x1},{y1}l{x2},{y2}l{x3},{y3}h-8z" fill="#000" stroke="none"/>"##,
-                )?;
             }
         }
 

@@ -7,12 +7,8 @@ mod svg;
 #[cfg(feature = "wavejson")]
 pub mod wavejson;
 
-use path::PathState;
-
-pub use path::{AssembledWavePath, WaveOptions, WavePath, WavePathSegment};
+pub use path::{AssembledWavePath, WaveOptions, WavePath, WavePathSegment, PathState};
 pub use svg::ToSvg;
-
-use self::path::{BoxData, IndexBoxData};
 
 pub struct Wave {
     pub name: String,
@@ -27,7 +23,19 @@ pub enum WaveLine {
 }
 
 pub struct WaveLineGroup(Option<String>, Vec<WaveLine>);
-pub struct Cycles(pub Vec<CycleData>);
+pub struct Cycles(Vec<PathState>);
+
+impl Cycles {
+    pub fn new(cycles: Vec<PathState>) -> Self {
+        Self(cycles)
+    }
+}
+
+impl FromIterator<PathState> for Cycles {
+    fn from_iter<T: IntoIterator<Item = PathState>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
 
 impl From<Wave> for WaveLine {
     fn from(wave: Wave) -> Self {
@@ -46,20 +54,14 @@ impl WaveLine {
     ) -> u32 {
         match self {
             Self::Wave(wave) => {
-                if wave.cycles.0.contains(&CycleData::Undefined) {
+                if wave.cycles.0.contains(&PathState::X) {
                     *has_undefined = true;
                 }
 
                 lines.push(AssembledLine {
                     text: &wave.name,
                     depth,
-                    path: WavePath::new(
-                        wave.cycles
-                            .0
-                            .iter()
-                            .map(|c| c.to_path_state(&wave.data[..]))
-                            .collect(),
-                    ),
+                    path: WavePath::new(wave.cycles.0.clone()).shape(&wave.data),
                 });
 
                 depth
@@ -118,26 +120,28 @@ impl FromStr for Cycles {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut cycles = Vec::with_capacity(s.len());
 
-        let mut last_state = None;
-        for (i, c) in s.char_indices() {
+        for c in s.chars() {
             let state = match c {
-                '1' => CycleData::Top,
-                '0' => CycleData::Bottom,
-                'z' => CycleData::Middle,
-                'x' => CycleData::Undefined,
-                'p' => CycleData::PosedgeClock(EdgeMarker::None),
-                'P' => CycleData::PosedgeClock(EdgeMarker::Arrow),
-                'n' => CycleData::NegedgeClock(EdgeMarker::None),
-                'N' => CycleData::NegedgeClock(EdgeMarker::Arrow),
-                '2' => CycleData::Box(0),
-                '3' => CycleData::Box(1),
-                '4' => CycleData::Box(2),
-                '5' => CycleData::Box(3),
-                '.' => last_state.ok_or(i)?,
-                _ => return Err(i),
+                '1' => PathState::Top,
+                '0' => PathState::Bottom,
+                'z' => PathState::Middle,
+                'x' => PathState::X,
+                'p' => PathState::PosedgeClockUnmarked,
+                'P' => PathState::PosedgeClockMarked,
+                'n' => PathState::NegedgeClockUnmarked,
+                'N' => PathState::NegedgeClockMarked,
+                '2' => PathState::Box2,
+                '3' => PathState::Box3,
+                '4' => PathState::Box3,
+                '5' => PathState::Box4,
+                '6' => PathState::Box5,
+                '7' => PathState::Box6,
+                '8' => PathState::Box7,
+                '9' => PathState::Box8,
+                '.' => PathState::Continue,
+                _ => PathState::X,
             };
 
-            last_state = Some(state);
             cycles.push(state)
         }
 
@@ -152,17 +156,6 @@ pub enum EdgeMarker {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CycleData {
-    Top,
-    Bottom,
-    Middle,
-    Undefined,
-    PosedgeClock(EdgeMarker),
-    NegedgeClock(EdgeMarker),
-    Box(usize),
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ClockEdge {
     Positive,
     Negative,
@@ -174,23 +167,6 @@ pub struct CycleClock {
     has_arrows: bool,
 }
 
-impl CycleData {
-    fn to_path_state<'a>(&self, data: &'a [String]) -> PathState<'a> {
-        match self {
-            CycleData::Top => PathState::Top,
-            CycleData::Bottom => PathState::Bottom,
-            CycleData::Middle => PathState::Middle,
-            CycleData::Undefined => PathState::Box(BoxData::Undefined),
-            CycleData::PosedgeClock(marker) => PathState::PosedgeClock(*marker),
-            CycleData::NegedgeClock(marker) => PathState::NegedgeClock(*marker),
-            CycleData::Box(index) => PathState::Box(BoxData::Index(IndexBoxData::new(
-                *index,
-                data.get(*index).map(|s| &s[..]),
-            ))),
-        }
-    }
-}
-
 pub struct AssembledFigure<'a> {
     num_cycles: u32,
 
@@ -199,7 +175,7 @@ pub struct AssembledFigure<'a> {
     group_label_at_depth: Vec<bool>,
     max_group_depth: u32,
 
-    lines: Vec<AssembledLine<'a>>,
+    pub lines: Vec<AssembledLine<'a>>,
     groups: Vec<WaveGroup<'a>>,
 }
 
@@ -226,7 +202,7 @@ struct WaveGroup<'a> {
 pub struct AssembledLine<'a> {
     text: &'a str,
     depth: u32,
-    path: WavePath<'a>,
+    path: AssembledWavePath,
 }
 
 impl AssembledLine<'_> {
@@ -272,7 +248,7 @@ impl Figure {
             .max()
             .unwrap_or_default();
 
-        let num_cycles = lines.iter().map(|line| line.path.len()).max().unwrap_or(0);
+        let num_cycles = lines.iter().map(|line| line.path.num_cycles()).max().unwrap_or(0);
         let num_cycles = u32::try_from(num_cycles).map_err(|_| ())?;
 
         Ok(AssembledFigure {
