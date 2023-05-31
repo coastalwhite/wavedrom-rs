@@ -26,9 +26,6 @@ pub struct FigureSpacing {
 
 #[derive(Debug, Clone)]
 pub struct GroupIndicatorDimension {
-    padding_top: u32,
-    padding_bottom: u32,
-
     width: u32,
 
     spacing: u32,
@@ -46,8 +43,6 @@ impl GroupIndicatorDimension {
 impl Default for GroupIndicatorDimension {
     fn default() -> Self {
         Self {
-            padding_top: 0,
-            padding_bottom: 0,
             width: 4,
             spacing: 4,
 
@@ -223,6 +218,69 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 r##"<g id="nei"><path d="M{x1},{y1}l{x2},{y2}l{x3},{y3}h-8z" fill="#000" stroke="none"/></g>"##,
             )?;
         }
+        {
+            let wave_height = f32::from(options.wave_dimensions.wave_height);
+
+            let a: f32 = 8.0;
+            let b = wave_height / 2.0 + 6.0;
+
+            const DISTANCE: f32 = 4.0;
+
+            let start = (
+                -a,
+                b,
+            );
+
+            let control_1 = (
+                start.0 + a / 2.0,
+                start.1,
+            );
+
+            let rad = (-2.0 * b / a).atan();
+            let control_2 = (
+                rad.cos() * a / -2.0,
+                rad.sin() * a / -2.0,
+            );
+
+            let end = (
+                a,
+                -b,
+            );
+
+            let control_3 = (
+                end.0 - a / 2.0,
+                end.1,
+            );
+
+            write!(
+                writer,
+                r##"<g id="gap"><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}H{rp1x}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}H{lp1x}z" fill="#fff" stroke="none"/><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}" fill="none" stroke="#000" stroke-width="1"/><path d="M{rp1x},{rp1y}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}" fill="none" stroke="#000" stroke-width="1"/></g>"##,
+                lp1x = start.0 - DISTANCE/2.0,
+                lp1y = start.1,
+                lp2x = control_1.0 - DISTANCE/2.0,
+                lp2y = control_1.1,
+                lp3x = control_2.0 - DISTANCE/2.0,
+                lp3y = control_2.1,
+                lp4x = 0.0 - DISTANCE/2.0,
+                lp4y = 0,
+                lp5x = control_3.0 - DISTANCE/2.0,
+                lp5y = control_3.1,
+                lp6x = end.0 - DISTANCE/2.0,
+                lp6y = end.1,
+                rp1x = end.0 + DISTANCE/2.0,
+                rp1y = end.1,
+                rp2x = control_3.0 + DISTANCE/2.0,
+                rp2y = control_3.1,
+                rp3x = -control_2.0 + DISTANCE/2.0,
+                rp3y = -control_2.1,
+                rp4x = 0.0 + DISTANCE/2.0,
+                rp4y = 0,
+                rp5x = control_1.0 + DISTANCE/2.0,
+                rp5y = control_1.1,
+                rp6x = start.0 + DISTANCE/2.0,
+                rp6y = start.1,
+            )?;
+        }
         write!(
             writer,
             r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g>"##
@@ -328,8 +386,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 r##"<g transform="translate({schema_x})">"##,
                 schema_x = textbox_x.map_or(0, |textbox_x| schema_x - textbox_x)
             )?;
-            line.path
-                .write_svg_with_options(writer, &wave_dimensions)?;
+            line.path.write_svg_with_options(writer, &wave_dimensions)?;
 
             write!(writer, r##"</g>"##)?;
 
@@ -425,14 +482,24 @@ impl ToSvg for AssembledWavePath {
                             writer,
                             r##"<use transform="translate({x},{y})" xlink:href="#pei"/>"##,
                         )?;
-                    },
+                    }
                     ClockEdge::Negative => {
                         write!(
                             writer,
                             r##"<use transform="translate({x},{y})" xlink:href="#nei"/>"##,
                         )?;
-                    },
+                    }
                 };
+            }
+
+            for gap in segment.gaps() {
+                let x = u32::from(options.cycle_width) * *gap + u32::from(options.cycle_width) / 2;
+                let y = u32::from(options.wave_height) / 2;
+
+                write!(
+                    writer,
+                    r##"<use transform="translate({x},{y})" xlink:href="#gap"/>"##,
+                )?;
             }
         }
 

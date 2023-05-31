@@ -27,6 +27,7 @@ pub enum PathState {
     NegedgeClockUnmarked,
     NegedgeClockMarked,
     Continue,
+    Gap,
 }
 
 #[derive(Debug, Clone)]
@@ -56,6 +57,7 @@ pub struct WavePathSegment {
     actions: Vec<PathCommand>,
 
     text: Option<String>,
+    gaps: Vec<u32>,
     clock_edge_markers: Vec<ClockEdgeMarker>,
 }
 
@@ -127,6 +129,10 @@ impl WavePathSegment {
         &self.clock_edge_markers
     }
 
+    pub fn gaps(&self) -> &[u32] {
+        &self.gaps
+    }
+
     pub fn marker_text(&self) -> Option<&str> {
         self.text.as_ref().map(|s| &s[..])
     }
@@ -147,6 +153,8 @@ impl WavePathSegment {
 pub struct SignalSegmentIter<'a> {
     inner: std::slice::Iter<'a, PathState>,
 
+    cycle_index: u32,
+
     prev: Option<PathState>,
 
     forward: PathData,
@@ -156,12 +164,12 @@ pub struct SignalSegmentIter<'a> {
     box_content: &'a [String],
 
     clock_edge_markers: Vec<ClockEdgeMarker>,
+    gaps: Vec<u32>,
 
     options: &'a WaveOptions,
 }
 
-impl WavePath {
-}
+impl WavePath {}
 
 impl<'a> Iterator for SignalSegmentIter<'a> {
     type Item = WavePathSegment;
@@ -178,14 +186,17 @@ impl<'a> Iterator for SignalSegmentIter<'a> {
 
                 if let Some(wave_segment) = wave_segment {
                     debug_assert_ne!(state, PathState::Continue);
+                    debug_assert_ne!(state, PathState::Gap);
 
                     self.prev = Some(state);
                     return Some(wave_segment);
                 } else {
-                    if state != PathState::Continue {
+                    if !matches!(state, PathState::Continue | PathState::Gap) {
                         prev = state;
                     }
                 }
+
+                self.cycle_index += 1;
             } else {
                 self.prev = None;
                 return Some(self.end(prev));
@@ -207,6 +218,10 @@ impl<'a> SignalSegmentIter<'a> {
             x: self.forward.current_x as u32,
             edge: ClockEdge::Negative,
         });
+    }
+
+    fn gap(&mut self) {
+        self.gaps.push(self.cycle_index)
     }
 
     fn begin(&mut self, state: PathState) {
@@ -232,7 +247,7 @@ impl<'a> SignalSegmentIter<'a> {
                 self.backward.vertical_line_no_stroke(-h);
                 self.backward.horizontal_line(-t);
             }
-            Continue => {
+            Continue | Gap => {
                 self.forward.horizontal_line(t);
                 self.backward.vertical_line_no_stroke(-h);
                 self.backward.horizontal_line(-t);
@@ -247,7 +262,11 @@ impl<'a> SignalSegmentIter<'a> {
 
         use PathState::*;
 
-        if state == Continue {
+        if state == Gap {
+            self.gap();
+        }
+
+        if matches!(state, Continue | Gap) {
             state = self.prev.unwrap_or(X);
         }
 
@@ -277,7 +296,7 @@ impl<'a> SignalSegmentIter<'a> {
                 self.forward.horizontal_line(w - t * 2);
                 self.backward.horizontal_line(t * 2 - w);
             }
-            Continue => unreachable!(),
+            Continue | Gap => unreachable!(),
         }
     }
 
@@ -291,9 +310,9 @@ impl<'a> SignalSegmentIter<'a> {
             (Top, Top)
             | (Bottom, Bottom)
             | (Middle, Middle)
-            | (Top, Continue)
-            | (Bottom, Continue)
-            | (Middle, Continue) => self.forward.horizontal_line(t * 2),
+            | (Top, Gap | Continue)
+            | (Bottom, Gap | Continue)
+            | (Middle, Gap | Continue) => self.forward.horizontal_line(t * 2),
             (
                 Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X,
                 Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X,
@@ -372,11 +391,11 @@ impl<'a> SignalSegmentIter<'a> {
             }
             (
                 PosedgeClockMarked | PosedgeClockUnmarked,
-                PosedgeClockMarked | PosedgeClockUnmarked | Continue,
+                PosedgeClockMarked | PosedgeClockUnmarked | Gap | Continue,
             ) => {}
             (
                 NegedgeClockMarked | NegedgeClockUnmarked,
-                NegedgeClockMarked | NegedgeClockUnmarked | Continue,
+                NegedgeClockMarked | NegedgeClockUnmarked | Gap | Continue,
             ) => {}
             (
                 PosedgeClockMarked | PosedgeClockUnmarked,
@@ -462,14 +481,11 @@ impl<'a> SignalSegmentIter<'a> {
             (NegedgeClockMarked | NegedgeClockUnmarked, Top) => {
                 self.forward.horizontal_line(t);
             }
-            (
-                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X,
-                Continue
-            ) => {
+            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X, Gap | Continue) => {
                 self.forward.horizontal_line(2 * t);
                 self.backward.horizontal_line(-2 * t);
             }
-            (Continue, _) => {
+            (Gap | Continue, _) => {
                 unreachable!();
             }
         }
@@ -496,7 +512,7 @@ impl<'a> SignalSegmentIter<'a> {
                 self.backward.horizontal_line(-t);
                 self.commit_with_back_line(state.background())
             }
-            Continue => unreachable!(),
+            Continue | Gap => unreachable!(),
         }
     }
 
@@ -532,6 +548,7 @@ impl<'a> SignalSegmentIter<'a> {
             None
         };
         let clock_edge_markers = std::mem::take(&mut self.clock_edge_markers);
+        let gaps = std::mem::take(&mut self.gaps);
         let actions = self.forward.take_and_restart_at(start_x, start_y).actions;
 
         WavePathSegment {
@@ -541,6 +558,7 @@ impl<'a> SignalSegmentIter<'a> {
 
             text,
             clock_edge_markers,
+            gaps,
 
             background,
             is_fully_stroked,
@@ -558,6 +576,7 @@ impl<'a> SignalSegmentIter<'a> {
         let start_y = self.forward.current_y;
 
         let clock_edge_markers = std::mem::take(&mut self.clock_edge_markers);
+        let gaps = std::mem::take(&mut self.gaps);
         let actions = self.forward.take_and_restart_at(start_x, start_y).actions;
 
         WavePathSegment {
@@ -565,8 +584,9 @@ impl<'a> SignalSegmentIter<'a> {
             y: segment_start_y,
             width: segment_width,
 
-            clock_edge_markers,
             text: None,
+            clock_edge_markers,
+            gaps,
 
             background: None,
             is_fully_stroked: true,
@@ -611,6 +631,8 @@ impl WavePath {
         let mut iter = SignalSegmentIter {
             inner: self.0.iter(),
 
+            cycle_index: 0,
+
             prev: None,
 
             forward: PathData::new(0, 0),
@@ -620,6 +642,7 @@ impl WavePath {
             box_content,
 
             clock_edge_markers: Vec::new(),
+            gaps: Vec::new(),
 
             options,
         };
@@ -630,14 +653,15 @@ impl WavePath {
 
         let first_state = *first_state;
 
-        if first_state == PathState::Continue {
-            iter.prev = Some(PathState::X);
-        } else {
-            iter.prev = Some(first_state);
+        match first_state {
+            PathState::Continue | PathState::Gap => iter.prev = Some(PathState::X),
+            _ => iter.prev = Some(first_state),
         }
 
         iter.begin(first_state);
         iter.wave_path(first_state);
+
+        iter.cycle_index += 1;
 
         iter
     }
@@ -779,7 +803,7 @@ impl PathState {
             PathState::Box7 => Some(PathSegmentBackground::Index(7)),
             PathState::Box8 => Some(PathSegmentBackground::Index(8)),
             PathState::Box9 => Some(PathSegmentBackground::Index(9)),
-            PathState::Continue => None,
+            PathState::Continue | PathState::Gap => None,
         }
     }
 }

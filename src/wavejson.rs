@@ -123,16 +123,16 @@ mod tests {
                     { "name": ".", "wave": "." }
                 ],
                 [
-                    { "name": "0.", "wave": "0." },
-                    { "name": "1.", "wave": "1." },
-                    { "name": "2.", "wave": "2." },
-                    { "name": "z.", "wave": "z." },
-                    { "name": "x.", "wave": "x." },
-                    { "name": "p.", "wave": "p." },
-                    { "name": "P.", "wave": "P." },
-                    { "name": "n.", "wave": "n." },
-                    { "name": "N.", "wave": "N." },
-                    { "name": "..", "wave": ".." }
+                    { "name": "0.|", "wave": "0.|" },
+                    { "name": "1.|", "wave": "1.|" },
+                    { "name": "2.|", "wave": "2.|" },
+                    { "name": "z.|", "wave": "z.|" },
+                    { "name": "x.|", "wave": "x.|" },
+                    { "name": "p.|", "wave": "p.|" },
+                    { "name": "P.|", "wave": "P.|" },
+                    { "name": "n.|", "wave": "n.|" },
+                    { "name": "N.|", "wave": "N.|" },
+                    { "name": "..|", "wave": "..|" }
                 ],
                 [
                     { "name": "0001020z0x0p0P0n0N0.0", "wave": "0001020z0x0p0P0n0N0.0" },
