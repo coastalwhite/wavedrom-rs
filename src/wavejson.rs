@@ -5,6 +5,22 @@ use crate::{Figure, Wave, WaveLine, WaveLineGroup};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaveJson {
     pub signal: Vec<Signal>,
+    pub head: Option<Head>,
+    pub foot: Option<Foot>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Head {
+    pub text: Option<String>,
+    pub tick: Option<i32>,
+    pub every: Option<i32>, 
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Foot {
+    pub text: Option<String>,
+    pub tock: Option<i32>,
+    pub every: Option<i32>, 
 }
 
 impl WaveJson {
@@ -16,7 +32,12 @@ impl WaveJson {
 impl TryFrom<WaveJson> for Figure {
     type Error = ();
     fn try_from(value: WaveJson) -> Result<Self, Self::Error> {
-        Ok(Figure::from_lines(
+        let title = value.head.and_then(|head| head.text);
+        let footer = value.foot.and_then(|foot| foot.text);
+
+        Ok(Figure::new(
+            title,
+            footer,
             value.signal
                 .into_iter()
                 .map(WaveLine::try_from)
@@ -166,7 +187,13 @@ mod tests {
                         ]
                     }
                 ]
-            ]
+            ],
+            "head": {
+                "text": "Interaction Test Figure"
+            },
+            "foot": {
+                "text": "Some Footer Text"
+            }
         }
         "#;
 

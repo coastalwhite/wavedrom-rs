@@ -34,6 +34,30 @@ pub struct GroupIndicatorDimension {
     label_fontsize: u32,
 }
 
+#[derive(Debug, Clone)]
+pub struct HeaderOptions {
+    font_size: u32,
+    height: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct FooterOptions {
+    font_size: u32,
+    height: u32,
+}
+
+impl Default for HeaderOptions {
+    fn default() -> Self {
+        Self { font_size: 24, height: 32 }
+    }
+}
+
+impl Default for FooterOptions {
+    fn default() -> Self {
+        Self { font_size: 24, height: 32 }
+    }
+}
+
 impl GroupIndicatorDimension {
     fn label_height(&self) -> u32 {
         self.label_spacing + self.label_fontsize
@@ -57,6 +81,8 @@ pub struct RenderOptions {
     pub font_size: u32,
     pub paddings: FigurePadding,
     pub spacings: FigureSpacing,
+    pub header: HeaderOptions,
+    pub footer: FooterOptions,
     pub wave_dimensions: WaveOptions,
     pub group_indicator_dimensions: GroupIndicatorDimension,
 }
@@ -67,6 +93,8 @@ impl Default for RenderOptions {
             font_size: 14,
             paddings: FigurePadding::default(),
             spacings: FigureSpacing::default(),
+            header: HeaderOptions::default(),
+            footer: FooterOptions::default(),
             wave_dimensions: WaveOptions::default(),
             group_indicator_dimensions: GroupIndicatorDimension::default(),
         }
@@ -126,6 +154,8 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             spacings,
             wave_dimensions,
             group_indicator_dimensions,
+            header,
+            footer,
         } = options;
 
         let face =
@@ -134,6 +164,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap();
 
         let font_family = get_font_family_name(&face).unwrap_or_else(|| "monospace".to_string());
+
+        let header_height = if self.title.is_some() { header.height } else { 0 };
+
+        let footer_height = if self.footer.is_some() { footer.height } else { 0 };
 
         let has_textbox = !self.lines.iter().all(|line| line.text.is_empty());
         let textbox_width = has_textbox.then(|| {
@@ -172,7 +206,11 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             + textbox_width.map_or(0, |w| w + spacings.textbox_to_schema)
             + schema_width
             + paddings.figure_right;
-        let figure_height = paddings.figure_top + schema_height + paddings.figure_bottom;
+        let figure_height = paddings.figure_top
+            + header_height
+            + schema_height
+            + footer_height
+            + paddings.figure_bottom;
 
         let (textbox_x, schema_x) = match (groupbox_width, textbox_width) {
             (Some(groupbox_width), Some(textbox_width)) => {
@@ -226,58 +264,43 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
             const DISTANCE: f32 = 4.0;
 
-            let start = (
-                -a,
-                b,
-            );
+            let start = (-a, b);
 
-            let control_1 = (
-                start.0 + a / 2.0,
-                start.1,
-            );
+            let control_1 = (start.0 + a / 2.0, start.1);
 
             let rad = (-2.0 * b / a).atan();
-            let control_2 = (
-                rad.cos() * a / -2.0,
-                rad.sin() * a / -2.0,
-            );
+            let control_2 = (rad.cos() * a / -2.0, rad.sin() * a / -2.0);
 
-            let end = (
-                a,
-                -b,
-            );
+            let end = (a, -b);
 
-            let control_3 = (
-                end.0 - a / 2.0,
-                end.1,
-            );
+            let control_3 = (end.0 - a / 2.0, end.1);
 
             write!(
                 writer,
                 r##"<g id="gap"><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}H{rp1x}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}H{lp1x}z" fill="#fff" stroke="none"/><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}" fill="none" stroke="#000" stroke-width="1"/><path d="M{rp1x},{rp1y}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}" fill="none" stroke="#000" stroke-width="1"/></g>"##,
-                lp1x = start.0 - DISTANCE/2.0,
+                lp1x = start.0 - DISTANCE / 2.0,
                 lp1y = start.1,
-                lp2x = control_1.0 - DISTANCE/2.0,
+                lp2x = control_1.0 - DISTANCE / 2.0,
                 lp2y = control_1.1,
-                lp3x = control_2.0 - DISTANCE/2.0,
+                lp3x = control_2.0 - DISTANCE / 2.0,
                 lp3y = control_2.1,
-                lp4x = 0.0 - DISTANCE/2.0,
+                lp4x = 0.0 - DISTANCE / 2.0,
                 lp4y = 0,
-                lp5x = control_3.0 - DISTANCE/2.0,
+                lp5x = control_3.0 - DISTANCE / 2.0,
                 lp5y = control_3.1,
-                lp6x = end.0 - DISTANCE/2.0,
+                lp6x = end.0 - DISTANCE / 2.0,
                 lp6y = end.1,
-                rp1x = end.0 + DISTANCE/2.0,
+                rp1x = end.0 + DISTANCE / 2.0,
                 rp1y = end.1,
-                rp2x = control_3.0 + DISTANCE/2.0,
+                rp2x = control_3.0 + DISTANCE / 2.0,
                 rp2y = control_3.1,
-                rp3x = -control_2.0 + DISTANCE/2.0,
+                rp3x = -control_2.0 + DISTANCE / 2.0,
                 rp3y = -control_2.1,
-                rp4x = 0.0 + DISTANCE/2.0,
+                rp4x = 0.0 + DISTANCE / 2.0,
                 rp4y = 0,
-                rp5x = control_1.0 + DISTANCE/2.0,
+                rp5x = control_1.0 + DISTANCE / 2.0,
                 rp5y = control_1.1,
-                rp6x = start.0 + DISTANCE/2.0,
+                rp6x = start.0 + DISTANCE / 2.0,
                 rp6y = start.1,
             )?;
         }
@@ -295,7 +318,20 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             padding_y = paddings.figure_top,
         )?;
 
-        write!(writer, r##"<g transform="translate({schema_x})">"##,)?;
+        if let Some(title) = self.title {
+            let title_font_size = header.font_size;
+            write!(
+                writer,
+                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{title_font_size}" letter-spacing="0"><tspan>{title}</tspan></text>"##,
+                x = (figure_width - paddings.figure_left - paddings.figure_right) / 2,
+                y = header_height / 2
+            )?;
+        }
+
+        write!(
+            writer,
+            r##"<g transform="translate({schema_x},{header_height})">"##,
+        )?;
         for i in 0..=u64::from(self.num_cycles) {
             write!(
                 writer,
@@ -319,7 +355,8 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 } else {
                     group.depth * group_indicator_dimensions.width
                 };
-            let y = paddings.schema_top
+            let y = header_height
+                + paddings.schema_top
                 + if group.start == 0 {
                     0
                 } else {
@@ -362,7 +399,8 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             };
 
             let x = textbox_x.unwrap_or(schema_x);
-            let y = paddings.schema_top
+            let y = header_height
+                + paddings.schema_top
                 + if i == 0 {
                     0
                 } else {
@@ -391,6 +429,16 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             write!(writer, r##"</g>"##)?;
 
             write!(writer, r##"</g>"##)?;
+        }
+
+        if let Some(footer_text) = self.footer {
+            let footer_font_size = footer.font_size;
+            write!(
+                writer,
+                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{footer_font_size}" letter-spacing="0"><tspan>{footer_text}</tspan></text>"##,
+                x = (figure_width - paddings.figure_left - paddings.figure_right) / 2,
+                y = header_height + schema_height + footer_height / 2
+            )?;
         }
 
         write!(writer, "</g></svg>")?;

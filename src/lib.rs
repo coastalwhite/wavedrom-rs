@@ -7,7 +7,7 @@ mod svg;
 #[cfg(feature = "wavejson")]
 pub mod wavejson;
 
-pub use path::{AssembledWavePath, WaveOptions, WavePath, WavePathSegment, PathState};
+pub use path::{AssembledWavePath, PathState, WaveOptions, WavePath, WavePathSegment};
 pub use svg::ToSvg;
 
 pub struct Wave {
@@ -16,7 +16,12 @@ pub struct Wave {
     pub data: Vec<String>,
 }
 
-pub struct Figure(Vec<WaveLine>);
+pub struct Figure {
+    title: Option<String>,
+    footer: Option<String>,
+
+    lines: Vec<WaveLine>,
+}
 pub enum WaveLine {
     Group(WaveLineGroup),
     Wave(Wave),
@@ -110,7 +115,11 @@ impl WaveLine {
 
 impl Figure {
     pub fn from_lines<T: Into<WaveLine>>(lines: impl IntoIterator<Item = T>) -> Self {
-        Self(lines.into_iter().map(T::into).collect())
+        Self {
+            title: None,
+            footer: None,
+            lines: lines.into_iter().map(T::into).collect(),
+        }
     }
 }
 
@@ -176,6 +185,9 @@ pub struct AssembledFigure<'a> {
     group_label_at_depth: Vec<bool>,
     max_group_depth: u32,
 
+    title: Option<&'a str>,
+    footer: Option<&'a str>,
+
     pub lines: Vec<AssembledLine<'a>>,
     groups: Vec<WaveGroup<'a>>,
 }
@@ -227,15 +239,26 @@ impl WaveGroup<'_> {
 }
 
 impl Figure {
+    pub fn new(title: Option<String>, footer: Option<String>, lines: Vec<WaveLine>) -> Self {
+        Self {
+            title,
+            footer,
+            lines,
+        }
+    }
+
     pub fn assemble_with_options(&self) -> Result<AssembledFigure, ()> {
-        let mut lines = Vec::with_capacity(self.0.len());
+        let title = self.title.as_ref().map(|s| &s[..]);
+        let footer = self.footer.as_ref().map(|s| &s[..]);
+
+        let mut lines = Vec::with_capacity(self.lines.len());
         let mut groups = Vec::new();
         let mut group_label_at_depth = Vec::new();
 
         let mut has_undefined = false;
 
         let max_group_depth = self
-            .0
+            .lines
             .iter()
             .map(|line| {
                 line.render_into(
@@ -249,7 +272,11 @@ impl Figure {
             .max()
             .unwrap_or_default();
 
-        let num_cycles = lines.iter().map(|line| line.path.num_cycles()).max().unwrap_or(0);
+        let num_cycles = lines
+            .iter()
+            .map(|line| line.path.num_cycles())
+            .max()
+            .unwrap_or(0);
         let num_cycles = u32::try_from(num_cycles).map_err(|_| ())?;
 
         Ok(AssembledFigure {
@@ -259,6 +286,9 @@ impl Figure {
 
             group_label_at_depth,
             max_group_depth,
+
+            title,
+            footer,
 
             lines,
             groups,
