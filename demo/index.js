@@ -47,33 +47,33 @@ function render_svg(input, output, error, memory, malloc, free, render) {
         memory.buffer, rptr, 5,
     );
 
-    switch (array[0]) {
+	let return_code = array[0];
+    let size = (array[1] << 24) | (array[2] << 16) | (array[3] << 8) | array[4];
+
+	if (return_code != 0) {
+        free(rptr, 1);
+	}
+
+    switch (return_code) {
         case 0: 
-            error.innerText = "";
+            error.innerText = "✅ Succesful Build";
             break;
         case 1: 
-            free(rptr, 1);
-            error.innerText = "Invalid JSON";
+            error.innerText = "❌ Invalid JSON";
             return;
         case 2: 
-            free(rptr, 1);
-            error.innerText = "Invalid JSON value";
+            error.innerText = "❌ Invalid JSON value";
             return;
         case 3: 
-            free(rptr, 1);
-            error.innerText = "Failed to Assemble SVG";
+            error.innerText = "❌ Failed to Assemble SVG";
             return;
         case 4: 
-            free(rptr, 1);
-            error.innerText = "Failed to Render SVG";
+            error.innerText = "❌ Failed to Render SVG";
             return;
         default:
-            free(rptr, 1);
-            error.innerText = "Unknown Error";
+            error.innerText = "❌ Unknown Error";
             return;
     }
-
-    let size = (array[1] << 24) | (array[2] << 16) | (array[3] << 8) | array[4];
     
     const out = decode_string(memory, rptr + 5, size);
     output.innerHTML = out;
@@ -89,8 +89,8 @@ fetch("./rust/target/wasm32-unknown-unknown/release/rust.wasm")
     let { malloc, free, render, memory } = mod.exports;
 
 	const input = document.getElementById("input");
-	const error = document.getElementById("error");
 	const output = document.getElementById("output");
+	const error = document.getElementById("status-message");
 
     const handler = () => {
         render_svg(input, output, error, memory, malloc, free, render);
@@ -101,3 +101,48 @@ fetch("./rust/target/wasm32-unknown-unknown/release/rust.wasm")
 
     handler();
   });
+
+function menuToggle() {
+	const menu = document.getElementById("menu");
+	if (menu.classList.contains("hidden")) {
+		menu.classList.remove("hidden");
+	} else {
+		menu.classList.add("hidden");
+	}
+}
+
+function exportToSvg() {
+	const output = document.getElementById("output");
+	const fileContent = output.innerHTML;
+	const bb = new Blob([fileContent ], { type: 'text/svg' });
+	const a = document.createElement('a');
+	a.download = 'figure.svg';
+	a.href = window.URL.createObjectURL(bb);
+	a.click();
+}
+
+document.getElementById('input').value = `
+{
+	signal: [
+		{ name: "clk", wave: "p.........." },
+		{ name: "req", wave: "0.10......." },
+		{ name: "data", wave: "x......2.x.", data: "0xBEEF" },
+		{ name: "done", wave: "0......1.0." },
+	]
+}
+`.trim();
+document.getElementById('input').addEventListener('keydown', function(e) {
+  if (e.key == 'Tab') {
+    e.preventDefault();
+    var start = this.selectionStart;
+    var end = this.selectionEnd;
+
+    // set textarea value to: text before caret + tab + text after caret
+    this.value = this.value.substring(0, start) +
+      "\t" + this.value.substring(end);
+
+    // put caret at right position again
+    this.selectionStart =
+      this.selectionEnd = start + 1;
+  }
+});

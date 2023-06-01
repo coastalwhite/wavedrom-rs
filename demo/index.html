@@ -4,21 +4,35 @@
         <title></title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <script type="text/javascript" src="index.js"></script>
+		<link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
     </head>
-    <body>
-<textarea id="input" style="width:500px;height:400px;">
-{
-    "signal": [
-        { "name": "clk", "wave": "p.........." },
-        { "name": "req", "wave": "0.10......." },
-        { "name": "data", "wave": "x......22x.", "data": "0xBEEF" },
-        { "name": "done", "wave": "0......1.0." }
-    ]
-}
-</textarea>
-        <div style="color:red" id="error"></div>
-        <div id="output"></div>
+    <body class="h-screen">
+		<div class="w-full min-h-full flex flex-col lg:flex-row-reverse">
+			<div class="lg:w-1/2 lg:min-h-full flex-none lg:flex-1">
+				<div class="w-full h-full relative">
+					<div class="pt-4 pb-16 lg:py-0 overflow-auto">
+						<div id="output"></div>
+					</div>
+					<div class="absolute right-0 bottom-0">
+						<a class="p-2 block" onclick="menuToggle()" href="#">⚙️</a>
+						<div id="menu" class="relative hidden">
+							<div class="absolute right-0 lg:bottom-0 lg:mb-2 lg:mr-8 w-40 bg-gray-200 border">
+								<a class="list-none p-2 block hover:bg-gray-400" target="_blank" href="https://wavedrom.com/tutorial.html">🌐 Guide</a>
+								<a class="list-none p-2 block hover:bg-gray-400" onclick="exportToSvg()" href="#">📈 Export as SVG</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="lg:w-1/2 flex-1 grow flex flex-col bg-gray-100 border-r">
+				<textarea class="w-full outline-none resize-none flex-1 bg-transparent p-4" id="input" spellcheck="false"></textarea>
+				<div class="bg-gray-300 h-16 w-full p-4 text-xl">
+					<!-- Filled by the Javascript -->
+					<span id="status-message"></span>
+				</div>
+			</div>
+		</div>
+        <script type="text/javascript" src="index.js"></script>
     </body>
 </html>
 
