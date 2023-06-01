@@ -102,8 +102,8 @@ fetch("./rust/target/wasm32-unknown-unknown/release/rust.wasm")
     handler();
   });
 
-function menuToggle() {
-	const menu = document.getElementById("menu");
+function toggleVisibility(id) {
+	const menu = document.getElementById(id);
 	if (menu.classList.contains("hidden")) {
 		menu.classList.remove("hidden");
 	} else {

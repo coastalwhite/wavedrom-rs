@@ -14,11 +14,12 @@
 						<div id="output"></div>
 					</div>
 					<div class="absolute right-0 bottom-0">
-						<a class="p-2 block" onclick="menuToggle()" href="#">⚙️</a>
+						<a class="p-2 block" onclick="toggleVisibility('menu')" href="#">⚙️</a>
 						<div id="menu" class="relative hidden">
-							<div class="absolute right-0 lg:bottom-0 lg:mb-2 lg:mr-8 w-40 bg-gray-200 border">
+							<div class="absolute right-0 lg:bottom-0 lg:mb-2 lg:mr-8 w-64 bg-gray-200 border">
 								<a class="list-none p-2 block hover:bg-gray-400" target="_blank" href="https://wavedrom.com/tutorial.html">🌐 Guide</a>
 								<a class="list-none p-2 block hover:bg-gray-400" onclick="exportToSvg()" href="#">📈 Export as SVG</a>
+								<a class="list-none p-2 block hover:bg-gray-400" onclick="toggleVisibility('render-settings')" href="#">📏 Toggle Render Settings</a>
 							</div>
 						</div>
 					</div>
@@ -26,6 +27,44 @@
 			</div>
 			<div class="lg:w-1/2 flex-1 grow flex flex-col bg-gray-100 border-r">
 				<textarea class="w-full outline-none resize-none flex-1 bg-transparent p-4" id="input" spellcheck="false"></textarea>
+				<div id="render-settings" class="bg-gray-700 flex-1 w-full p-4 text-md hidden text-white">
+                    <h2 class="text-lg font-bold">Render Settings</h2>
+                    <div>
+                        <h3 class="font-bold mt-4">Wave Dimensions</h3>
+                        <table class="w-full">
+                            <tr>
+                                <td>Wave Height (pixels):</td>
+                                <td><input type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Cycle Width (pixels):</td>
+                                <td><input type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Transition Offset (pixels):</td>
+                                <td><input type="number" /></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div>
+                        <h3 class="font-bold mt-4">Wave Dimensions</h3>
+                        <table class="w-full">
+                            <tr>
+                                <td>Wave Height (pixels):</td>
+                                <td><input type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Cycle Width (pixels):</td>
+                                <td><input type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Transition Offset (pixels):</td>
+                                <td><input type="number" /></td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+				</div>
 				<div class="bg-gray-300 h-16 w-full p-4 text-xl">
 					<!-- Filled by the Javascript -->
 					<span id="status-message"></span>
