@@ -2,6 +2,7 @@
 name = "wavedrom-rs"
 version = "0.1.0"
 edition = "2021"
+include = ["/src", "/helvetica.ttf"]
 
 [lib]
 name = "wavedrom_rs"
@@ -11,8 +12,9 @@ path = "src/lib.rs"
 name = "wavedrom"
 path = "src/main.rs"
 
-[dependencies]
-ttf-parser = "0.19.0"
+[dependencies.ttf-parser]
+version = "0.19.0"
+optional = true
 
 [dependencies.serde]
 version = "1.0"
@@ -26,3 +28,4 @@ optional = true
 [features]
 default = ["wavejson"]
 wavejson = ["serde", "serde_json"]
+embed_font = ["ttf-parser"]

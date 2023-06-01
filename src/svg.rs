@@ -1,6 +1,5 @@
 use std::io;
-
-use ttf_parser::Face;
+use std::marker::PhantomData;
 
 use crate::path::{ClockEdgeMarker, PathCommand, PathSegmentBackground};
 use crate::{ClockEdge, CycleMarker, WaveOptions};
@@ -15,13 +14,13 @@ struct SvgDimensions<'a> {
 }
 
 impl<'a> SvgDimensions<'a> {
-    fn new(figure: &'a AssembledFigure<'a>, face: &'a Face, options: &'a RenderOptions) -> Self {
+    fn new(figure: &'a AssembledFigure<'a>, font: Font, options: &'a RenderOptions) -> Self {
         let has_textbox = !figure.lines.iter().all(|line| line.text.is_empty());
         let textbox_width = has_textbox.then(|| {
             figure
                 .lines
                 .iter()
-                .map(|line| get_text_width(line.text, &face, options.font_size))
+                .map(|line| font.get_text_width(line.text, options.font_size))
                 .max()
                 .unwrap_or_default()
         });
@@ -492,6 +491,13 @@ fn negedge_arrow(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()
     )
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum Font<'a> {
+    #[cfg(feature = "embed_font")]
+    FontFace(&'a ttf_parser::Face<'a>),
+    HelveticaLookUpTable(PhantomData<&'a ()>),
+}
+
 impl<'a> ToSvg for AssembledFigure<'a> {
     type Options = RenderOptions;
 
@@ -510,14 +516,19 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             footer,
         } = options;
 
-        let face =
-            // ttf_parser::Face::parse(include_bytes!("../JetBrainsMono-Medium.ttf"), 0).unwrap();
-            // ttf_parser::Face::parse(include_bytes!("/usr/share/fonts/noto/NotoSansMono-Regular.ttf"), 0).unwrap();
-            ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap();
+        #[cfg(feature = "embed_font")]
+        let face = ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap();
+        #[cfg(feature = "embed_font")]
+        let font = Font::FontFace(&face);
 
-        let font_family = get_font_family_name(&face).unwrap_or_else(|| "monospace".to_string());
+        #[cfg(not(feature = "embed_font"))]
+        let font = Font::HelveticaLookUpTable(PhantomData::default());
 
-        let dims = SvgDimensions::new(self, &face, options);
+        let font_family = font
+            .get_font_family_name()
+            .unwrap_or_else(|| "helvetica".to_string());
+
+        let dims = SvgDimensions::new(self, font, options);
 
         write!(
             writer,
@@ -829,7 +840,8 @@ fn write_signal(
         }
 
         for gap in segment.gaps() {
-            let x = u32::from(options.cycle_width * hscale) * *gap + u32::from(options.cycle_width * hscale) / 2;
+            let x = u32::from(options.cycle_width * hscale) * *gap
+                + u32::from(options.cycle_width * hscale) / 2;
             let y = u32::from(options.wave_height) / 2;
 
             write!(
@@ -842,63 +854,115 @@ fn write_signal(
     Ok(())
 }
 
-fn get_text_width(s: &str, face: &ttf_parser::Face, font_size: u32) -> u32 {
-    let width = s
-        .chars()
-        .map(|c| {
-            face.glyph_index(c).map_or_else(
-                || {
-                    // warn!("[WARNING]: Failed to get glyph for '{c}'");
-                    0
-                },
-                |g| {
-                    u32::from(face.glyph_hor_advance(g).unwrap_or_else(|| {
-                        // warn!(
-                        //     "[WARNING]: Failed to get length for glyph '{}' that represents character '{c}'",
-                        //     face.glyph_name(g).unwrap_or(&c.to_string())
-                        // );
-                        0
-                    }))
-                },
-            )
-        })
-        .sum::<u32>();
-
-    let width = f64::from(width);
-
-    // NOTE: Face::units_per_em guarantees the value to be non-zero. So this should never
-    // generate a divide-by-zero error.
-    let pts_per_em = f64::from(font_size) / f64::from(face.units_per_em());
-    let width = width * pts_per_em;
-
-    width.ceil() as u32
-}
-
-fn name_to_string(name: ttf_parser::name::Name) -> Option<String> {
-    if !name.is_unicode() {
-        return None;
-    }
-
-    // Invalid UTF16 check
-    if name.name.len() % 2 != 0 {
-        return None;
-    }
-
-    let utf16_bytes = name
-        .name
-        .chunks_exact(2)
-        .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
-        .collect::<Vec<u16>>();
-
-    String::from_utf16(&utf16_bytes).ok()
-}
-
-fn get_font_family_name(face: &ttf_parser::Face) -> Option<String> {
-    for item in face.names() {
-        if item.name_id == 1 {
-            return name_to_string(item);
+impl<'a> Font<'a> {
+    fn units_per_em(&self) -> u16 {
+        match self {
+            Self::HelveticaLookUpTable(_) => 2048,
+            #[cfg(feature = "embed_font")]
+            Self::FontFace(face) => face.units_per_em(),
         }
     }
 
-    None
+    fn get_text_width(&self, s: &'_ str, font_size: u32) -> u32 {
+        let width = match self {
+            Self::HelveticaLookUpTable(_) => {
+                static ADVANCE_LUT: [u16; 128] = [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 569, 569, 0, 0, 569, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 569, 569, 727, 1139, 1139, 1821, 1366, 391, 682, 682,
+                    797, 1196, 569, 682, 569, 569, 1139, 1139, 1139, 1139, 1139, 1139, 1139, 1139,
+                    1139, 1139, 569, 569, 1196, 1196, 1196, 1139, 2079, 1366, 1366, 1479, 1479,
+                    1366, 1251, 1593, 1479, 569, 1024, 1366, 1139, 1706, 1479, 1593, 1366, 1593,
+                    1479, 1366, 1251, 1479, 1366, 1933, 1366, 1366, 1251, 569, 569, 569, 961, 1139,
+                    682, 1139, 1139, 1024, 1139, 1139, 569, 1139, 1139, 455, 455, 1024, 455, 1706,
+                    1139, 1139, 1139, 1139, 682, 1024, 569, 1139, 1024, 1479, 1024, 1024, 1024,
+                    684, 532, 684, 1196, 0,
+                ];
+
+                s.chars()
+                    .map(|c| {
+                        if c.is_ascii() {
+                            u32::from(ADVANCE_LUT[c as usize])
+                        } else {
+                            2052
+                        }
+                    })
+                    .sum::<u32>()
+            }
+            #[cfg(feature = "embed_font")]
+            Self::FontFace(face) => s
+                .chars()
+                .map(|c| {
+                    face.glyph_index(c)
+                        .and_then(|g| face.glyph_hor_advance(g))
+                        .map(u32::from)
+                        .unwrap_or(0)
+                })
+                .sum::<u32>(),
+        };
+
+        let width = f64::from(width);
+
+        // NOTE: Face::units_per_em guarantees the value to be non-zero. So this should never
+        // generate a divide-by-zero error.
+        let pts_per_em = f64::from(font_size) / f64::from(self.units_per_em());
+        let width = width * pts_per_em;
+
+        width.ceil() as u32
+    }
+
+    fn get_font_family_name(&self) -> Option<String> {
+        match self {
+            Self::HelveticaLookUpTable(_) => Some("helvetica".to_string()),
+            #[cfg(feature = "embed_font")]
+            Self::FontFace(face) => face
+                .names()
+                .into_iter()
+                .find(|item| item.name_id == 1)
+                .map_or(None, {
+                    if !name.is_unicode() {
+                        return None;
+                    }
+
+                    // Invalid UTF16 check
+                    if name.name.len() % 2 != 0 {
+                        return None;
+                    }
+
+                    let utf16_bytes = name
+                        .name
+                        .chunks_exact(2)
+                        .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
+                        .collect::<Vec<u16>>();
+
+                    String::from_utf16(&utf16_bytes).ok()
+                }),
+        }
+    }
+}
+
+#[cfg(feature = "embed_font")]
+fn name_to_string(name: ttf_parser::name::Name) -> Option<String> {}
+
+#[ignore]
+#[test]
+#[cfg(all(feature = "gen_lut", feature = "embed_font"))]
+fn generate_lookup_table() {
+    let face = ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap();
+
+    println!("[");
+    for c in 0..128u8 {
+        let c = c as char;
+        println!(
+            "\t{},",
+            face.glyph_index(c)
+                .and_then(|g| face.glyph_hor_advance(g))
+                .map(u32::from)
+                .unwrap_or(0)
+        );
+    }
+    println!("]");
+    println!("units_per_em: {:?}", face.units_per_em());
+    println!("Rest Advance: {:?}", face.global_bounding_box().width());
+
+    assert!(false);
 }
