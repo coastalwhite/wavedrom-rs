@@ -1,10 +1,266 @@
 use std::io;
 
+use ttf_parser::Face;
+
 use crate::path::{ClockEdgeMarker, PathCommand, PathSegmentBackground};
-use crate::{ClockEdge, WaveOptions};
+use crate::{ClockEdge, CycleMarker, WaveOptions};
 
 use super::path::AssembledWavePath;
 use super::AssembledFigure;
+
+struct SvgDimensions<'a> {
+    figure: &'a AssembledFigure<'a>,
+    options: &'a RenderOptions,
+    textbox_width: Option<u32>,
+}
+
+impl<'a> SvgDimensions<'a> {
+    fn new(figure: &'a AssembledFigure<'a>, face: &'a Face, options: &'a RenderOptions) -> Self {
+        let has_textbox = !figure.lines.iter().all(|line| line.text.is_empty());
+        let textbox_width = has_textbox.then(|| {
+            figure
+                .lines
+                .iter()
+                .map(|line| get_text_width(line.text, &face, options.font_size))
+                .max()
+                .unwrap_or_default()
+        });
+
+        Self {
+            figure,
+            options,
+            textbox_width,
+        }
+    }
+
+    fn inner_width(&self) -> u32 {
+        let RenderOptions { spacings, .. } = self.options;
+
+        let mut width = self.schema_width();
+
+        if self.has_grouping() {
+            width += self.grouping_width() + spacings.groupbox_to_textbox;
+        }
+
+        if self.has_grouping() {
+            width += self.textbox_width() + spacings.textbox_to_schema;
+        }
+
+        width
+    }
+
+    #[inline]
+    fn inner_x(&self) -> u32 {
+        self.options.paddings.figure_left
+    }
+
+    #[inline]
+    fn figure_width(&self) -> u32 {
+        let RenderOptions { paddings, .. } = self.options;
+        paddings.figure_left + paddings.figure_right + self.inner_width()
+    }
+
+    #[inline]
+    fn figure_height(&self) -> u32 {
+        let RenderOptions { paddings, .. } = self.options;
+
+        paddings.figure_top
+            + self.header_height()
+            + self.schema_height()
+            + self.footer_height()
+            + paddings.figure_bottom
+    }
+
+    #[inline]
+    fn header_width(&self) -> u32 {
+        self.inner_width()
+    }
+
+    #[inline]
+    fn header_height(&self) -> u32 {
+        let RenderOptions { header, .. } = self.options;
+
+        let mut height = 0;
+
+        if self.figure.title.is_some() {
+            height += header.height;
+        }
+
+        if self.figure.top_cycle_marker.is_some() {
+            height += header.cycle_marker_height;
+        }
+
+        height
+    }
+
+    #[inline]
+    fn header_x(&self) -> u32 {
+        self.options.paddings.figure_left
+    }
+
+    #[inline]
+    fn header_y(&self) -> u32 {
+        self.options.paddings.figure_top
+    }
+
+    #[inline]
+    fn footer_width(&self) -> u32 {
+        self.inner_width()
+    }
+
+    #[inline]
+    fn footer_height(&self) -> u32 {
+        let RenderOptions { footer, .. } = self.options;
+
+        let mut height = 0;
+
+        if self.figure.footer.is_some() {
+            height += footer.height;
+        }
+
+        if self.figure.bottom_cycle_marker.is_some() {
+            height += footer.cycle_marker_height;
+        }
+
+        height
+    }
+
+    #[inline]
+    fn footer_x(&self) -> u32 {
+        self.options.paddings.figure_left
+    }
+
+    #[inline]
+    fn footer_y(&self) -> u32 {
+        self.schema_y() + self.schema_height()
+    }
+
+    fn has_textbox(&self) -> bool {
+        self.figure.lines.iter().any(|line| !line.text.is_empty())
+    }
+    fn textbox_width(&self) -> u32 {
+        self.textbox_width.unwrap_or(0)
+    }
+
+    #[inline]
+    fn textbox_height(&self) -> u32 {
+        self.schema_height()
+    }
+
+    #[inline]
+    fn textbox_x(&self) -> u32 {
+        let mut x = self.grouping_x();
+
+        if self.has_grouping() {
+            x += self.grouping_width() + self.options.spacings.groupbox_to_textbox;
+        }
+
+        x
+    }
+
+    #[inline]
+    fn textbox_y(&self) -> u32 {
+        self.header_y() + self.header_height()
+    }
+
+    #[inline]
+    fn has_grouping(&self) -> bool {
+        self.figure.max_group_depth != 0
+    }
+
+    #[inline]
+    fn grouping_x(&self) -> u32 {
+        self.inner_x()
+    }
+
+    #[inline]
+    fn grouping_y(&self) -> u32 {
+        self.header_y() + self.header_height()
+    }
+
+    fn grouping_width(&self) -> u32 {
+        let max_group_depth = self.figure.max_group_depth;
+
+        if max_group_depth == 0 {
+            return 0;
+        }
+
+        let RenderOptions {
+            group_indicator_dimensions,
+            ..
+        } = self.options;
+
+        let sum_indicator_widths = max_group_depth * group_indicator_dimensions.width;
+        let spacing = (max_group_depth - 1) * group_indicator_dimensions.spacing;
+        let label_widths = self
+            .figure
+            .group_label_at_depth
+            .iter()
+            .filter(|x| **x)
+            .count() as u32
+            * group_indicator_dimensions.label_height();
+
+        sum_indicator_widths + spacing + label_widths
+    }
+
+    #[inline]
+    fn grouping_height(&self) -> u32 {
+        self.schema_height()
+    }
+
+    #[inline]
+    fn schema_x(&self) -> u32 {
+        let mut x = self.textbox_x();
+
+        if self.has_textbox() {
+            x += self.textbox_width() + self.options.spacings.textbox_to_schema;
+        }
+
+        x
+    }
+
+    #[inline]
+    fn schema_y(&self) -> u32 {
+        self.header_y() + self.header_height()
+    }
+
+    #[inline]
+    fn schema_width(&self) -> u32 {
+        self.figure.num_cycles * self.cycle_width()
+    }
+
+    fn schema_height(&self) -> u32 {
+        if self.figure.lines.len() == 0 {
+            return 0;
+        }
+
+        let RenderOptions {
+            paddings, spacings, ..
+        } = self.options;
+
+        let num_lines = self.num_lines();
+
+        paddings.schema_top
+            + paddings.schema_bottom
+            + spacings.line_to_line * (num_lines - 1)
+            + self.wave_height() * num_lines
+    }
+
+    #[inline]
+    fn cycle_width(&self) -> u32 {
+        self.options.wave_dimensions.cycle_width.into()
+    }
+
+    #[inline]
+    fn wave_height(&self) -> u32 {
+        self.options.wave_dimensions.wave_height.into()
+    }
+
+    #[inline]
+    fn num_lines(&self) -> u32 {
+        self.figure.lines.len() as u32
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct FigurePadding {
@@ -38,23 +294,39 @@ pub struct GroupIndicatorDimension {
 pub struct HeaderOptions {
     font_size: u32,
     height: u32,
+
+    cycle_marker_height: u32,
+    cycle_marker_font_size: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct FooterOptions {
     font_size: u32,
     height: u32,
+
+    cycle_marker_height: u32,
+    cycle_marker_font_size: u32,
 }
 
 impl Default for HeaderOptions {
     fn default() -> Self {
-        Self { font_size: 24, height: 32 }
+        Self {
+            font_size: 24,
+            height: 32,
+            cycle_marker_height: 12,
+            cycle_marker_font_size: 12,
+        }
     }
 }
 
 impl Default for FooterOptions {
     fn default() -> Self {
-        Self { font_size: 24, height: 32 }
+        Self {
+            font_size: 24,
+            height: 32,
+            cycle_marker_height: 12,
+            cycle_marker_font_size: 12,
+        }
     }
 }
 
@@ -140,6 +412,86 @@ pub trait ToSvg {
     }
 }
 
+fn gap(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
+    let wave_height = f32::from(wave_height);
+
+    let a: f32 = 8.0;
+    let b = wave_height / 2.0 + 6.0;
+
+    const DISTANCE: f32 = 4.0;
+
+    let start = (-a, b);
+    let end = (a, -b);
+
+    let control_1 = (-a / 2.0, b);
+
+    let rad = (-2.0 * b / a).atan();
+    let control_2 = (rad.cos() * a / -2.0, rad.sin() * a / -2.0);
+
+    let control_3 = (a / 2.0, -b);
+
+    write!(
+        writer,
+        r##"<path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}H{rp1x}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}H{lp1x}z" fill="#fff" stroke="none"/><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}" fill="none" stroke="#000" stroke-width="1"/><path d="M{rp1x},{rp1y}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}" fill="none" stroke="#000" stroke-width="1"/>"##,
+        lp1x = start.0 - DISTANCE / 2.0,
+        lp1y = start.1,
+        lp2x = control_1.0 - DISTANCE / 2.0,
+        lp2y = control_1.1,
+        lp3x = control_2.0 - DISTANCE / 2.0,
+        lp3y = control_2.1,
+        lp4x = 0.0 - DISTANCE / 2.0,
+        lp4y = 0,
+        lp5x = control_3.0 - DISTANCE / 2.0,
+        lp5y = control_3.1,
+        lp6x = end.0 - DISTANCE / 2.0,
+        lp6y = end.1,
+        rp1x = end.0 + DISTANCE / 2.0,
+        rp1y = end.1,
+        rp2x = control_3.0 + DISTANCE / 2.0,
+        rp2y = control_3.1,
+        rp3x = -control_2.0 + DISTANCE / 2.0,
+        rp3y = -control_2.1,
+        rp4x = 0.0 + DISTANCE / 2.0,
+        rp4y = 0,
+        rp5x = control_1.0 + DISTANCE / 2.0,
+        rp5y = control_1.1,
+        rp6x = start.0 + DISTANCE / 2.0,
+        rp6y = start.1,
+    )
+}
+
+fn posedge_arrow(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
+    let scale = i32::from(wave_height / 6);
+
+    write!(
+        writer,
+        r##"<path d="M{x1},{y1}L{x2},{y2}L{x3},{y3}H{hback}z" fill="#000" stroke="none"/>"##,
+        x1 = -scale,
+        y1 = scale,
+        x2 = 0,
+        y2 = -scale,
+        x3 = scale,
+        y3 = scale,
+        hback = -scale * 2,
+    )
+}
+
+fn negedge_arrow(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
+    let scale = i32::from(wave_height / 6);
+
+    write!(
+        writer,
+        r##"<path d="M{x1},{y1}L{x2},{y2}L{x3},{y3}H{hback}z" fill="#000" stroke="none"/>"##,
+        x1 = -scale,
+        y1 = -scale,
+        x2 = 0,
+        y2 = scale,
+        x3 = scale,
+        y3 = -scale,
+        hback = -scale * 2,
+    )
+}
+
 impl<'a> ToSvg for AssembledFigure<'a> {
     type Options = RenderOptions;
 
@@ -165,69 +517,13 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
         let font_family = get_font_family_name(&face).unwrap_or_else(|| "monospace".to_string());
 
-        let header_height = if self.title.is_some() { header.height } else { 0 };
-
-        let footer_height = if self.footer.is_some() { footer.height } else { 0 };
-
-        let has_textbox = !self.lines.iter().all(|line| line.text.is_empty());
-        let textbox_width = has_textbox.then(|| {
-            self.lines
-                .iter()
-                .map(|line| get_text_width(line.text, &face, options.font_size))
-                .max()
-                .unwrap_or_default()
-        });
-
-        let schema_width = self.num_cycles * u32::from(wave_dimensions.cycle_width);
-        let schema_height = if self.lines.len() == 0 {
-            0
-        } else {
-            let num_lines = self.lines.len() as u32;
-
-            paddings.schema_top
-                + paddings.schema_bottom
-                + spacings.line_to_line * (num_lines - 1)
-                + u32::from(wave_dimensions.wave_height) * num_lines
-        };
-
-        let groupbox_width = if self.max_group_depth == 0 {
-            None
-        } else {
-            Some(
-                self.max_group_depth * group_indicator_dimensions.width
-                    + (self.max_group_depth - 1) * group_indicator_dimensions.spacing
-                    + self.group_label_at_depth.iter().filter(|x| **x).count() as u32
-                        * group_indicator_dimensions.label_height(),
-            )
-        };
-
-        let figure_width = paddings.figure_left
-            + groupbox_width.map_or(0, |w| w + spacings.groupbox_to_textbox)
-            + textbox_width.map_or(0, |w| w + spacings.textbox_to_schema)
-            + schema_width
-            + paddings.figure_right;
-        let figure_height = paddings.figure_top
-            + header_height
-            + schema_height
-            + footer_height
-            + paddings.figure_bottom;
-
-        let (textbox_x, schema_x) = match (groupbox_width, textbox_width) {
-            (Some(groupbox_width), Some(textbox_width)) => {
-                let textbox_x = groupbox_width + spacings.groupbox_to_textbox;
-                (
-                    Some(textbox_x),
-                    textbox_x + textbox_width + spacings.textbox_to_schema,
-                )
-            }
-            (Some(groupbox_width), None) => (None, groupbox_width + spacings.groupbox_to_textbox),
-            (None, Some(textbox_width)) => (Some(0), textbox_width + spacings.textbox_to_schema),
-            (None, None) => (None, 0),
-        };
+        let dims = SvgDimensions::new(self, &face, options);
 
         write!(
             writer,
             r#"<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 {figure_width} {figure_height}" overflow="hidden" width="{figure_width}" height="{figure_height}">"#,
+            figure_width = dims.figure_width(),
+            figure_height = dims.figure_height(),
         )?;
 
         // Define the cycle-to-cycle background hint lines
@@ -238,75 +534,23 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)"><line x1="0" y="0" x2="0" y2="10" stroke="#000" stroke-width="1"/></pattern>"##
             )?;
         }
-        {
-            // (-4, 4) -> (0, -4) -> (4, 4)
-            let [x1, y1, x2, y2, x3, y3] = [-4, 4, 4, -8, 4, 8];
 
-            write!(
-                writer,
-                r##"<g id="pei"><path d="M{x1},{y1}l{x2},{y2}l{x3},{y3}h-8z" fill="#000" stroke="none"/></g>"##,
-            )?;
-        }
-        {
-            // (-4, -4) -> (0, 4) -> (4, -4)
-            let [x1, y1, x2, y2, x3, y3] = [-4, -4, 4, 8, 4, -8];
+        write!(writer, r##"<g id="pei">"##)?;
+        posedge_arrow(writer, wave_dimensions.wave_height)?;
+        write!(writer, r##"</g>"##)?;
 
-            write!(
-                writer,
-                r##"<g id="nei"><path d="M{x1},{y1}l{x2},{y2}l{x3},{y3}h-8z" fill="#000" stroke="none"/></g>"##,
-            )?;
-        }
-        {
-            let wave_height = f32::from(options.wave_dimensions.wave_height);
+        write!(writer, r##"<g id="nei">"##)?;
+        negedge_arrow(writer, wave_dimensions.wave_height)?;
+        write!(writer, r##"</g>"##)?;
 
-            let a: f32 = 8.0;
-            let b = wave_height / 2.0 + 6.0;
+        write!(writer, r##"<g id="gap">"##)?;
+        gap(writer, wave_dimensions.wave_height)?;
+        write!(writer, r##"</g>"##)?;
 
-            const DISTANCE: f32 = 4.0;
-
-            let start = (-a, b);
-
-            let control_1 = (start.0 + a / 2.0, start.1);
-
-            let rad = (-2.0 * b / a).atan();
-            let control_2 = (rad.cos() * a / -2.0, rad.sin() * a / -2.0);
-
-            let end = (a, -b);
-
-            let control_3 = (end.0 - a / 2.0, end.1);
-
-            write!(
-                writer,
-                r##"<g id="gap"><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}H{rp1x}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}H{lp1x}z" fill="#fff" stroke="none"/><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}" fill="none" stroke="#000" stroke-width="1"/><path d="M{rp1x},{rp1y}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}" fill="none" stroke="#000" stroke-width="1"/></g>"##,
-                lp1x = start.0 - DISTANCE / 2.0,
-                lp1y = start.1,
-                lp2x = control_1.0 - DISTANCE / 2.0,
-                lp2y = control_1.1,
-                lp3x = control_2.0 - DISTANCE / 2.0,
-                lp3y = control_2.1,
-                lp4x = 0.0 - DISTANCE / 2.0,
-                lp4y = 0,
-                lp5x = control_3.0 - DISTANCE / 2.0,
-                lp5y = control_3.1,
-                lp6x = end.0 - DISTANCE / 2.0,
-                lp6y = end.1,
-                rp1x = end.0 + DISTANCE / 2.0,
-                rp1y = end.1,
-                rp2x = control_3.0 + DISTANCE / 2.0,
-                rp2y = control_3.1,
-                rp3x = -control_2.0 + DISTANCE / 2.0,
-                rp3y = -control_2.1,
-                rp4x = 0.0 + DISTANCE / 2.0,
-                rp4y = 0,
-                rp5x = control_1.0 + DISTANCE / 2.0,
-                rp5y = control_1.1,
-                rp6x = start.0 + DISTANCE / 2.0,
-                rp6y = start.1,
-            )?;
-        }
         write!(
             writer,
-            r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g>"##
+            r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g>"##,
+            schema_height = dims.schema_height(),
         )?;
         write!(writer, "</defs>")?;
 
@@ -318,19 +562,38 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             padding_y = paddings.figure_top,
         )?;
 
+        // --- Start Header ---
         if let Some(title) = self.title {
             let title_font_size = header.font_size;
             write!(
                 writer,
                 r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{title_font_size}" letter-spacing="0"><tspan>{title}</tspan></text>"##,
-                x = (figure_width - paddings.figure_left - paddings.figure_right) / 2,
-                y = header_height / 2
+                x = dims.header_width() / 2,
+                y = dims.header_height() / 2
             )?;
         }
+        if let Some(CycleMarker { start, every }) = self.top_cycle_marker {
+            let marker_font_size = header.cycle_marker_font_size;
+            let end = start + self.num_cycles;
+
+            if every != 0 {
+                for offset in (start..end).step_by(every as usize) {
+                    write!(
+                        writer,
+                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{marker_font_size}" letter-spacing="0"><tspan>{offset}</tspan></text>"##,
+                        x = dims.schema_x() + dims.cycle_width() * (offset - start) + dims.cycle_width() / 2,
+                        y = dims.header_height()
+                    )?;
+                }
+            }
+        }
+        // --- End Header ---
 
         write!(
             writer,
-            r##"<g transform="translate({schema_x},{header_height})">"##,
+            r##"<g transform="translate({schema_x},{schema_y})">"##,
+            schema_x = dims.schema_x(),
+            schema_y = dims.schema_y(),
         )?;
         for i in 0..=u64::from(self.num_cycles) {
             write!(
@@ -355,7 +618,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 } else {
                     group.depth * group_indicator_dimensions.width
                 };
-            let y = header_height
+            let y = dims.header_height()
                 + paddings.schema_top
                 + if group.start == 0 {
                     0
@@ -398,8 +661,11 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 break;
             };
 
-            let x = textbox_x.unwrap_or(schema_x);
-            let y = header_height
+            let x = dims
+                .has_textbox()
+                .then_some(dims.textbox_x())
+                .unwrap_or(dims.schema_x());
+            let y = dims.header_height()
                 + paddings.schema_top
                 + if i == 0 {
                     0
@@ -419,27 +685,48 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 )?;
             }
 
-            write!(
-                writer,
-                r##"<g transform="translate({schema_x})">"##,
-                schema_x = textbox_x.map_or(0, |textbox_x| schema_x - textbox_x)
-            )?;
-            line.path.write_svg_with_options(writer, &wave_dimensions)?;
-
-            write!(writer, r##"</g>"##)?;
+            if dims.has_textbox() {
+                write!(
+                    writer,
+                    r##"<g transform="translate({schema_x})">"##,
+                    schema_x = dims.schema_x() - dims.textbox_x()
+                )?;
+                line.path.write_svg_with_options(writer, &wave_dimensions)?;
+                write!(writer, r##"</g>"##)?;
+            } else {
+                line.path.write_svg_with_options(writer, &wave_dimensions)?;
+            }
 
             write!(writer, r##"</g>"##)?;
         }
 
+        // --- Start Footer ---
         if let Some(footer_text) = self.footer {
             let footer_font_size = footer.font_size;
             write!(
                 writer,
                 r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{footer_font_size}" letter-spacing="0"><tspan>{footer_text}</tspan></text>"##,
-                x = (figure_width - paddings.figure_left - paddings.figure_right) / 2,
-                y = header_height + schema_height + footer_height / 2
+                x = dims.footer_width() / 2,
+                y = dims.footer_y() + dims.footer_height() / 2
             )?;
         }
+        if let Some(CycleMarker { start, every }) = self.bottom_cycle_marker {
+            let marker_font_size = footer.cycle_marker_font_size;
+            let end = start + self.num_cycles;
+
+            if every != 0 {
+                for offset in (start..end).step_by(every as usize) {
+                    write!(
+                        writer,
+                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{marker_font_size}" letter-spacing="0"><tspan>{offset}</tspan></text>"##,
+                        x = dims.schema_x() + dims.cycle_width() * (offset - start) + dims.cycle_width() / 2,
+                        y = dims.footer_y()
+                    )?;
+                }
+            }
+        }
+        // --- End Footer ---
+
 
         write!(writer, "</g></svg>")?;
 

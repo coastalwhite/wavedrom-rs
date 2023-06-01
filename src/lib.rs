@@ -188,8 +188,16 @@ pub struct AssembledFigure<'a> {
     title: Option<&'a str>,
     footer: Option<&'a str>,
 
+    top_cycle_marker: Option<CycleMarker>,
+    bottom_cycle_marker: Option<CycleMarker>,
+
     pub lines: Vec<AssembledLine<'a>>,
     groups: Vec<WaveGroup<'a>>,
+}
+
+pub struct CycleMarker {
+    start: u32,
+    every: u32,
 }
 
 impl<'a> AssembledFigure<'a> {
@@ -289,6 +297,15 @@ impl Figure {
 
             title,
             footer,
+
+            top_cycle_marker: Some(CycleMarker {
+                start: 42,
+                every: 3,
+            }),
+            bottom_cycle_marker: Some(CycleMarker {
+                start: 32,
+                every: 1,
+            }),
 
             lines,
             groups,
