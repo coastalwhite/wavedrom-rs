@@ -7,6 +7,78 @@ use crate::{ClockEdge, CycleMarker, WaveOptions};
 use super::path::AssembledWavePath;
 use super::AssembledFigure;
 
+pub trait ToSvg {
+    type Options: Default;
+
+    fn write_svg_with_options(
+        &self,
+        writer: &mut impl io::Write,
+        options: &Self::Options,
+    ) -> io::Result<()>;
+
+    #[inline]
+    fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
+        self.write_svg_with_options(writer, &Self::Options::default())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RenderOptions {
+    pub font_size: u32,
+    pub paddings: FigurePadding,
+    pub spacings: FigureSpacing,
+    pub header: HeaderOptions,
+    pub footer: FooterOptions,
+    pub wave_dimensions: WaveOptions,
+    pub group_indicator_dimensions: GroupIndicatorDimension,
+}
+
+#[derive(Debug, Clone)]
+pub struct FigurePadding {
+    pub figure_top: u32,
+    pub figure_bottom: u32,
+    pub figure_left: u32,
+    pub figure_right: u32,
+
+    pub schema_top: u32,
+    pub schema_bottom: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct FigureSpacing {
+    pub textbox_to_schema: u32,
+    pub groupbox_to_textbox: u32,
+    pub line_to_line: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct GroupIndicatorDimension {
+    width: u32,
+
+    spacing: u32,
+
+    label_spacing: u32,
+    label_fontsize: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct HeaderOptions {
+    font_size: u32,
+    height: u32,
+
+    cycle_marker_height: u32,
+    cycle_marker_font_size: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct FooterOptions {
+    font_size: u32,
+    height: u32,
+
+    cycle_marker_height: u32,
+    cycle_marker_font_size: u32,
+}
+
 struct SvgDimensions<'a> {
     figure: &'a AssembledFigure<'a>,
     options: &'a RenderOptions,
@@ -92,10 +164,10 @@ impl<'a> SvgDimensions<'a> {
         height
     }
 
-    #[inline]
-    fn header_x(&self) -> u32 {
-        self.options.paddings.figure_left
-    }
+    // #[inline]
+    // fn header_x(&self) -> u32 {
+    //     self.options.paddings.figure_left
+    // }
 
     #[inline]
     fn header_y(&self) -> u32 {
@@ -124,10 +196,10 @@ impl<'a> SvgDimensions<'a> {
         height
     }
 
-    #[inline]
-    fn footer_x(&self) -> u32 {
-        self.options.paddings.figure_left
-    }
+    // #[inline]
+    // fn footer_x(&self) -> u32 {
+    //     self.options.paddings.figure_left
+    // }
 
     #[inline]
     fn footer_y(&self) -> u32 {
@@ -141,10 +213,10 @@ impl<'a> SvgDimensions<'a> {
         self.textbox_width.unwrap_or(0)
     }
 
-    #[inline]
-    fn textbox_height(&self) -> u32 {
-        self.schema_height()
-    }
+    // #[inline]
+    // fn textbox_height(&self) -> u32 {
+    //     self.schema_height()
+    // }
 
     #[inline]
     fn textbox_x(&self) -> u32 {
@@ -157,10 +229,10 @@ impl<'a> SvgDimensions<'a> {
         x
     }
 
-    #[inline]
-    fn textbox_y(&self) -> u32 {
-        self.header_y() + self.header_height()
-    }
+    // #[inline]
+    // fn textbox_y(&self) -> u32 {
+    //     self.header_y() + self.header_height()
+    // }
 
     #[inline]
     fn has_grouping(&self) -> bool {
@@ -172,10 +244,10 @@ impl<'a> SvgDimensions<'a> {
         self.inner_x()
     }
 
-    #[inline]
-    fn grouping_y(&self) -> u32 {
-        self.header_y() + self.header_height()
-    }
+    // #[inline]
+    // fn grouping_y(&self) -> u32 {
+    //     self.header_y() + self.header_height()
+    // }
 
     fn grouping_width(&self) -> u32 {
         let max_group_depth = self.figure.max_group_depth;
@@ -202,10 +274,10 @@ impl<'a> SvgDimensions<'a> {
         sum_indicator_widths + spacing + label_widths
     }
 
-    #[inline]
-    fn grouping_height(&self) -> u32 {
-        self.schema_height()
-    }
+    // #[inline]
+    // fn grouping_height(&self) -> u32 {
+    //     self.schema_height()
+    // }
 
     #[inline]
     fn schema_x(&self) -> u32 {
@@ -261,52 +333,6 @@ impl<'a> SvgDimensions<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct FigurePadding {
-    pub figure_top: u32,
-    pub figure_bottom: u32,
-    pub figure_left: u32,
-    pub figure_right: u32,
-
-    pub schema_top: u32,
-    pub schema_bottom: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct FigureSpacing {
-    pub textbox_to_schema: u32,
-    pub groupbox_to_textbox: u32,
-    pub line_to_line: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct GroupIndicatorDimension {
-    width: u32,
-
-    spacing: u32,
-
-    label_spacing: u32,
-    label_fontsize: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct HeaderOptions {
-    font_size: u32,
-    height: u32,
-
-    cycle_marker_height: u32,
-    cycle_marker_font_size: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct FooterOptions {
-    font_size: u32,
-    height: u32,
-
-    cycle_marker_height: u32,
-    cycle_marker_font_size: u32,
-}
-
 impl Default for HeaderOptions {
     fn default() -> Self {
         Self {
@@ -329,12 +355,6 @@ impl Default for FooterOptions {
     }
 }
 
-impl GroupIndicatorDimension {
-    fn label_height(&self) -> u32 {
-        self.label_spacing + self.label_fontsize
-    }
-}
-
 impl Default for GroupIndicatorDimension {
     fn default() -> Self {
         Self {
@@ -345,17 +365,6 @@ impl Default for GroupIndicatorDimension {
             label_fontsize: 14,
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct RenderOptions {
-    pub font_size: u32,
-    pub paddings: FigurePadding,
-    pub spacings: FigureSpacing,
-    pub header: HeaderOptions,
-    pub footer: FooterOptions,
-    pub wave_dimensions: WaveOptions,
-    pub group_indicator_dimensions: GroupIndicatorDimension,
 }
 
 impl Default for RenderOptions {
@@ -396,18 +405,9 @@ impl Default for FigureSpacing {
     }
 }
 
-pub trait ToSvg {
-    type Options: Default;
-
-    fn write_svg_with_options(
-        &self,
-        writer: &mut impl io::Write,
-        options: &Self::Options,
-    ) -> io::Result<()>;
-
-    #[inline]
-    fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
-        self.write_svg_with_options(writer, &Self::Options::default())
+impl GroupIndicatorDimension {
+    fn label_height(&self) -> u32 {
+        self.label_spacing + self.label_fontsize
     }
 }
 
@@ -921,7 +921,7 @@ impl<'a> Font<'a> {
                 .names()
                 .into_iter()
                 .find(|item| item.name_id == 1)
-                .map_or(None, {
+                .map_or(None, |name| {
                     if !name.is_unicode() {
                         return None;
                     }
@@ -942,9 +942,6 @@ impl<'a> Font<'a> {
         }
     }
 }
-
-#[cfg(feature = "embed_font")]
-fn name_to_string(name: ttf_parser::name::Name) -> Option<String> {}
 
 #[ignore]
 #[test]

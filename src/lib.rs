@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 mod path;
-mod rect;
 mod svg;
 
 #[cfg(feature = "wavejson")]
