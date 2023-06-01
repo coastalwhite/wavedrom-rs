@@ -39,9 +39,16 @@ pub enum PathCommand {
     Curve(i32, i32, i32, i32, i32, i32),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PathSegmentBackground {
-    Index(usize),
+    B2,
+    B3,
+    B4,
+    B5,
+    B6,
+    B7,
+    B8,
+    B9,
     Undefined,
 }
 
@@ -81,6 +88,8 @@ pub struct WaveOptions {
     pub wave_height: u16,
     pub cycle_width: u16,
     pub transition_offset: u16,
+
+    pub backgrounds: [String; 8],
 }
 
 impl Default for WaveOptions {
@@ -92,6 +101,17 @@ impl Default for WaveOptions {
             wave_height: 24,
             cycle_width: 48,
             transition_offset: 4,
+
+            backgrounds: [
+                "#ff4040".to_string(),
+                "#5499C7".to_string(),
+                "#58D68D".to_string(),
+                "#A569BD".to_string(),
+                "#DEE5E5".to_string(),
+                "#D4D6B9".to_string(),
+                "#E3D7FF".to_string(),
+                "#839791".to_string(),
+            ]
         }
     }
 }
@@ -540,7 +560,7 @@ impl<'a> SignalSegmentIter<'a> {
             self.forward.actions.push(action);
         }
 
-        let text = if matches!(background, Some(PathSegmentBackground::Index(_))) {
+        let text = if background.map_or(false, PathSegmentBackground::is_data_box) {
             let s = self.box_content.get(self.box_index);
             self.box_index += 1;
             s.map(|s| s.clone())
@@ -795,15 +815,24 @@ impl PathState {
             | PathState::PosedgeClockMarked
             | PathState::PosedgeClockUnmarked => None,
             PathState::X => Some(PathSegmentBackground::Undefined),
-            PathState::Box2 => Some(PathSegmentBackground::Index(2)),
-            PathState::Box3 => Some(PathSegmentBackground::Index(3)),
-            PathState::Box4 => Some(PathSegmentBackground::Index(4)),
-            PathState::Box5 => Some(PathSegmentBackground::Index(5)),
-            PathState::Box6 => Some(PathSegmentBackground::Index(6)),
-            PathState::Box7 => Some(PathSegmentBackground::Index(7)),
-            PathState::Box8 => Some(PathSegmentBackground::Index(8)),
-            PathState::Box9 => Some(PathSegmentBackground::Index(9)),
+            PathState::Box2 => Some(PathSegmentBackground::B2),
+            PathState::Box3 => Some(PathSegmentBackground::B3),
+            PathState::Box4 => Some(PathSegmentBackground::B4),
+            PathState::Box5 => Some(PathSegmentBackground::B5),
+            PathState::Box6 => Some(PathSegmentBackground::B6),
+            PathState::Box7 => Some(PathSegmentBackground::B7),
+            PathState::Box8 => Some(PathSegmentBackground::B8),
+            PathState::Box9 => Some(PathSegmentBackground::B9),
             PathState::Continue | PathState::Gap => None,
+        }
+    }
+}
+
+impl PathSegmentBackground {
+    fn is_data_box(self) -> bool {
+        match self {
+            Self::Undefined => false,
+            _ => true,
         }
     }
 }

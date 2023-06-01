@@ -756,11 +756,14 @@ fn write_signal(
 ) -> io::Result<()> {
     for segment in wave_path.segments() {
         let fill = match segment.background() {
-            Some(PathSegmentBackground::Index(2)) => "#ff4040",
-            Some(PathSegmentBackground::Index(3)) => "#5499C7",
-            Some(PathSegmentBackground::Index(4)) => "#58D68D",
-            Some(PathSegmentBackground::Index(5)) => "#A569BD",
-            Some(PathSegmentBackground::Index(_)) => unimplemented!(),
+            Some(PathSegmentBackground::B2) => &options.backgrounds[0],
+            Some(PathSegmentBackground::B3) => &options.backgrounds[1],
+            Some(PathSegmentBackground::B4) => &options.backgrounds[2],
+            Some(PathSegmentBackground::B5) => &options.backgrounds[3],
+            Some(PathSegmentBackground::B6) => &options.backgrounds[4],
+            Some(PathSegmentBackground::B7) => &options.backgrounds[5],
+            Some(PathSegmentBackground::B8) => &options.backgrounds[6],
+            Some(PathSegmentBackground::B9) => &options.backgrounds[7],
             Some(PathSegmentBackground::Undefined) => "url(#x-bg)",
             None => "none",
         };
