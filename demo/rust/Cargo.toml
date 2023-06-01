@@ -8,6 +8,8 @@ crate-type = ["cdylib"]
 
 [dependencies.wavedrom-rs]
 path = "../.."
+default-features = false
+features = ["serde", "embed_font"]
 
 [dependencies]
 json5 = "0.4.1"

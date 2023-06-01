@@ -3,7 +3,7 @@ use std::str::FromStr;
 mod path;
 mod svg;
 
-#[cfg(feature = "wavejson")]
+#[cfg(feature = "serde")]
 pub mod wavejson;
 
 pub use path::{AssembledWavePath, PathState, WaveOptions, WavePath, WavePathSegment};

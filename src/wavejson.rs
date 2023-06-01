@@ -30,6 +30,7 @@ pub struct Config {
     pub skin: Option<String>,
 }
 
+#[cfg(feature = "serde_json")]
 impl WaveJson {
     pub fn from_str(s: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(s)
@@ -134,6 +135,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "serde_json")]
     fn groups() {
         use crate::svg::ToSvg;
 

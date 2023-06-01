@@ -26,6 +26,6 @@ version = "1.0"
 optional = true
 
 [features]
-default = ["wavejson"]
+default = ["wavejson", "embed_font"]
 wavejson = ["serde", "serde_json"]
 embed_font = ["ttf-parser"]
