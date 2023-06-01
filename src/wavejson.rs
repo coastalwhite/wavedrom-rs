@@ -7,6 +7,7 @@ pub struct WaveJson {
     pub signal: Vec<Signal>,
     pub head: Option<Head>,
     pub foot: Option<Foot>,
+    pub config: Option<Config>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,6 +24,12 @@ pub struct Foot {
     pub every: Option<i32>, 
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Config {
+    pub hscale: Option<u16>,
+    pub skin: Option<String>,
+}
+
 impl WaveJson {
     pub fn from_str(s: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(s)
@@ -35,9 +42,12 @@ impl TryFrom<WaveJson> for Figure {
         let title = value.head.and_then(|head| head.text);
         let footer = value.foot.and_then(|foot| foot.text);
 
+        let hscale = value.config.and_then(|config| config.hscale).unwrap_or(1);
+
         Ok(Figure::new(
             title,
             footer,
+            hscale,
             value.signal
                 .into_iter()
                 .map(WaveLine::try_from)
@@ -193,6 +203,9 @@ mod tests {
             },
             "foot": {
                 "text": "Some Footer Text"
+            },
+            "config": {
+                "hscale": 1
             }
         }
         "#;

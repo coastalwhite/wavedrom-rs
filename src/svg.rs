@@ -248,7 +248,7 @@ impl<'a> SvgDimensions<'a> {
 
     #[inline]
     fn cycle_width(&self) -> u32 {
-        self.options.wave_dimensions.cycle_width.into()
+        (self.figure.hscale * self.options.wave_dimensions.cycle_width).into()
     }
 
     #[inline]
@@ -581,7 +581,9 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                     write!(
                         writer,
                         r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{marker_font_size}" letter-spacing="0"><tspan>{offset}</tspan></text>"##,
-                        x = dims.schema_x() + dims.cycle_width() * (offset - start) + dims.cycle_width() / 2,
+                        x = dims.schema_x()
+                            + dims.cycle_width() * (offset - start)
+                            + dims.cycle_width() / 2,
                         y = dims.header_height()
                     )?;
                 }
@@ -595,11 +597,11 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             schema_x = dims.schema_x(),
             schema_y = dims.schema_y(),
         )?;
-        for i in 0..=u64::from(self.num_cycles) {
+        for i in 0..=self.num_cycles {
             write!(
                 writer,
                 r##"<use transform="translate({x})" xlink:href="#cl"/>"##,
-                x = i * u64::from(wave_dimensions.cycle_width)
+                x = i * dims.cycle_width()
             )?;
         }
         write!(writer, r##"</g>"##)?;
@@ -691,10 +693,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                     r##"<g transform="translate({schema_x})">"##,
                     schema_x = dims.schema_x() - dims.textbox_x()
                 )?;
-                line.path.write_svg_with_options(writer, &wave_dimensions)?;
+                write_signal(&line.path, writer, &wave_dimensions, self.hscale)?;
                 write!(writer, r##"</g>"##)?;
             } else {
-                line.path.write_svg_with_options(writer, &wave_dimensions)?;
+                write_signal(&line.path, writer, &wave_dimensions, self.hscale)?;
             }
 
             write!(writer, r##"</g>"##)?;
@@ -719,7 +721,9 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                     write!(
                         writer,
                         r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{marker_font_size}" letter-spacing="0"><tspan>{offset}</tspan></text>"##,
-                        x = dims.schema_x() + dims.cycle_width() * (offset - start) + dims.cycle_width() / 2,
+                        x = dims.schema_x()
+                            + dims.cycle_width() * (offset - start)
+                            + dims.cycle_width() / 2,
                         y = dims.footer_y()
                     )?;
                 }
@@ -727,40 +731,60 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         }
         // --- End Footer ---
 
-
         write!(writer, "</g></svg>")?;
 
         Ok(())
     }
 }
 
-impl ToSvg for AssembledWavePath {
-    type Options = WaveOptions;
+fn write_signal(
+    wave_path: &AssembledWavePath,
+    writer: &mut impl io::Write,
+    options: &WaveOptions,
+    hscale: u16,
+) -> io::Result<()> {
+    for segment in wave_path.segments() {
+        let fill = match segment.background() {
+            Some(PathSegmentBackground::Index(2)) => "#ff4040",
+            Some(PathSegmentBackground::Index(3)) => "#5499C7",
+            Some(PathSegmentBackground::Index(4)) => "#58D68D",
+            Some(PathSegmentBackground::Index(5)) => "#A569BD",
+            Some(PathSegmentBackground::Index(_)) => unimplemented!(),
+            Some(PathSegmentBackground::Undefined) => "url(#x-bg)",
+            None => "none",
+        };
 
-    fn write_svg_with_options(
-        &self,
-        writer: &mut impl io::Write,
-        options: &Self::Options,
-    ) -> io::Result<()> {
-        for segment in self.segments() {
-            let fill = match segment.background() {
-                Some(PathSegmentBackground::Index(2)) => "#ff4040",
-                Some(PathSegmentBackground::Index(3)) => "#5499C7",
-                Some(PathSegmentBackground::Index(4)) => "#58D68D",
-                Some(PathSegmentBackground::Index(5)) => "#A569BD",
-                Some(PathSegmentBackground::Index(_)) => unimplemented!(),
-                Some(PathSegmentBackground::Undefined) => "url(#x-bg)",
-                None => "none",
-            };
+        let x = segment.x();
+        let y = segment.y();
 
-            let x = segment.x();
-            let y = segment.y();
+        write!(writer, r##"<path fill="{fill}" d=""##)?;
+        write!(writer, "M{x},{y}")?;
+        for action in segment.actions() {
+            match action {
+                PathCommand::LineVerticalNoStroke(dy) => write!(writer, "v{dy}"),
+                PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
+                PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
+                PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
+                PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => {
+                    write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}")
+                }
+            }?
+        }
 
-            write!(writer, r##"<path fill="{fill}" d=""##)?;
+        if segment.background().is_some() {
+            write!(writer, r##"z"##)?;
+        }
+
+        // If there is a `no_stroke` element, we need to divide up the filling and the
+        // stroking.
+        if !segment.is_fully_stroked() {
+            write!(writer, r##"" stroke="none"/>"##)?;
+
+            write!(writer, r##"<path fill="none" d=""##)?;
             write!(writer, "M{x},{y}")?;
             for action in segment.actions() {
                 match action {
-                    PathCommand::LineVerticalNoStroke(dy) => write!(writer, "v{dy}"),
+                    PathCommand::LineVerticalNoStroke(dy) => write!(writer, "m0,{dy}"),
                     PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
                     PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
                     PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
@@ -769,77 +793,53 @@ impl ToSvg for AssembledWavePath {
                     }
                 }?
             }
+        }
+        write!(writer, r##"" stroke-width="1" stroke="#000"/>"##)?;
 
-            if segment.background().is_some() {
-                write!(writer, r##"z"##)?;
-            }
-
-            // If there is a `no_stroke` element, we need to divide up the filling and the
-            // stroking.
-            if !segment.is_fully_stroked() {
-                write!(writer, r##"" stroke="none"/>"##)?;
-
-                write!(writer, r##"<path fill="none" d=""##)?;
-                write!(writer, "M{x},{y}")?;
-                for action in segment.actions() {
-                    match action {
-                        PathCommand::LineVerticalNoStroke(dy) => write!(writer, "m0,{dy}"),
-                        PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
-                        PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
-                        PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
-                        PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => {
-                            write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}")
-                        }
-                    }?
-                }
-            }
-            write!(writer, r##"" stroke-width="1" stroke="#000"/>"##)?;
-
-            if let Some(marker_text) = segment.marker_text() {
-                write!(
-                    writer,
-                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
-                    font_family = options.font_family,
-                    font_size = options.font_size,
-                    text = marker_text,
-                    x = segment.x() + segment.width() / 2,
-                    y = options.wave_height / 2,
-                )?;
-            }
-
-            for ClockEdgeMarker { x, edge } in segment.clock_edge_markers() {
-                let x = *x;
-                let y = u32::from(options.wave_height) / 2;
-
-                match edge {
-                    ClockEdge::Positive => {
-                        write!(
-                            writer,
-                            r##"<use transform="translate({x},{y})" xlink:href="#pei"/>"##,
-                        )?;
-                    }
-                    ClockEdge::Negative => {
-                        write!(
-                            writer,
-                            r##"<use transform="translate({x},{y})" xlink:href="#nei"/>"##,
-                        )?;
-                    }
-                };
-            }
-
-            for gap in segment.gaps() {
-                let x = u32::from(options.cycle_width) * *gap + u32::from(options.cycle_width) / 2;
-                let y = u32::from(options.wave_height) / 2;
-
-                write!(
-                    writer,
-                    r##"<use transform="translate({x},{y})" xlink:href="#gap"/>"##,
-                )?;
-            }
+        if let Some(marker_text) = segment.marker_text() {
+            write!(
+                writer,
+                r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
+                font_family = options.font_family,
+                font_size = options.font_size,
+                text = marker_text,
+                x = segment.x() + segment.width() / 2,
+                y = options.wave_height / 2,
+            )?;
         }
 
-        Ok(())
+        for ClockEdgeMarker { x, edge } in segment.clock_edge_markers() {
+            let x = *x;
+            let y = u32::from(options.wave_height) / 2;
+
+            match edge {
+                ClockEdge::Positive => {
+                    write!(
+                        writer,
+                        r##"<use transform="translate({x},{y})" xlink:href="#pei"/>"##,
+                    )?;
+                }
+                ClockEdge::Negative => {
+                    write!(
+                        writer,
+                        r##"<use transform="translate({x},{y})" xlink:href="#nei"/>"##,
+                    )?;
+                }
+            };
+        }
+
+        for gap in segment.gaps() {
+            let x = u32::from(options.cycle_width * hscale) * *gap + u32::from(options.cycle_width * hscale) / 2;
+            let y = u32::from(options.wave_height) / 2;
+
+            write!(
+                writer,
+                r##"<use transform="translate({x},{y})" xlink:href="#gap"/>"##,
+            )?;
+        }
     }
+
+    Ok(())
 }
 
 fn get_text_width(s: &str, face: &ttf_parser::Face, font_size: u32) -> u32 {

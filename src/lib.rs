@@ -20,6 +20,8 @@ pub struct Figure {
     title: Option<String>,
     footer: Option<String>,
 
+    hscale: u16,
+
     lines: Vec<WaveLine>,
 }
 pub enum WaveLine {
@@ -55,6 +57,7 @@ impl WaveLine {
         groups: &'_ mut Vec<WaveGroup<'a>>,
         group_label_at_depth: &mut Vec<bool>,
         has_undefined: &mut bool,
+        wave_shape_options: &WaveOptions,
         depth: u32,
     ) -> u32 {
         match self {
@@ -66,7 +69,8 @@ impl WaveLine {
                 lines.push(AssembledLine {
                     text: &wave.name,
                     depth,
-                    path: WavePath::new(wave.cycles.0.clone()).shape(&wave.data),
+                    path: WavePath::new(wave.cycles.0.clone())
+                        .shape_with_options(&wave.data, wave_shape_options),
                 });
 
                 depth
@@ -91,6 +95,7 @@ impl WaveLine {
                         groups,
                         group_label_at_depth,
                         has_undefined,
+                        wave_shape_options,
                         depth + 1,
                     );
 
@@ -118,6 +123,7 @@ impl Figure {
         Self {
             title: None,
             footer: None,
+            hscale: 1,
             lines: lines.into_iter().map(T::into).collect(),
         }
     }
@@ -179,6 +185,8 @@ pub struct CycleClock {
 
 pub struct AssembledFigure<'a> {
     num_cycles: u32,
+
+    hscale: u16,
 
     has_undefined: bool,
 
@@ -247,17 +255,29 @@ impl WaveGroup<'_> {
 }
 
 impl Figure {
-    pub fn new(title: Option<String>, footer: Option<String>, lines: Vec<WaveLine>) -> Self {
+    pub fn new(
+        title: Option<String>,
+        footer: Option<String>,
+        hscale: u16,
+        lines: Vec<WaveLine>,
+    ) -> Self {
         Self {
             title,
             footer,
+            hscale,
             lines,
         }
     }
 
-    pub fn assemble_with_options(&self) -> Result<AssembledFigure, ()> {
+    pub fn assemble_with_options(&self, options: &WaveOptions) -> Result<AssembledFigure, ()> {
+        let hscale = self.hscale;
+
         let title = self.title.as_ref().map(|s| &s[..]);
         let footer = self.footer.as_ref().map(|s| &s[..]);
+
+        let mut options = options.clone();
+        
+        options.cycle_width *= hscale;
 
         let mut lines = Vec::with_capacity(self.lines.len());
         let mut groups = Vec::new();
@@ -274,6 +294,7 @@ impl Figure {
                     &mut groups,
                     &mut group_label_at_depth,
                     &mut has_undefined,
+                    &options,
                     0,
                 )
             })
@@ -289,6 +310,8 @@ impl Figure {
 
         Ok(AssembledFigure {
             num_cycles,
+
+            hscale,
 
             has_undefined,
 
@@ -314,6 +337,6 @@ impl Figure {
 
     #[inline]
     pub fn assemble(&self) -> Result<AssembledFigure, ()> {
-        self.assemble_with_options()
+        self.assemble_with_options(&WaveOptions::default())
     }
 }
