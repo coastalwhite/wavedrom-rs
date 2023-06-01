@@ -113,7 +113,7 @@ impl<'a> SvgDimensions<'a> {
             width += self.grouping_width() + spacings.groupbox_to_textbox;
         }
 
-        if self.has_grouping() {
+        if self.has_textbox() {
             width += self.textbox_width() + spacings.textbox_to_schema;
         }
 
