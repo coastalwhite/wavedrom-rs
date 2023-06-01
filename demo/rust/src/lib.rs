@@ -18,7 +18,7 @@ pub extern fn render(ptr: *mut u8, size: usize) -> *const u8 {
 
     use wavedrom_rs::ToSvg;
 
-    let Ok(wavejson) = WaveJson::from_str(&s[..]) else {
+    let Ok(wavejson) = json5::from_str::<WaveJson>(&s[..]) else {
         return vec![1].leak().as_ptr();
     };
 

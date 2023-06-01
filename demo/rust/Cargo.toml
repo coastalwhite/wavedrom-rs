@@ -8,3 +8,6 @@ crate-type = ["cdylib"]
 
 [dependencies.wavedrom-rs]
 path = "../.."
+
+[dependencies]
+json5 = "0.4.1"
