@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Figure, Wave, WaveLine, WaveLineGroup};
+use crate::{Figure, Wave, WaveLine, WaveLineGroup, CycleMarker};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaveJson {
@@ -13,15 +13,15 @@ pub struct WaveJson {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Head {
     pub text: Option<String>,
-    pub tick: Option<i32>,
-    pub every: Option<i32>, 
+    pub tick: Option<u32>,
+    pub every: Option<u32>, 
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Foot {
     pub text: Option<String>,
-    pub tock: Option<i32>,
-    pub every: Option<i32>, 
+    pub tock: Option<u32>,
+    pub every: Option<u32>, 
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,14 +40,38 @@ impl WaveJson {
 impl TryFrom<WaveJson> for Figure {
     type Error = ();
     fn try_from(value: WaveJson) -> Result<Self, Self::Error> {
-        let title = value.head.and_then(|head| head.text);
-        let footer = value.foot.and_then(|foot| foot.text);
+        let (title, top_cycle_marker) = if let Some(head) = value.head {
+            let title = head.text;
+            let top_cycle_marker = match (head.tick, head.every) {
+                (Some(start), Some(every)) => Some(CycleMarker { start, every }),
+                (Some(start), None) => Some(CycleMarker { start, every: 1 }),
+                (None, _) => None,
+            };
+
+            (title, top_cycle_marker)
+        } else {
+            (None, None)
+        };
+        let (footer, bottom_cycle_marker) = if let Some(foot) = value.foot {
+            let footer = foot.text;
+            let bottom_cycle_marker = match (foot.tock, foot.every) {
+                (Some(start), Some(every)) => Some(CycleMarker { start, every }),
+                (Some(start), None) => Some(CycleMarker { start, every: 1 }),
+                (None, _) => None,
+            };
+
+            (footer, bottom_cycle_marker)
+        } else {
+            (None, None)
+        };
 
         let hscale = value.config.and_then(|config| config.hscale).unwrap_or(1);
 
         Ok(Figure::new(
             title,
             footer,
+            top_cycle_marker,
+            bottom_cycle_marker,
             hscale,
             value.signal
                 .into_iter()

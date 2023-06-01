@@ -19,6 +19,9 @@ pub struct Figure {
     title: Option<String>,
     footer: Option<String>,
 
+    top_cycle_marker: Option<CycleMarker>,
+    bottom_cycle_marker: Option<CycleMarker>,
+
     hscale: u16,
 
     lines: Vec<WaveLine>,
@@ -122,6 +125,10 @@ impl Figure {
         Self {
             title: None,
             footer: None,
+
+            top_cycle_marker: None,
+            bottom_cycle_marker: None,
+
             hscale: 1,
             lines: lines.into_iter().map(T::into).collect(),
         }
@@ -202,6 +209,7 @@ pub struct AssembledFigure<'a> {
     groups: Vec<WaveGroup<'a>>,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct CycleMarker {
     start: u32,
     every: u32,
@@ -257,25 +265,35 @@ impl Figure {
     pub fn new(
         title: Option<String>,
         footer: Option<String>,
+
+        top_cycle_marker: Option<CycleMarker>,
+        bottom_cycle_marker: Option<CycleMarker>,
+
         hscale: u16,
         lines: Vec<WaveLine>,
     ) -> Self {
         Self {
             title,
             footer,
+
+            top_cycle_marker,
+            bottom_cycle_marker,
+
             hscale,
             lines,
         }
     }
 
     pub fn assemble_with_options(&self, options: &WaveOptions) -> Result<AssembledFigure, ()> {
+        let top_cycle_marker = self.top_cycle_marker;
+        let bottom_cycle_marker = self.bottom_cycle_marker;
         let hscale = self.hscale;
 
         let title = self.title.as_ref().map(|s| &s[..]);
         let footer = self.footer.as_ref().map(|s| &s[..]);
 
         let mut options = options.clone();
-        
+
         options.cycle_width *= hscale;
 
         let mut lines = Vec::with_capacity(self.lines.len());
@@ -320,14 +338,8 @@ impl Figure {
             title,
             footer,
 
-            top_cycle_marker: Some(CycleMarker {
-                start: 42,
-                every: 3,
-            }),
-            bottom_cycle_marker: Some(CycleMarker {
-                start: 32,
-                every: 1,
-            }),
+            top_cycle_marker,
+            bottom_cycle_marker,
 
             lines,
             groups,
