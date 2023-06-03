@@ -103,14 +103,14 @@ impl Default for WaveOptions {
             transition_offset: 4,
 
             backgrounds: [
-                "#ff4040".to_string(),
-                "#5499C7".to_string(),
-                "#58D68D".to_string(),
-                "#A569BD".to_string(),
-                "#DEE5E5".to_string(),
-                "#D4D6B9".to_string(),
-                "#E3D7FF".to_string(),
-                "#839791".to_string(),
+                "#FFFFFF".to_string(),
+                "#F7F7A1".to_string(),
+                "#F9D49F".to_string(),
+                "#ADDEFF".to_string(),
+                "#ACD5B6".to_string(),
+                "#A4ABE1".to_string(),
+                "#E8A8F0".to_string(),
+                "#FBDADA".to_string(),
             ]
         }
     }
