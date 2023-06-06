@@ -14,12 +14,26 @@
 						<div id="output"></div>
 					</div>
 					<div class="absolute right-0 bottom-0">
-						<a class="p-2 block" onclick="toggleVisibility('menu')" href="#">⚙️</a>
+						<a class="p-2 mr-2 mb-2 hover:bg-gray-200 rounded block" onclick="toggleVisibility('menu')" href="#">
+                            <img alt="options" src="./assets/options.svg" />
+                        </a>
 						<div id="menu" class="relative hidden">
-							<div class="absolute right-0 lg:bottom-0 lg:mb-2 lg:mr-8 w-64 bg-gray-200 border">
-								<a class="list-none p-2 block hover:bg-gray-400" target="_blank" href="https://wavedrom.com/tutorial.html">🌐 Guide</a>
-								<a class="list-none p-2 block hover:bg-gray-400" onclick="exportToSvg()" href="#">📈 Export as SVG</a>
-								<a class="list-none p-2 block hover:bg-gray-400" onclick="toggleVisibility('render-settings')" href="#">📏 Toggle Render Settings</a>
+							<div class="absolute right-0 lg:bottom-0 lg:mb-2 lg:mr-16 w-64 bg-gray-200 border">
+								<a class="list-none p-2 block hover:bg-gray-400"
+target="_blank" href="https://wavedrom.com/tutorial.html">
+                                    <img class="inline pr-2" src="./assets/globe.svg" alt="globe" />
+                                    Guide
+                                </a>
+								<a class="list-none p-2 block hover:bg-gray-400"
+onclick="exportToSvg()" href="#">
+                                    <img class="inline pr-2" src="./assets/export.svg" />
+                                    Export as SVG
+                                </a>
+								<a class="list-none p-2 block hover:bg-gray-400"
+onclick="toggleVisibility('render-settings')" href="#">
+                                    <img class="inline pr-2" src="./assets/settings.svg" alt="settings" />
+                                    Toggle Render Settings
+                                </a>
 							</div>
 						</div>
 					</div>
