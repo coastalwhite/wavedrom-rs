@@ -212,6 +212,7 @@ impl<'a> Iterator for SignalSegmentIter<'a> {
                     return Some(wave_segment);
                 } else {
                     if !matches!(state, PathState::Continue | PathState::Gap) {
+                        self.prev = Some(state);
                         prev = state;
                     }
                 }
