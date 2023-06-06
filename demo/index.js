@@ -1,3 +1,41 @@
+const SUCCESS_RETURN = 0;
+const ERROR_MSGS = [
+    "✅ Succesful Build",
+    "❌ Invalid JSON",
+    "❌ Invalid JSON value",
+    "❌ Failed to Assemble SVG",
+    "❌ Failed to Render SVG",
+    "❌ Invalid UTF-8",
+    "❌ Unknown Error",
+];
+
+document.getElementById('input').value = `
+{
+	signal: [
+		{ name: "clk", wave: "p.........." },
+		{ name: "req", wave: "0.10......." },
+		{ name: "data", wave: "x......2.x.", data: "0xBEEF" },
+		{ name: "done", wave: "0......1.0." },
+	]
+}
+`.trim();
+
+document.getElementById('input').addEventListener('keydown', function(e) {
+  if (e.key == 'Tab') {
+    e.preventDefault();
+    var start = this.selectionStart;
+    var end = this.selectionEnd;
+
+    // set textarea value to: text before caret + tab + text after caret
+    this.value = this.value.substring(0, start) +
+      "\t" + this.value.substring(end);
+
+    // put caret at right position again
+    this.selectionStart =
+      this.selectionEnd = start + 1;
+  }
+});
+
 function encode_string(str, memory, malloc) {
 	if (!("TextEncoder" in window)) {
 		throw new Error("No support for TextEncoder");
@@ -38,46 +76,26 @@ function decode_string(memory, addr, length) {
 	return text_decoder.decode(array);
 }
 
-let change_code = () => {};
-
 function render_svg(input, output, error, memory, malloc, free, render) {
-    let [ptr, length] = encode_string(input.value, memory, malloc);
-    rptr = render(ptr, length);
-    const array = new Uint8Array(
-        memory.buffer, rptr, 5,
-    );
+    const [ptr, length] = encode_string(input.value, memory, malloc);
+    const rptr = render(ptr, length);
+    const array = new Uint8Array(memory.buffer, rptr, 5);
 
-	let return_code = array[0];
-    let size = (array[1] << 24) | (array[2] << 16) | (array[3] << 8) | array[4];
+	const return_code = Math.min(array[0], ERROR_MSGS.length - 1);
 
-	if (return_code != 0) {
+    error.innerText = ERROR_MSGS[return_code];
+
+	if (return_code == SUCCESS_RETURN) {
+        const size = (array[1] << 24) |
+                     (array[2] << 16) |
+                     (array[3] << 8)  |
+                      array[4];
+        const out = decode_string(memory, rptr + 5, size);
+        output.innerHTML = out;
+        free(rptr, size + 5);
+	} else {
         free(rptr, 1);
-	}
-
-    switch (return_code) {
-        case 0: 
-            error.innerText = "✅ Succesful Build";
-            break;
-        case 1: 
-            error.innerText = "❌ Invalid JSON";
-            return;
-        case 2: 
-            error.innerText = "❌ Invalid JSON value";
-            return;
-        case 3: 
-            error.innerText = "❌ Failed to Assemble SVG";
-            return;
-        case 4: 
-            error.innerText = "❌ Failed to Render SVG";
-            return;
-        default:
-            error.innerText = "❌ Unknown Error";
-            return;
     }
-    
-    const out = decode_string(memory, rptr + 5, size);
-    output.innerHTML = out;
-    free(rptr, size + 5);
 }
 
 fetch("./rust/target/wasm32-unknown-unknown/release/rust.wasm")
@@ -99,6 +117,7 @@ fetch("./rust/target/wasm32-unknown-unknown/release/rust.wasm")
     input.onchange = handler;
     input.onkeyup = handler;
 
+    // Call the render method initialially
     handler();
   });
 
@@ -120,29 +139,3 @@ function exportToSvg() {
 	a.href = window.URL.createObjectURL(bb);
 	a.click();
 }
-
-document.getElementById('input').value = `
-{
-	signal: [
-		{ name: "clk", wave: "p.........." },
-		{ name: "req", wave: "0.10......." },
-		{ name: "data", wave: "x......2.x.", data: "0xBEEF" },
-		{ name: "done", wave: "0......1.0." },
-	]
-}
-`.trim();
-document.getElementById('input').addEventListener('keydown', function(e) {
-  if (e.key == 'Tab') {
-    e.preventDefault();
-    var start = this.selectionStart;
-    var end = this.selectionEnd;
-
-    // set textarea value to: text before caret + tab + text after caret
-    this.value = this.value.substring(0, start) +
-      "\t" + this.value.substring(end);
-
-    // put caret at right position again
-    this.selectionStart =
-      this.selectionEnd = start + 1;
-  }
-});
