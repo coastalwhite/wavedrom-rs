@@ -11,6 +11,7 @@ pub struct ClockEdgeMarker {
 pub struct WavePath<'a> {
     states: Vec<PathState>,
     period: NonZeroU16,
+    phase: u16,
     data: &'a [String],
 }
 
@@ -180,6 +181,7 @@ pub struct SignalSegmentIter<'a> {
     inner: std::slice::Iter<'a, PathState>,
 
     cycle_index: u32,
+
     period: NonZeroU16,
 
     prev: Option<PathState>,
@@ -657,11 +659,12 @@ impl<'a> SignalSegmentIter<'a> {
 
 impl<'a> WavePath<'a> {
     #[inline]
-    pub fn new(states: Vec<PathState>, period: NonZeroU16, data: &'a [String]) -> Self {
+    pub fn new(states: Vec<PathState>, period: NonZeroU16, phase: u16, data: &'a [String]) -> Self {
         Self {
             states,
             period,
             data,
+            phase,
         }
     }
 
@@ -697,15 +700,18 @@ impl<'a> WavePath<'a> {
     }
 
     pub fn iter(&'a self, options: &'a WaveOptions) -> SignalSegmentIter<'a> {
+        let phase_x = i32::from(self.phase) * i32::from(options.cycle_width) / 4;
+
         let mut iter = SignalSegmentIter {
             inner: self.states.iter(),
 
             cycle_index: 0,
+
             period: self.period,
 
             prev: None,
 
-            forward: PathData::new(0, 0),
+            forward: PathData::new(phase_x, 0),
             backward: PathData::new(0, 0),
 
             box_index: 0,
@@ -894,30 +900,32 @@ mod tests {
     #[test]
     fn calculate_cycle_length() {
         macro_rules! assert_cycle_length {
-            ([$($item:ident),* $(,)?], $period:literal => $result:literal) => {
+            ([$($item:ident),* $(,)?], $period:literal, $phase:literal => $result:literal) => {
                 let period = NonZeroU16::new($period).unwrap();
                 let options = WaveOptions::default();
                 let num_cycles = WavePath::new(
                     vec![$(PathState::$item),*],
                     period,
+                    $phase,
                     &[],
                 ).iter(&options).last().map_or(0, |i| i.end_cycle);
                 assert_eq!(num_cycles, $result, "{:?}", WavePath::new(
                     vec![$(PathState::$item),*],
                     period,
+                    $phase,
                     &[],
                 ).iter(&options).collect::<Vec<SignalSegmentItem>>());
             };
         }
 
-        assert_cycle_length!([], 1 => 0);
-        assert_cycle_length!([], 2 => 0);
-        assert_cycle_length!([Box2], 1 => 1);
-        assert_cycle_length!([Box2], 2 => 1);
-        assert_cycle_length!([PosedgeClockMarked], 1 => 1);
-        assert_cycle_length!([PosedgeClockMarked], 2 => 2);
-        assert_cycle_length!([Box2, PosedgeClockMarked], 3 => 4);
-        assert_cycle_length!([PosedgeClockMarked, NegedgeClockMarked], 3 => 6);
-        assert_cycle_length!([PosedgeClockMarked, Continue, NegedgeClockMarked], 3 => 9);
+        assert_cycle_length!([], 1, 0 => 0);
+        assert_cycle_length!([], 2, 0 => 0);
+        assert_cycle_length!([Box2], 1, 0 => 1);
+        assert_cycle_length!([Box2], 2, 0 => 1);
+        assert_cycle_length!([PosedgeClockMarked], 1, 0 => 1);
+        assert_cycle_length!([PosedgeClockMarked], 2, 0 => 2);
+        assert_cycle_length!([Box2, PosedgeClockMarked], 3, 0 => 4);
+        assert_cycle_length!([PosedgeClockMarked, NegedgeClockMarked], 3, 0 => 6);
+        assert_cycle_length!([PosedgeClockMarked, Continue, NegedgeClockMarked], 3, 0 => 9);
     }
 }

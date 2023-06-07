@@ -30,6 +30,7 @@ pub struct SignalItem {
     pub wave: Option<String>,
     pub data: Option<SignalData>,
     pub period: Option<f32>,
+    pub phase: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -152,6 +153,7 @@ impl TryFrom<SignalItem> for Wave {
                     SignalData::Multiple(data) => data,
                 }),
             item.period.map_or(0, |f| f.ceil() as u16),
+            item.phase.map_or(0, |f| (f * 4.).ceil() as u16),
         ))
     }
 }
@@ -224,6 +226,9 @@ mod tests {
                             "D"
                         ]
                     }
+                ],
+                [
+                    { "name": "period 2, phase 0.5", "wave": "p", "period": 2, "phase": 0.5 }
                 ]
             ],
             "head": {

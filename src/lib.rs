@@ -15,6 +15,7 @@ pub struct Wave {
     cycles: Cycles,
     data: Vec<String>,
     period: NonZeroU16,
+    phase: u16,
 }
 
 pub struct Figure {
@@ -73,7 +74,7 @@ impl WaveLine {
                 lines.push(AssembledLine {
                     text: &wave.name,
                     depth,
-                    path: WavePath::new(wave.cycles.0.clone(), wave.period, &wave.data)
+                    path: WavePath::new(wave.cycles.0.clone(), wave.period, wave.phase, &wave.data)
                         .shape_with_options(wave_shape_options),
                 });
 
@@ -355,7 +356,7 @@ impl Figure {
 }
 
 impl Wave {
-    pub fn new(name: String, cycles: Cycles, data: Vec<String>, period: u16) -> Self {
+    pub fn new(name: String, cycles: Cycles, data: Vec<String>, period: u16, phase: u16) -> Self {
         let period = NonZeroU16::new(period).unwrap_or(NonZeroU16::new(1).unwrap());
 
         Self {
@@ -363,6 +364,7 @@ impl Wave {
             cycles,
             data,
             period,
+            phase,
         }
     }
 }
