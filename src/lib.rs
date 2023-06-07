@@ -229,7 +229,7 @@ impl<'a> AssembledFigure<'a> {
     }
 }
 
-struct WaveGroup<'a> {
+pub struct WaveGroup<'a> {
     depth: u32,
 
     label: Option<&'a str>,
@@ -251,15 +251,15 @@ impl AssembledLine<'_> {
 }
 
 impl WaveGroup<'_> {
-    fn len(&self) -> u32 {
+    pub fn len(&self) -> u32 {
         self.end - self.start
     }
 
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.start == self.end
     }
 
-    fn label(&self) -> Option<&str> {
+    pub fn label(&self) -> Option<&str> {
         self.label
     }
 }
@@ -366,5 +366,11 @@ impl Wave {
             period,
             phase,
         }
+    }
+}
+
+impl<'a> AssembledLine<'a> {
+    pub fn depth(&self) -> u32 {
+        self.depth
     }
 }

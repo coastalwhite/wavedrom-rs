@@ -495,6 +495,7 @@ fn negedge_arrow(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()
 pub enum Font<'a> {
     #[cfg(feature = "embed_font")]
     FontFace(&'a ttf_parser::Face<'a>),
+    #[allow(unused)]
     HelveticaLookUpTable(PhantomData<&'a ()>),
 }
 
