@@ -28,6 +28,7 @@ pub enum PathState {
     Box7,
     Box8,
     Box9,
+    Data,
     X,
     PosedgeClockUnmarked,
     PosedgeClockMarked,
@@ -286,7 +287,7 @@ impl<'a> SignalSegmentIter<'a> {
             }
             PosedgeClockMarked | PosedgeClockUnmarked => self.forward.restart_move_to(0, h),
             NegedgeClockMarked | NegedgeClockUnmarked => {}
-            Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X => {
+            Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X => {
                 self.forward.horizontal_line(t);
                 self.backward.vertical_line_no_stroke(-h);
                 self.backward.horizontal_line(-t);
@@ -337,7 +338,7 @@ impl<'a> SignalSegmentIter<'a> {
                 self.forward.vertical_line(-h);
                 self.forward.horizontal_line(w * p / 2);
             }
-            Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X => {
+            Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X => {
                 self.forward.horizontal_line(w - t * 2);
                 self.backward.horizontal_line(t * 2 - w);
             }
@@ -359,8 +360,8 @@ impl<'a> SignalSegmentIter<'a> {
             | (Bottom, Gap | Continue)
             | (Middle, Gap | Continue) => self.forward.horizontal_line(t * 2),
             (
-                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X,
-                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X,
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data,
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data,
             ) => {
                 self.forward.line(t, h / 2);
                 self.backward.line(-t, h / 2);
@@ -378,7 +379,7 @@ impl<'a> SignalSegmentIter<'a> {
             (Middle, Bottom) => self.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2),
             (Bottom, Top) => self.forward.line(t * 2, -h),
             (Bottom, Middle) => self.forward.curve(0, -h / 2, t, -h / 2, t * 2, -h / 2),
-            (Bottom, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X) => {
+            (Bottom, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
                 self.forward.horizontal_line(t);
 
                 let wave_segment = self.commit_without_back_line();
@@ -388,7 +389,7 @@ impl<'a> SignalSegmentIter<'a> {
 
                 return Some(wave_segment);
             }
-            (Middle, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X) => {
+            (Middle, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
                 self.forward.horizontal_line(t);
 
                 let wave_segment = self.commit_without_back_line();
@@ -398,7 +399,7 @@ impl<'a> SignalSegmentIter<'a> {
 
                 return Some(wave_segment);
             }
-            (Top, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X) => {
+            (Top, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
                 self.forward.horizontal_line(t);
 
                 let wave_segment = self.commit_without_back_line();
@@ -408,7 +409,7 @@ impl<'a> SignalSegmentIter<'a> {
 
                 return Some(wave_segment);
             }
-            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X, Top) => {
+            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X, Top) => {
                 self.forward.horizontal_line(t);
                 self.backward.line(-t, h);
 
@@ -418,13 +419,13 @@ impl<'a> SignalSegmentIter<'a> {
 
                 return Some(wave_segment);
             }
-            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X, Middle) => {
+            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X, Middle) => {
                 self.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2);
                 self.backward.curve(-t * 2 + t, 0, -t * 2, 0, -t * 2, h / 2);
 
                 return Some(self.commit_with_back_line(state.background()));
             }
-            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X, Bottom) => {
+            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X, Bottom) => {
                 self.forward.line(t, h);
                 self.backward.horizontal_line(-t);
 
@@ -451,7 +452,7 @@ impl<'a> SignalSegmentIter<'a> {
                 PosedgeClockMarked | PosedgeClockUnmarked,
             ) => self.forward.vertical_line(h),
             (
-                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X,
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X,
                 PosedgeClockMarked | PosedgeClockUnmarked,
             ) => {
                 self.forward.line(t, h);
@@ -460,7 +461,7 @@ impl<'a> SignalSegmentIter<'a> {
                 return Some(self.commit_with_back_line(state.background()));
             }
             (
-                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X,
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X,
                 NegedgeClockMarked | NegedgeClockUnmarked,
             ) => {
                 self.forward.horizontal_line(t);
@@ -488,7 +489,7 @@ impl<'a> SignalSegmentIter<'a> {
             }
             (
                 PosedgeClockMarked | PosedgeClockUnmarked,
-                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X,
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X,
             ) => {
                 let wave_segment = self.commit_without_back_line();
 
@@ -499,7 +500,7 @@ impl<'a> SignalSegmentIter<'a> {
             }
             (
                 NegedgeClockMarked | NegedgeClockUnmarked,
-                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X,
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X,
             ) => {
                 let wave_segment = self.commit_without_back_line();
 
@@ -526,7 +527,10 @@ impl<'a> SignalSegmentIter<'a> {
             (NegedgeClockMarked | NegedgeClockUnmarked, Top) => {
                 self.forward.horizontal_line(t);
             }
-            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X, Gap | Continue) => {
+            (
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data,
+                Gap | Continue,
+            ) => {
                 self.forward.horizontal_line(2 * t);
                 self.backward.horizontal_line(-2 * t);
             }
@@ -551,7 +555,7 @@ impl<'a> SignalSegmentIter<'a> {
             }
             PosedgeClockMarked | PosedgeClockUnmarked | NegedgeClockMarked
             | NegedgeClockUnmarked => self.commit_without_back_line(),
-            Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X => {
+            Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data => {
                 self.forward.horizontal_line(t);
                 self.forward.vertical_line_no_stroke(h);
                 self.backward.horizontal_line(-t);
@@ -647,9 +651,8 @@ impl<'a> SignalSegmentIter<'a> {
         }
 
         match state {
-            Top | Bottom | Middle | Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X => {
-                NonZeroU16::new(1).unwrap()
-            }
+            Top | Bottom | Middle | Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9
+            | Data | X => NonZeroU16::new(1).unwrap(),
             PosedgeClockUnmarked | PosedgeClockMarked | NegedgeClockUnmarked
             | NegedgeClockMarked => self.period,
             Continue | Gap => unreachable!(),
@@ -862,24 +865,21 @@ impl PathData {
 
 impl PathState {
     fn background(self) -> Option<PathSegmentBackground> {
+        use PathState::*;
+
         match self {
-            PathState::Top
-            | PathState::Bottom
-            | PathState::Middle
-            | PathState::NegedgeClockMarked
-            | PathState::NegedgeClockUnmarked
-            | PathState::PosedgeClockMarked
-            | PathState::PosedgeClockUnmarked => None,
-            PathState::X => Some(PathSegmentBackground::Undefined),
-            PathState::Box2 => Some(PathSegmentBackground::B2),
-            PathState::Box3 => Some(PathSegmentBackground::B3),
-            PathState::Box4 => Some(PathSegmentBackground::B4),
-            PathState::Box5 => Some(PathSegmentBackground::B5),
-            PathState::Box6 => Some(PathSegmentBackground::B6),
-            PathState::Box7 => Some(PathSegmentBackground::B7),
-            PathState::Box8 => Some(PathSegmentBackground::B8),
-            PathState::Box9 => Some(PathSegmentBackground::B9),
-            PathState::Continue | PathState::Gap => None,
+            Top | Bottom | Middle | NegedgeClockMarked | NegedgeClockUnmarked
+            | PosedgeClockMarked | PosedgeClockUnmarked => None,
+            X => Some(PathSegmentBackground::Undefined),
+            Box2 | Data => Some(PathSegmentBackground::B2),
+            Box3 => Some(PathSegmentBackground::B3),
+            Box4 => Some(PathSegmentBackground::B4),
+            Box5 => Some(PathSegmentBackground::B5),
+            Box6 => Some(PathSegmentBackground::B6),
+            Box7 => Some(PathSegmentBackground::B7),
+            Box8 => Some(PathSegmentBackground::B8),
+            Box9 => Some(PathSegmentBackground::B9),
+            Continue | PathState::Gap => None,
         }
     }
 }

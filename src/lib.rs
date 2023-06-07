@@ -164,6 +164,7 @@ impl FromStr for Cycles {
                 '9' => PathState::Box9,
                 '.' => PathState::Continue,
                 '|' => PathState::Gap,
+                '=' => PathState::Data,
                 _ => PathState::X,
             };
 

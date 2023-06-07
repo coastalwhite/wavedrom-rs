@@ -207,7 +207,7 @@ mod tests {
                     { "name": "N0N1N2NzNxNpNPNnNNN.N", "wave": "N0N1N2NzNxNpNPNnNNN.N" }
                 ],
                 [
-                    { "name": "0123456789zx", "wave": "0123456789zx" },
+                    { "name": "0123456789=zx", "wave": "0123456789=zx" },
                     {
                         "name": "02....3...0",
                         "wave": "02....3...0",
