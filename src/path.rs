@@ -8,9 +8,10 @@ pub struct ClockEdgeMarker {
     pub edge: ClockEdge,
 }
 
-pub struct WavePath {
-    period: NonZeroU16,
+pub struct WavePath<'a> {
     states: Vec<PathState>,
+    period: NonZeroU16,
+    data: &'a [String],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -654,10 +655,14 @@ impl<'a> SignalSegmentIter<'a> {
     }
 }
 
-impl WavePath {
+impl<'a> WavePath<'a> {
     #[inline]
-    pub fn new(states: Vec<PathState>, period: NonZeroU16) -> Self {
-        Self { states, period }
+    pub fn new(states: Vec<PathState>, period: NonZeroU16, data: &'a [String]) -> Self {
+        Self {
+            states,
+            period,
+            data,
+        }
     }
 
     #[inline]
@@ -670,10 +675,10 @@ impl WavePath {
         self.states.len()
     }
 
-    pub fn shape_with_options(&self, data: &[String], options: &WaveOptions) -> AssembledWavePath {
+    pub fn shape_with_options(&self, options: &WaveOptions) -> AssembledWavePath {
         let mut num_cycles = 0;
         let segments = self
-            .iter(data, options)
+            .iter(options)
             .map(|i| {
                 num_cycles = i.end_cycle;
                 i.segment
@@ -687,15 +692,11 @@ impl WavePath {
     }
 
     #[inline]
-    pub fn shape(&self, data: &[String]) -> AssembledWavePath {
-        self.shape_with_options(data, &WaveOptions::default())
+    pub fn shape(&self) -> AssembledWavePath {
+        self.shape_with_options(&WaveOptions::default())
     }
 
-    pub fn iter<'a>(
-        &'a self,
-        box_content: &'a [String],
-        options: &'a WaveOptions,
-    ) -> SignalSegmentIter<'a> {
+    pub fn iter(&'a self, options: &'a WaveOptions) -> SignalSegmentIter<'a> {
         let mut iter = SignalSegmentIter {
             inner: self.states.iter(),
 
@@ -708,7 +709,7 @@ impl WavePath {
             backward: PathData::new(0, 0),
 
             box_index: 0,
-            box_content,
+            box_content: self.data,
 
             clock_edge_markers: Vec::new(),
             gaps: Vec::new(),
@@ -899,11 +900,13 @@ mod tests {
                 let num_cycles = WavePath::new(
                     vec![$(PathState::$item),*],
                     period,
-                ).iter(&[], &options).last().map_or(0, |i| i.end_cycle);
+                    &[],
+                ).iter(&options).last().map_or(0, |i| i.end_cycle);
                 assert_eq!(num_cycles, $result, "{:?}", WavePath::new(
                     vec![$(PathState::$item),*],
                     period,
-                ).iter(&[], &options).collect::<Vec<SignalSegmentItem>>());
+                    &[],
+                ).iter(&options).collect::<Vec<SignalSegmentItem>>());
             };
         }
 
