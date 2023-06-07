@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Figure, Wave, WaveLine, WaveLineGroup, CycleMarker};
+use crate::{CycleMarker, Figure, Wave, WaveLine, WaveLineGroup};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaveJson {
@@ -11,17 +11,46 @@ pub struct WaveJson {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Signal {
+    Group(Vec<SignalGroupItem>),
+    Item(SignalItem),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SignalGroupItem {
+    String(String),
+    Item(Signal),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignalItem {
+    pub name: Option<String>,
+    pub wave: Option<String>,
+    pub data: Option<SignalData>,
+    pub period: Option<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SignalData {
+    One(String),
+    Multiple(Vec<String>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Head {
     pub text: Option<String>,
     pub tick: Option<u32>,
-    pub every: Option<u32>, 
+    pub every: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Foot {
     pub text: Option<String>,
     pub tock: Option<u32>,
-    pub every: Option<u32>, 
+    pub every: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,7 +102,8 @@ impl TryFrom<WaveJson> for Figure {
             top_cycle_marker,
             bottom_cycle_marker,
             hscale,
-            value.signal
+            value
+                .signal
                 .into_iter()
                 .map(WaveLine::try_from)
                 .collect::<Result<Vec<WaveLine>, ()>>()?,
@@ -113,45 +143,17 @@ impl TryFrom<SignalItem> for Wave {
     type Error = ();
 
     fn try_from(item: SignalItem) -> Result<Self, Self::Error> {
-        Ok(Wave {
-            name: item.name.unwrap_or_default(),
-            cycles: item.wave.unwrap_or_default().parse().map_err(|_| ())?,
-            data: item
-                .data
+        Ok(Wave::new(
+            item.name.unwrap_or_default(),
+            item.wave.unwrap_or_default().parse().map_err(|_| ())?,
+            item.data
                 .map_or_else(Vec::new, |signal_data| match signal_data {
                     SignalData::One(data) => vec![data],
                     SignalData::Multiple(data) => data,
                 }),
-        })
+            item.period.map_or(0, |f| f.ceil() as u16),
+        ))
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Signal {
-    Group(Vec<SignalGroupItem>),
-    Item(SignalItem),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum SignalGroupItem {
-    String(String),
-    Item(Signal),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SignalItem {
-    pub name: Option<String>,
-    pub wave: Option<String>,
-    pub data: Option<SignalData>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum SignalData {
-    One(String),
-    Multiple(Vec<String>),
 }
 
 #[cfg(test)]
@@ -235,7 +237,6 @@ mod tests {
             }
         }
         "#;
-
 
         let wavejson: WaveJson = serde_json::from_str(data).unwrap();
         let figure: Figure = wavejson.try_into().unwrap();

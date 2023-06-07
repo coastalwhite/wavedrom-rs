@@ -1,3 +1,5 @@
+use std::num::NonZeroU16;
+
 use crate::ClockEdge;
 
 #[derive(Debug, Clone)]
@@ -6,7 +8,10 @@ pub struct ClockEdgeMarker {
     pub edge: ClockEdge,
 }
 
-pub struct WavePath(Vec<PathState>);
+pub struct WavePath {
+    period: NonZeroU16,
+    states: Vec<PathState>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PathState {
@@ -111,7 +116,7 @@ impl Default for WaveOptions {
                 "#A4ABE1".to_string(),
                 "#E8A8F0".to_string(),
                 "#FBDADA".to_string(),
-            ]
+            ],
         }
     }
 }
@@ -174,6 +179,7 @@ pub struct SignalSegmentIter<'a> {
     inner: std::slice::Iter<'a, PathState>,
 
     cycle_index: u32,
+    period: NonZeroU16,
 
     prev: Option<PathState>,
 
@@ -189,10 +195,14 @@ pub struct SignalSegmentIter<'a> {
     options: &'a WaveOptions,
 }
 
-impl WavePath {}
+#[derive(Debug)]
+pub struct SignalSegmentItem {
+    pub end_cycle: u32,
+    pub segment: WavePathSegment,
+}
 
 impl<'a> Iterator for SignalSegmentIter<'a> {
-    type Item = WavePathSegment;
+    type Item = SignalSegmentItem;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut prev = self.prev?;
@@ -209,18 +219,28 @@ impl<'a> Iterator for SignalSegmentIter<'a> {
                     debug_assert_ne!(state, PathState::Gap);
 
                     self.prev = Some(state);
-                    return Some(wave_segment);
+                    let segment_item = Some(SignalSegmentItem {
+                        end_cycle: self.cycle_index,
+                        segment: wave_segment,
+                    });
+
+                    self.cycle_index += u32::from(self.cycle_length(state).get());
+
+                    return segment_item;
                 } else {
                     if !matches!(state, PathState::Continue | PathState::Gap) {
                         self.prev = Some(state);
                         prev = state;
                     }
-                }
 
-                self.cycle_index += 1;
+                    self.cycle_index += u32::from(self.cycle_length(state).get());
+                }
             } else {
                 self.prev = None;
-                return Some(self.end(prev));
+                return Some(SignalSegmentItem {
+                    end_cycle: self.cycle_index,
+                    segment: self.end(prev),
+                });
             }
         }
     }
@@ -280,6 +300,7 @@ impl<'a> SignalSegmentIter<'a> {
         let t = i32::from(self.options.transition_offset);
         let h = i32::from(self.options.wave_height);
         let w = i32::from(self.options.cycle_width);
+        let p = i32::from(self.period.get());
 
         use PathState::*;
 
@@ -299,9 +320,9 @@ impl<'a> SignalSegmentIter<'a> {
                 }
 
                 self.forward.vertical_line(-h);
-                self.forward.horizontal_line(w / 2);
+                self.forward.horizontal_line(w * p / 2);
                 self.forward.vertical_line(h);
-                self.forward.horizontal_line(w / 2);
+                self.forward.horizontal_line(w * p / 2);
             }
             NegedgeClockMarked | NegedgeClockUnmarked => {
                 if state == NegedgeClockMarked {
@@ -309,9 +330,9 @@ impl<'a> SignalSegmentIter<'a> {
                 }
 
                 self.forward.vertical_line(h);
-                self.forward.horizontal_line(w / 2);
+                self.forward.horizontal_line(w * p / 2);
                 self.forward.vertical_line(-h);
-                self.forward.horizontal_line(w / 2);
+                self.forward.horizontal_line(w * p / 2);
             }
             Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X => {
                 self.forward.horizontal_line(w - t * 2);
@@ -614,28 +635,54 @@ impl<'a> SignalSegmentIter<'a> {
             actions,
         }
     }
+
+    fn cycle_length(&self, mut state: PathState) -> NonZeroU16 {
+        use PathState::*;
+
+        if matches!(state, Continue | Gap) {
+            state = self.prev.unwrap_or(X);
+        }
+
+        match state {
+            Top | Bottom | Middle | Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X => {
+                NonZeroU16::new(1).unwrap()
+            }
+            PosedgeClockUnmarked | PosedgeClockMarked | NegedgeClockUnmarked
+            | NegedgeClockMarked => self.period,
+            Continue | Gap => unreachable!(),
+        }
+    }
 }
 
 impl WavePath {
     #[inline]
-    pub fn new(states: Vec<PathState>) -> Self {
-        Self(states)
+    pub fn new(states: Vec<PathState>, period: NonZeroU16) -> Self {
+        Self { states, period }
     }
 
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.states.is_empty()
     }
 
     #[inline]
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.states.len()
     }
 
     pub fn shape_with_options(&self, data: &[String], options: &WaveOptions) -> AssembledWavePath {
+        let mut num_cycles = 0;
+        let segments = self
+            .iter(data, options)
+            .map(|i| {
+                num_cycles = i.end_cycle;
+                i.segment
+            })
+            .collect();
+
         AssembledWavePath {
-            num_cycles: self.len() as u32,
-            segments: self.iter(data, options).collect(),
+            num_cycles,
+            segments,
         }
     }
 
@@ -650,9 +697,10 @@ impl WavePath {
         options: &'a WaveOptions,
     ) -> SignalSegmentIter<'a> {
         let mut iter = SignalSegmentIter {
-            inner: self.0.iter(),
+            inner: self.states.iter(),
 
             cycle_index: 0,
+            period: self.period,
 
             prev: None,
 
@@ -682,7 +730,7 @@ impl WavePath {
         iter.begin(first_state);
         iter.wave_path(first_state);
 
-        iter.cycle_index += 1;
+        iter.cycle_index += u32::from(iter.cycle_length(first_state).get());
 
         iter
     }
@@ -835,5 +883,38 @@ impl PathSegmentBackground {
             Self::Undefined => false,
             _ => true,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn calculate_cycle_length() {
+        macro_rules! assert_cycle_length {
+            ([$($item:ident),* $(,)?], $period:literal => $result:literal) => {
+                let period = NonZeroU16::new($period).unwrap();
+                let options = WaveOptions::default();
+                let num_cycles = WavePath::new(
+                    vec![$(PathState::$item),*],
+                    period,
+                ).iter(&[], &options).last().map_or(0, |i| i.end_cycle);
+                assert_eq!(num_cycles, $result, "{:?}", WavePath::new(
+                    vec![$(PathState::$item),*],
+                    period,
+                ).iter(&[], &options).collect::<Vec<SignalSegmentItem>>());
+            };
+        }
+
+        assert_cycle_length!([], 1 => 0);
+        assert_cycle_length!([], 2 => 0);
+        assert_cycle_length!([Box2], 1 => 1);
+        assert_cycle_length!([Box2], 2 => 1);
+        assert_cycle_length!([PosedgeClockMarked], 1 => 1);
+        assert_cycle_length!([PosedgeClockMarked], 2 => 2);
+        assert_cycle_length!([Box2, PosedgeClockMarked], 3 => 4);
+        assert_cycle_length!([PosedgeClockMarked, NegedgeClockMarked], 3 => 6);
+        assert_cycle_length!([PosedgeClockMarked, Continue, NegedgeClockMarked], 3 => 9);
     }
 }

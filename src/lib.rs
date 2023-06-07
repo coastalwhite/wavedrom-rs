@@ -1,3 +1,4 @@
+use std::num::NonZeroU16;
 use std::str::FromStr;
 
 mod path;
@@ -10,9 +11,10 @@ pub use path::{AssembledWavePath, PathState, WaveOptions, WavePath, WavePathSegm
 pub use svg::ToSvg;
 
 pub struct Wave {
-    pub name: String,
-    pub cycles: Cycles,
-    pub data: Vec<String>,
+    name: String,
+    cycles: Cycles,
+    data: Vec<String>,
+    period: NonZeroU16,
 }
 
 pub struct Figure {
@@ -71,7 +73,7 @@ impl WaveLine {
                 lines.push(AssembledLine {
                     text: &wave.name,
                     depth,
-                    path: WavePath::new(wave.cycles.0.clone())
+                    path: WavePath::new(wave.cycles.0.clone(), wave.period)
                         .shape_with_options(&wave.data, wave_shape_options),
                 });
 
@@ -349,5 +351,18 @@ impl Figure {
     #[inline]
     pub fn assemble(&self) -> Result<AssembledFigure, ()> {
         self.assemble_with_options(&WaveOptions::default())
+    }
+}
+
+impl Wave {
+    pub fn new(name: String, cycles: Cycles, data: Vec<String>, period: u16) -> Self {
+        let period = NonZeroU16::new(period).unwrap_or(NonZeroU16::new(1).unwrap());
+
+        Self {
+            name,
+            cycles,
+            data,
+            period,
+        }
     }
 }
