@@ -3,12 +3,26 @@ use std::marker::PhantomData;
 
 static EMBEDDED_HELVETICA: OnceLock<ttf_parser::Face<'static>> = OnceLock::new(); 
 
+/// The font that is used by the svg assembler to calculate text widths.
+///
+/// The `embed_font` feature (that is enabled by default)` includes a [Helvetica][helvetica] [TTF
+/// file][ttf] into the binary, which enables better width calculations even when using more exotic
+/// characters. When this feature is disabled, only the width of [ASCII][ascii] characters is
+/// property calculated. Other characters widths are overestimated.
+///
+/// [helvetica]: https://en.wikipedia.org/wiki/Helvetica
+/// [ttf]: https://en.wikipedia.org/wiki/TrueType
+/// [ascii]: https://en.wikipedia.org/wiki/ASCII
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Font {
     _marker: PhantomData<()>,
 }
 
 impl Font {
+    /// Get an upperbound on the text width for a given string `s` and `font_size`.
+    ///
+    /// Given a `font_size` of *x* units the width of the string `s` without letter spacing is
+    /// `get_text_width(s, font_size)` units.
     pub fn get_text_width(&self, s: &str, font_size: u32) -> u32 {
         let width = f64::from(self.get_pts_text_width(s));
 
@@ -75,11 +89,12 @@ impl Font {
                     .glyph_index(c)
                     .and_then(|g| face.glyph_hor_advance(g))
                     .map(u32::from)
-                    .unwrap_or(0)
+                    .unwrap_or(face.global_bounding_box().width() as u32)
             })
             .sum()
     }
 
+    /// Get a string representing the Font Family of the font.
     pub fn get_font_family_name(&self) -> Option<String> {
         self.get_face()
             .names()
