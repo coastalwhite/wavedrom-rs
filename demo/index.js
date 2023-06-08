@@ -1,12 +1,12 @@
 const SUCCESS_RETURN = 0;
 const ERROR_MSGS = [
-    "✅ Succesful Build",
-    "❌ Invalid JSON",
-    "❌ Invalid JSON value",
-    "❌ Failed to Assemble SVG",
-    "❌ Failed to Render SVG",
-    "❌ Invalid UTF-8",
-    "❌ Unknown Error",
+    "Succesful Build",
+    "Invalid JSON",
+    "Invalid JSON value",
+    "Failed to Assemble SVG",
+    "Failed to Render SVG",
+    "Invalid UTF-8",
+    "Unknown Error",
 ];
 
 document.getElementById('input').value = `
@@ -86,14 +86,21 @@ function render_svg(input, output, error, memory, malloc, free, render) {
     error.innerText = ERROR_MSGS[return_code];
 
 	if (return_code == SUCCESS_RETURN) {
+        makeVisible('success-icon');
+        makeInvisible('failure-icon');
+
         const size = (array[1] << 24) |
                      (array[2] << 16) |
                      (array[3] << 8)  |
                       array[4];
         const out = decode_string(memory, rptr + 5, size);
         output.innerHTML = out;
+
         free(rptr, size + 5);
 	} else {
+        makeInvisible('success-icon');
+        makeVisible('failure-icon');
+
         free(rptr, 1);
     }
 }
@@ -120,6 +127,19 @@ fetch("./rust/target/wasm32-unknown-unknown/release/rust.wasm")
     // Call the render method initialially
     handler();
   });
+
+function makeVisible(id) {
+	const menu = document.getElementById(id);
+	if (menu.classList.contains("hidden")) {
+		menu.classList.remove("hidden");
+	}
+}
+function makeInvisible(id) {
+	const menu = document.getElementById(id);
+	if (!menu.classList.contains("hidden")) {
+		menu.classList.add("hidden");
+	}
+}
 
 function toggleVisibility(id) {
 	const menu = document.getElementById(id);

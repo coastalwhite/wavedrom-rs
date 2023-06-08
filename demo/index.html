@@ -79,9 +79,13 @@ onclick="toggleVisibility('render-settings')" href="#">
                     </div>
                     
 				</div>
-				<div class="bg-gray-300 h-16 w-full p-4 text-xl">
+				<div class="bg-gray-300 h-16 w-full p-4 text-xl flex flex-row space-x-2">
 					<!-- Filled by the Javascript -->
-					<span id="status-message"></span>
+                    <span class="w-8 h-8 justify-self-center self-center">
+                        <img id="success-icon" class="w-full h-full hidden" src="./assets/success.svg" alt="success" />
+                        <img id="failure-icon" class="w-full h-full hidden" src="./assets/failure.svg" alt="failure" />
+                    </span>
+					<span class="flex-1" id="status-message"></span>
 				</div>
 			</div>
 		</div>
