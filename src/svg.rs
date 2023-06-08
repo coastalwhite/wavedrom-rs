@@ -749,6 +749,28 @@ impl<'a> ToSvg for AssembledFigure<'a> {
     }
 }
 
+fn draw_dashed_horizontal_line(writer: &mut impl io::Write, dx: i32) -> io::Result<()> {
+    let mut cx = 0i32;
+
+    loop {
+        if cx.abs() == dx.abs() {
+            break;
+        }
+
+        write!(writer, "h{signed_len}", signed_len = dx.signum() * 4)?;
+        cx = i32::min(dx.abs(), cx + 4);
+
+        if cx.abs() >= dx.abs() {
+            break;
+        }
+
+        write!(writer, "m{signed_len},0", signed_len = dx.signum() * 4)?;
+        cx = i32::min(dx.abs(), cx + 4);
+    }
+
+     Ok(())
+}
+
 fn write_signal(
     wave_path: &AssembledWavePath,
     writer: &mut impl io::Write,
@@ -779,6 +801,7 @@ fn write_signal(
                 PathCommand::LineVerticalNoStroke(dy) => write!(writer, "v{dy}"),
                 PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
                 PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
+                PathCommand::DashedLineHorizontal(dx) => draw_dashed_horizontal_line(writer, *dx),
                 PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
                 PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => {
                     write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}")
@@ -802,6 +825,7 @@ fn write_signal(
                     PathCommand::LineVerticalNoStroke(dy) => write!(writer, "m0,{dy}"),
                     PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
                     PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
+                    PathCommand::DashedLineHorizontal(dx) => draw_dashed_horizontal_line(writer, *dx),
                     PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
                     PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => {
                         write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}")

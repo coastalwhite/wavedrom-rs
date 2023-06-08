@@ -165,6 +165,8 @@ impl FromStr for Cycles {
                 '.' => PathState::Continue,
                 '|' => PathState::Gap,
                 '=' => PathState::Data,
+                'u' => PathState::Up,
+                'd' => PathState::Down,
                 _ => PathState::X,
             };
 

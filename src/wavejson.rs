@@ -181,7 +181,9 @@ mod tests {
                     { "name": "P", "wave": "P" },
                     { "name": "n", "wave": "n" },
                     { "name": "N", "wave": "N" },
-                    { "name": ".", "wave": "." }
+                    { "name": ".", "wave": "." },
+                    { "name": "d", "wave": "d" },
+                    { "name": "u", "wave": "u" }
                 ],
                 [
                     { "name": "0.|", "wave": "0.|" },
@@ -193,18 +195,22 @@ mod tests {
                     { "name": "P.|", "wave": "P.|" },
                     { "name": "n.|", "wave": "n.|" },
                     { "name": "N.|", "wave": "N.|" },
-                    { "name": "..|", "wave": "..|" }
+                    { "name": "..|", "wave": "..|" },
+                    { "name": "d.|", "wave": "d.|" },
+                    { "name": "u.|", "wave": "u.|" }
                 ],
                 [
-                    { "name": "0001020z0x0p0P0n0N0.0", "wave": "0001020z0x0p0P0n0N0.0" },
-                    { "name": "1011121z1x1p1P1n1N1.1", "wave": "1011121z1x1p1P1n1N1.1" },
-                    { "name": "2021222z2x2p2P2n2N2.2", "wave": "2021222z2x2p2P2n2N2.2" },
-                    { "name": "z0z1z2zzzxzpzPznzNz.z", "wave": "z0z1z2zzzxzpzPznzNz.z" },
-                    { "name": "x0x1x2xzxxxpxPxnxNx.x", "wave": "x0x1x2xzxxxpxPxnxNx.x" },
-                    { "name": "p0p1p2pzpxpppPpnpNp.p", "wave": "p0p1p2pzpxpppPpnpNp.p" },
-                    { "name": "P0P1P2PzPxPpPPPnPNP.P", "wave": "P0P1P2PzPxPpPPPnPNP.P" },
-                    { "name": "n0n1n2nznxnpnPnnnNn.n", "wave": "n0n1n2nznxnpnPnnnNn.n" },
-                    { "name": "N0N1N2NzNxNpNPNnNNN.N", "wave": "N0N1N2NzNxNpNPNnNNN.N" }
+                    { "name": "0001020z0x0p0P0n0N0.0", "wave": "0001020z0x0p0P0n0N0.0d0u0" },
+                    { "name": "1011121z1x1p1P1n1N1.1", "wave": "1011121z1x1p1P1n1N1.1d1u1" },
+                    { "name": "2021222z2x2p2P2n2N2.2", "wave": "2021222z2x2p2P2n2N2.2d2u2" },
+                    { "name": "z0z1z2zzzxzpzPznzNz.z", "wave": "z0z1z2zzzxzpzPznzNz.zdzuz" },
+                    { "name": "x0x1x2xzxxxpxPxnxNx.x", "wave": "x0x1x2xzxxxpxPxnxNx.xdxux" },
+                    { "name": "p0p1p2pzpxpppPpnpNp.p", "wave": "p0p1p2pzpxpppPpnpNp.pdpup" },
+                    { "name": "P0P1P2PzPxPpPPPnPNP.P", "wave": "P0P1P2PzPxPpPPPnPNP.PdPuP" },
+                    { "name": "n0n1n2nznxnpnPnnnNn.n", "wave": "n0n1n2nznxnpnPnnnNn.ndnun" },
+                    { "name": "N0N1N2NzNxNpNPNnNNN.N", "wave": "N0N1N2NzNxNpNPNnNNN.NdNuN" },
+                    { "name": "u0u1u2uzuxupuPunuNu.u", "wave": "u0u1u2uzuxupuPunuNu.uduuu" },
+                    { "name": "d0d1d2dzdxdpdPdndNd.d", "wave": "d0d1d2dzdxdpdPdndNd.dddud" }
                 ],
                 [
                     { "name": "0123456789=zx", "wave": "0123456789=zx" },
@@ -242,7 +248,7 @@ mod tests {
             }
         }
         "#;
-
+        
         let wavejson: WaveJson = serde_json::from_str(data).unwrap();
         let figure: Figure = wavejson.try_into().unwrap();
 

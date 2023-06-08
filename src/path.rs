@@ -36,6 +36,8 @@ pub enum PathState {
     NegedgeClockMarked,
     Continue,
     Gap,
+    Up,
+    Down,
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +45,7 @@ pub enum PathCommand {
     LineVertical(i32),
     LineVerticalNoStroke(i32),
     LineHorizontal(i32),
+    DashedLineHorizontal(i32),
     Line(i32, i32),
     Curve(i32, i32, i32, i32, i32, i32),
 }
@@ -297,6 +300,13 @@ impl<'a> SignalSegmentIter<'a> {
                 self.backward.vertical_line_no_stroke(-h);
                 self.backward.horizontal_line(-t);
             }
+            Up => {
+                self.forward.dashed_horizontal_line(t);
+            }
+            Down => {
+                self.forward.restart_move_to(0, h);
+                self.forward.dashed_horizontal_line(t);
+            }
         }
     }
 
@@ -343,6 +353,7 @@ impl<'a> SignalSegmentIter<'a> {
                 self.backward.horizontal_line(t * 2 - w);
             }
             Continue | Gap => unreachable!(),
+            Up | Down => self.forward.dashed_horizontal_line(w - t * 2),
         }
     }
 
@@ -372,6 +383,9 @@ impl<'a> SignalSegmentIter<'a> {
                 self.backward.line(-t, -h / 2);
 
                 return Some(wave_segment);
+            }
+            (Up, Up | Gap | Continue) | (Down, Down | Gap | Continue) => {
+                self.forward.dashed_horizontal_line(t * 2)
             }
             (Top, Bottom) => self.forward.line(t * 2, h),
             (Top, Middle) => self.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2),
@@ -527,15 +541,100 @@ impl<'a> SignalSegmentIter<'a> {
             (NegedgeClockMarked | NegedgeClockUnmarked, Top) => {
                 self.forward.horizontal_line(t);
             }
-            (
-                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data,
-                Gap | Continue,
-            ) => {
+            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data, Gap | Continue) => {
                 self.forward.horizontal_line(2 * t);
                 self.backward.horizontal_line(-2 * t);
             }
             (Gap | Continue, _) => {
                 unreachable!();
+            }
+            (Up, Top) | (Down, Bottom) => {
+                self.forward.dashed_horizontal_line(t);
+                self.forward.horizontal_line(t);
+            }
+            (Top, Up) | (Bottom, Down) => {
+                self.forward.horizontal_line(t);
+                self.forward.dashed_horizontal_line(t);
+            }
+            (Up, Bottom | Down) | (Top, Down) => {
+                self.forward.curve(t, 0, t, h, t * 2, h);
+            }
+            (Down, Top | Up) | (Bottom, Up) => {
+                self.forward.curve(t, 0, t, -h, t * 2, -h);
+            }
+            (Up, Middle) => {
+                self.forward.curve(t, 0, t, h / 2, t * 2, h / 2);
+            }
+            (Down, Middle) => {
+                self.forward.curve(t, 0, t, -h / 2, t * 2, -h / 2);
+            }
+            (Middle, Up) => {
+                self.forward.curve(t, 0, t, -h / 2, t * 2, -h / 2);
+            }
+            (Middle, Down) => {
+                self.forward.curve(t, 0, t, h / 2, t * 2, h / 2);
+            }
+            (Up, PosedgeClockUnmarked | PosedgeClockMarked) => {
+                self.forward.dashed_horizontal_line(t);
+                self.forward.vertical_line_no_stroke(h);
+            }
+            (PosedgeClockUnmarked | PosedgeClockMarked, Up) => {
+                self.forward.vertical_line_no_stroke(-h);
+                self.forward.dashed_horizontal_line(t);
+            }
+            (Down, NegedgeClockUnmarked | NegedgeClockMarked) => {
+                self.forward.dashed_horizontal_line(t);
+                self.forward.vertical_line_no_stroke(-h);
+            }
+            (NegedgeClockUnmarked | NegedgeClockMarked, Down) => {
+                self.forward.vertical_line_no_stroke(h);
+                self.forward.dashed_horizontal_line(t);
+            }
+            (Up, NegedgeClockUnmarked | NegedgeClockMarked)
+            | (NegedgeClockUnmarked | NegedgeClockMarked, Up)
+            | (Down, PosedgeClockUnmarked | PosedgeClockMarked)
+            | (PosedgeClockUnmarked | PosedgeClockMarked, Down) => {
+                self.forward.dashed_horizontal_line(t);
+            }
+            (Up, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
+                self.forward.dashed_horizontal_line(t);
+
+                let wave_segment = self.commit_without_back_line();
+
+                self.forward.horizontal_line(t);
+                self.backward.line(-t, -h);
+
+                return Some(wave_segment);
+            }
+            (Down, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
+                self.forward.dashed_horizontal_line(t);
+
+                let wave_segment = self.commit_without_back_line();
+
+                self.forward.line(t, -h);
+                self.backward.horizontal_line(-t);
+
+                return Some(wave_segment);
+            }
+            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data, Up) => {
+                self.forward.horizontal_line(t);
+                self.backward.line(-t, h);
+
+                let wave_segment = self.commit_with_back_line(state.background());
+
+                self.forward.dashed_horizontal_line(t);
+
+                return Some(wave_segment);
+            }
+            (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data, Down) => {
+                self.forward.line(t, h);
+                self.backward.horizontal_line(-t);
+
+                let wave_segment = self.commit_with_back_line(state.background());
+
+                self.forward.dashed_horizontal_line(t);
+
+                return Some(wave_segment);
             }
         }
 
@@ -562,6 +661,10 @@ impl<'a> SignalSegmentIter<'a> {
                 self.commit_with_back_line(state.background())
             }
             Continue | Gap => unreachable!(),
+            Up | Down => {
+                self.forward.dashed_horizontal_line(t);
+                self.commit_without_back_line()
+            }
         }
     }
 
@@ -652,7 +755,7 @@ impl<'a> SignalSegmentIter<'a> {
 
         match state {
             Top | Bottom | Middle | Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9
-            | Data | X => NonZeroU16::new(1).unwrap(),
+            | Data | X | Down | Up => NonZeroU16::new(1).unwrap(),
             PosedgeClockUnmarked | PosedgeClockMarked | NegedgeClockUnmarked
             | NegedgeClockMarked => self.period,
             Continue | Gap => unreachable!(),
@@ -759,6 +862,7 @@ impl PathCommand {
             | Self::Line(..)
             | Self::Curve(..)
             | Self::LineVertical(..) => false,
+            Self::DashedLineHorizontal(..) => false,
             Self::LineVerticalNoStroke(..) => true,
         }
     }
@@ -788,6 +892,19 @@ impl PathData {
                 *last_dx += dx
             }
             _ => self.actions.push(PathCommand::LineHorizontal(dx)),
+        }
+    }
+
+    fn dashed_horizontal_line(&mut self, dx: i32) {
+        self.current_x += dx;
+
+        match self.actions.last_mut() {
+            Some(PathCommand::DashedLineHorizontal(ref mut last_dx))
+                if dx.signum() == last_dx.signum() =>
+            {
+                *last_dx += dx
+            }
+            _ => self.actions.push(PathCommand::DashedLineHorizontal(dx)),
         }
     }
 
@@ -869,7 +986,7 @@ impl PathState {
 
         match self {
             Top | Bottom | Middle | NegedgeClockMarked | NegedgeClockUnmarked
-            | PosedgeClockMarked | PosedgeClockUnmarked => None,
+            | PosedgeClockMarked | PosedgeClockUnmarked | Up | Down => None,
             X => Some(PathSegmentBackground::Undefined),
             Box2 | Data => Some(PathSegmentBackground::B2),
             Box3 => Some(PathSegmentBackground::B3),
