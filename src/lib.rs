@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 mod cycle_offset;
 mod path;
-mod svg;
+pub mod svg;
 
 pub use cycle_offset::{CycleOffset, InCycleOffset};
 
@@ -12,7 +12,6 @@ pub mod wavejson;
 pub mod markers;
 
 pub use path::{AssembledSignalPath, CycleState, SignalOptions, SignalPath, SignalPathSegment};
-pub use svg::ToSvg;
 
 use markers::{GroupMarker, ClockEdge, CycleMarker};
 

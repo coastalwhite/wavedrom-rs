@@ -1,11 +1,13 @@
 use std::io;
-use std::marker::PhantomData;
 
 use crate::path::{PathCommand, PathSegmentBackground};
 use crate::{ClockEdge, SignalOptions};
 
 use super::path::AssembledSignalPath;
 use super::AssembledFigure;
+
+mod font;
+pub use font::Font;
 
 pub trait ToSvg {
     type Options: Default;
@@ -491,14 +493,6 @@ fn negedge_arrow(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()
     )
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Font<'a> {
-    #[cfg(feature = "embed_font")]
-    FontFace(&'a ttf_parser::Face<'a>),
-    #[allow(unused)]
-    HelveticaLookUpTable(PhantomData<&'a ()>),
-}
-
 impl<'a> ToSvg for AssembledFigure<'a> {
     type Options = RenderOptions;
 
@@ -517,14 +511,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             footer,
         } = options;
 
-        #[cfg(feature = "embed_font")]
-        let face = ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap();
-        #[cfg(feature = "embed_font")]
-        let font = Font::FontFace(&face);
-
-        #[cfg(not(feature = "embed_font"))]
-        let font = Font::HelveticaLookUpTable(PhantomData::default());
-
+        let font = Font::default();
         let font_family = font
             .get_font_family_name()
             .unwrap_or_else(|| "helvetica".to_string());
@@ -538,7 +525,6 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             figure_height = dims.figure_height(),
         )?;
 
-        
         write!(writer, "<defs>")?;
         if self.definitions.has_undefined {
             write!(
@@ -781,7 +767,7 @@ fn draw_dashed_horizontal_line(writer: &mut impl io::Write, dx: i32) -> io::Resu
         cx = i32::min(dx.abs(), cx + 4);
     }
 
-     Ok(())
+    Ok(())
 }
 
 fn write_signal(
@@ -838,7 +824,9 @@ fn write_signal(
                     PathCommand::LineVerticalNoStroke(dy) => write!(writer, "m0,{dy}"),
                     PathCommand::LineVertical(dy) => write!(writer, "v{dy}"),
                     PathCommand::LineHorizontal(dx) => write!(writer, "h{dx}"),
-                    PathCommand::DashedLineHorizontal(dx) => draw_dashed_horizontal_line(writer, *dx),
+                    PathCommand::DashedLineHorizontal(dx) => {
+                        draw_dashed_horizontal_line(writer, *dx)
+                    }
                     PathCommand::Line(dx, dy) => write!(writer, "l{dx},{dy}"),
                     PathCommand::Curve(cdx1, cdy1, cdx2, cdy2, dx, dy) => {
                         write!(writer, "c{cdx1},{cdy1} {cdx2},{cdy2} {dx},{dy}")
@@ -861,7 +849,9 @@ fn write_signal(
         }
 
         for clock_edge_marker in segment.clock_edge_markers() {
-            let x = clock_edge_marker.at().width_offset(u32::from(options.cycle_width * hscale));
+            let x = clock_edge_marker
+                .at()
+                .width_offset(u32::from(options.cycle_width * hscale));
             let y = u32::from(options.signal_height) / 2;
 
             match clock_edge_marker.edge() {
@@ -894,112 +884,3 @@ fn write_signal(
     Ok(())
 }
 
-impl<'a> Font<'a> {
-    fn units_per_em(&self) -> u16 {
-        match self {
-            Self::HelveticaLookUpTable(_) => 2048,
-            #[cfg(feature = "embed_font")]
-            Self::FontFace(face) => face.units_per_em(),
-        }
-    }
-
-    fn get_text_width(&self, s: &'_ str, font_size: u32) -> u32 {
-        let width = match self {
-            Self::HelveticaLookUpTable(_) => {
-                static ADVANCE_LUT: [u16; 128] = [
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 569, 569, 0, 0, 569, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 569, 569, 727, 1139, 1139, 1821, 1366, 391, 682, 682,
-                    797, 1196, 569, 682, 569, 569, 1139, 1139, 1139, 1139, 1139, 1139, 1139, 1139,
-                    1139, 1139, 569, 569, 1196, 1196, 1196, 1139, 2079, 1366, 1366, 1479, 1479,
-                    1366, 1251, 1593, 1479, 569, 1024, 1366, 1139, 1706, 1479, 1593, 1366, 1593,
-                    1479, 1366, 1251, 1479, 1366, 1933, 1366, 1366, 1251, 569, 569, 569, 961, 1139,
-                    682, 1139, 1139, 1024, 1139, 1139, 569, 1139, 1139, 455, 455, 1024, 455, 1706,
-                    1139, 1139, 1139, 1139, 682, 1024, 569, 1139, 1024, 1479, 1024, 1024, 1024,
-                    684, 532, 684, 1196, 0,
-                ];
-
-                s.chars()
-                    .map(|c| {
-                        if c.is_ascii() {
-                            u32::from(ADVANCE_LUT[c as usize])
-                        } else {
-                            2052
-                        }
-                    })
-                    .sum::<u32>()
-            }
-            #[cfg(feature = "embed_font")]
-            Self::FontFace(face) => s
-                .chars()
-                .map(|c| {
-                    face.glyph_index(c)
-                        .and_then(|g| face.glyph_hor_advance(g))
-                        .map(u32::from)
-                        .unwrap_or(0)
-                })
-                .sum::<u32>(),
-        };
-
-        let width = f64::from(width);
-
-        // NOTE: Face::units_per_em guarantees the value to be non-zero. So this should never
-        // generate a divide-by-zero error.
-        let pts_per_em = f64::from(font_size) / f64::from(self.units_per_em());
-        let width = width * pts_per_em;
-
-        width.ceil() as u32
-    }
-
-    fn get_font_family_name(&self) -> Option<String> {
-        match self {
-            Self::HelveticaLookUpTable(_) => Some("helvetica".to_string()),
-            #[cfg(feature = "embed_font")]
-            Self::FontFace(face) => face
-                .names()
-                .into_iter()
-                .find(|item| item.name_id == 1)
-                .map_or(None, |name| {
-                    if !name.is_unicode() {
-                        return None;
-                    }
-
-                    // Invalid UTF16 check
-                    if name.name.len() % 2 != 0 {
-                        return None;
-                    }
-
-                    let utf16_bytes = name
-                        .name
-                        .chunks_exact(2)
-                        .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
-                        .collect::<Vec<u16>>();
-
-                    String::from_utf16(&utf16_bytes).ok()
-                }),
-        }
-    }
-}
-
-#[ignore]
-#[test]
-#[cfg(all(feature = "gen_lut", feature = "embed_font"))]
-fn generate_lookup_table() {
-    let face = ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap();
-
-    println!("[");
-    for c in 0..128u8 {
-        let c = c as char;
-        println!(
-            "\t{},",
-            face.glyph_index(c)
-                .and_then(|g| face.glyph_hor_advance(g))
-                .map(u32::from)
-                .unwrap_or(0)
-        );
-    }
-    println!("]");
-    println!("units_per_em: {:?}", face.units_per_em());
-    println!("Rest Advance: {:?}", face.global_bounding_box().width());
-
-    assert!(false);
-}
