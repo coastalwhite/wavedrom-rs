@@ -360,7 +360,7 @@ impl Figure {
 
 impl Wave {
     pub fn new(name: String, cycles: Cycles, data: Vec<String>, period: u16, phase: u16) -> Self {
-        let period = NonZeroU16::new(period).unwrap_or(NonZeroU16::new(1).unwrap());
+        let period = NonZeroU16::new(period).unwrap_or(NonZeroU16::MIN);
 
         Self {
             name,

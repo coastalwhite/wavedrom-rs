@@ -750,7 +750,7 @@ impl<'a> SignalSegmentIter<'a> {
 
         match state {
             Top | Bottom | Middle | Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9
-            | Data | X | Down | Up => NonZeroU16::new(1).unwrap(),
+            | Data | X | Down | Up => NonZeroU16::MIN,
             PosedgeClockUnmarked | PosedgeClockMarked | NegedgeClockUnmarked
             | NegedgeClockMarked => self.period,
             Continue | Gap => unreachable!(),
