@@ -538,27 +538,34 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             figure_height = dims.figure_height(),
         )?;
 
-        // Define the cycle-to-cycle background hint lines
+        
         write!(writer, "<defs>")?;
-        if self.has_undefined {
+        if self.definitions.has_undefined {
             write!(
                 writer,
                 r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)"><line x1="0" y="0" x2="0" y2="10" stroke="#000" stroke-width="1"/></pattern>"##
             )?;
         }
 
-        write!(writer, r##"<g id="pei">"##)?;
-        posedge_arrow(writer, wave_dimensions.wave_height)?;
-        write!(writer, r##"</g>"##)?;
+        if self.definitions.has_posedge_marker {
+            write!(writer, r##"<g id="pei">"##)?;
+            posedge_arrow(writer, wave_dimensions.wave_height)?;
+            write!(writer, r##"</g>"##)?;
+        }
 
-        write!(writer, r##"<g id="nei">"##)?;
-        negedge_arrow(writer, wave_dimensions.wave_height)?;
-        write!(writer, r##"</g>"##)?;
+        if self.definitions.has_negedge_marker {
+            write!(writer, r##"<g id="nei">"##)?;
+            negedge_arrow(writer, wave_dimensions.wave_height)?;
+            write!(writer, r##"</g>"##)?;
+        }
 
-        write!(writer, r##"<g id="gap">"##)?;
-        gap(writer, wave_dimensions.wave_height)?;
-        write!(writer, r##"</g>"##)?;
+        if self.definitions.has_gap {
+            write!(writer, r##"<g id="gap">"##)?;
+            gap(writer, wave_dimensions.wave_height)?;
+            write!(writer, r##"</g>"##)?;
+        }
 
+        // Define the cycle-to-cycle background hint lines
         write!(
             writer,
             r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g>"##,

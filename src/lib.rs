@@ -58,20 +58,34 @@ impl From<Wave> for WaveLine {
     }
 }
 
+#[derive(Default)]
+struct DefinitionTracker {
+    has_undefined: bool,
+    has_gap: bool,
+    has_posedge_marker: bool,
+    has_negedge_marker: bool,
+}
+
 impl WaveLine {
     fn render_into<'a>(
         &'a self,
         lines: &'_ mut Vec<AssembledLine<'a>>,
         groups: &'_ mut Vec<WaveGroup<'a>>,
         group_label_at_depth: &mut Vec<bool>,
-        has_undefined: &mut bool,
+        definitions: &mut DefinitionTracker,
         wave_shape_options: &WaveOptions,
         depth: u32,
     ) -> u32 {
         match self {
             Self::Wave(wave) => {
-                if wave.cycles.0.contains(&PathState::X) {
-                    *has_undefined = true;
+                for state in wave.cycles.0.iter() {
+                    match state {
+                        PathState::X => definitions.has_undefined = true,
+                        PathState::Gap => definitions.has_gap = true,
+                        PathState::PosedgeClockMarked => definitions.has_posedge_marker = true,
+                        PathState::NegedgeClockMarked => definitions.has_negedge_marker = true,
+                        _ => {}
+                    }
                 }
 
                 lines.push(AssembledLine {
@@ -102,7 +116,7 @@ impl WaveLine {
                         lines,
                         groups,
                         group_label_at_depth,
-                        has_undefined,
+                        definitions,
                         wave_shape_options,
                         depth + 1,
                     );
@@ -203,7 +217,7 @@ pub struct AssembledFigure<'a> {
 
     hscale: u16,
 
-    has_undefined: bool,
+    definitions: DefinitionTracker,
 
     group_label_at_depth: Vec<bool>,
     max_group_depth: u32,
@@ -309,7 +323,7 @@ impl Figure {
         let mut groups = Vec::new();
         let mut group_label_at_depth = Vec::new();
 
-        let mut has_undefined = false;
+        let mut definitions = DefinitionTracker::default();
 
         let max_group_depth = self
             .lines
@@ -319,7 +333,7 @@ impl Figure {
                     &mut lines,
                     &mut groups,
                     &mut group_label_at_depth,
-                    &mut has_undefined,
+                    &mut definitions,
                     &options,
                     0,
                 )
@@ -339,7 +353,7 @@ impl Figure {
 
             hscale,
 
-            has_undefined,
+            definitions,
 
             group_label_at_depth,
             max_group_depth,
