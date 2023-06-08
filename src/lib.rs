@@ -216,7 +216,7 @@ pub struct AssembledFigure<'a> {
     top_cycle_marker: Option<CycleMarker>,
     bottom_cycle_marker: Option<CycleMarker>,
 
-    pub lines: Vec<AssembledLine<'a>>,
+    lines: Vec<AssembledLine<'a>>,
     groups: Vec<WaveGroup<'a>>,
 }
 
