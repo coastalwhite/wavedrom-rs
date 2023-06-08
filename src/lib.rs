@@ -1,19 +1,29 @@
 use std::num::NonZeroU16;
 use std::str::FromStr;
 
+mod cycle_offset;
 mod path;
 mod svg;
-mod cycle_offset;
 
 pub use cycle_offset::{CycleOffset, InCycleOffset};
 
 #[cfg(feature = "serde")]
 pub mod wavejson;
 
-pub use path::{AssembledWavePath, PathState, WaveOptions, WavePath, WavePathSegment};
+pub use path::{AssembledSignalPath, CycleState, SignalOptions, SignalPath, SignalPathSegment};
 pub use svg::ToSvg;
 
-pub struct Wave {
+#[derive(Debug, Clone)]
+pub enum FigureSection {
+    Signal(Signal),
+    Group(FigureSectionGroup),
+}
+
+#[derive(Debug, Clone)]
+pub struct FigureSectionGroup(Option<String>, Vec<FigureSection>);
+
+#[derive(Debug, Clone)]
+pub struct Signal {
     name: String,
     cycles: Cycles,
     data: Vec<String>,
@@ -21,6 +31,24 @@ pub struct Wave {
     phase: CycleOffset,
 }
 
+#[derive(Debug, Clone)]
+pub struct GroupMarker<'a> {
+    depth: u32,
+
+    label: Option<&'a str>,
+
+    start: u32,
+    end: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct AssembledLine<'a> {
+    text: &'a str,
+    depth: u32,
+    path: AssembledSignalPath,
+}
+
+#[derive(Debug, Clone)]
 pub struct Figure {
     title: Option<String>,
     footer: Option<String>,
@@ -30,31 +58,27 @@ pub struct Figure {
 
     hscale: u16,
 
-    lines: Vec<WaveLine>,
-}
-pub enum WaveLine {
-    Group(WaveLineGroup),
-    Wave(Wave),
+    sections: Vec<FigureSection>,
 }
 
-pub struct WaveLineGroup(Option<String>, Vec<WaveLine>);
-pub struct Cycles(Vec<PathState>);
+#[derive(Debug, Clone)]
+pub struct Cycles(Vec<CycleState>);
 
 impl Cycles {
-    pub fn new(cycles: Vec<PathState>) -> Self {
+    pub fn new(cycles: Vec<CycleState>) -> Self {
         Self(cycles)
     }
 }
 
-impl FromIterator<PathState> for Cycles {
-    fn from_iter<T: IntoIterator<Item = PathState>>(iter: T) -> Self {
+impl FromIterator<CycleState> for Cycles {
+    fn from_iter<T: IntoIterator<Item = CycleState>>(iter: T) -> Self {
         Self(iter.into_iter().collect())
     }
 }
 
-impl From<Wave> for WaveLine {
-    fn from(wave: Wave) -> Self {
-        Self::Wave(wave)
+impl From<Signal> for FigureSection {
+    fn from(wave: Signal) -> Self {
+        Self::Signal(wave)
     }
 }
 
@@ -66,38 +90,38 @@ struct DefinitionTracker {
     has_negedge_marker: bool,
 }
 
-impl WaveLine {
+impl FigureSection {
     fn render_into<'a>(
         &'a self,
         lines: &'_ mut Vec<AssembledLine<'a>>,
-        groups: &'_ mut Vec<WaveGroup<'a>>,
+        groups: &'_ mut Vec<GroupMarker<'a>>,
         group_label_at_depth: &mut Vec<bool>,
         definitions: &mut DefinitionTracker,
-        wave_shape_options: &WaveOptions,
+        wave_shape_options: &SignalOptions,
         depth: u32,
     ) -> u32 {
         match self {
-            Self::Wave(wave) => {
-                for state in wave.cycles.0.iter() {
+            Self::Signal(signal) => {
+                for state in signal.cycles() {
                     match state {
-                        PathState::X => definitions.has_undefined = true,
-                        PathState::Gap => definitions.has_gap = true,
-                        PathState::PosedgeClockMarked => definitions.has_posedge_marker = true,
-                        PathState::NegedgeClockMarked => definitions.has_negedge_marker = true,
+                        CycleState::X => definitions.has_undefined = true,
+                        CycleState::Gap => definitions.has_gap = true,
+                        CycleState::PosedgeClockMarked => definitions.has_posedge_marker = true,
+                        CycleState::NegedgeClockMarked => definitions.has_negedge_marker = true,
                         _ => {}
                     }
                 }
 
                 lines.push(AssembledLine {
-                    text: &wave.name,
+                    text: &signal.name,
                     depth,
-                    path: WavePath::new(wave.cycles.0.clone(), wave.period, wave.phase, &wave.data)
+                    path: SignalPath::new(signal.cycles.0.clone(), signal.period, signal.phase, &signal.data)
                         .assemble_with_options(wave_shape_options),
                 });
 
                 depth
             }
-            Self::Group(WaveLineGroup(label, wave_lines)) => {
+            Self::Group(FigureSectionGroup(label, sections)) => {
                 // TODO: Do something smarter here.
                 if depth > 4 {
                     return depth;
@@ -111,7 +135,7 @@ impl WaveLine {
                 let mut max_depth = depth + 1;
 
                 let group_start = lines.len();
-                for wave_line in wave_lines {
+                for wave_line in sections {
                     let group_depth = wave_line.render_into(
                         lines,
                         groups,
@@ -127,7 +151,7 @@ impl WaveLine {
                 }
                 let group_end = lines.len();
 
-                groups.push(WaveGroup {
+                groups.push(GroupMarker {
                     depth,
                     label: label.as_ref().map(|s| &s[..]),
                     start: group_start as u32,
@@ -141,7 +165,7 @@ impl WaveLine {
 }
 
 impl Figure {
-    pub fn from_lines<T: Into<WaveLine>>(lines: impl IntoIterator<Item = T>) -> Self {
+    pub fn from_lines<T: Into<FigureSection>>(lines: impl IntoIterator<Item = T>) -> Self {
         Self {
             title: None,
             footer: None,
@@ -150,7 +174,7 @@ impl Figure {
             bottom_cycle_marker: None,
 
             hscale: 1,
-            lines: lines.into_iter().map(T::into).collect(),
+            sections: lines.into_iter().map(T::into).collect(),
         }
     }
 }
@@ -163,28 +187,28 @@ impl FromStr for Cycles {
 
         for c in s.chars() {
             let state = match c {
-                '1' => PathState::Top,
-                '0' => PathState::Bottom,
-                'z' => PathState::Middle,
-                'x' => PathState::X,
-                'p' => PathState::PosedgeClockUnmarked,
-                'P' => PathState::PosedgeClockMarked,
-                'n' => PathState::NegedgeClockUnmarked,
-                'N' => PathState::NegedgeClockMarked,
-                '2' => PathState::Box2,
-                '3' => PathState::Box3,
-                '4' => PathState::Box4,
-                '5' => PathState::Box5,
-                '6' => PathState::Box6,
-                '7' => PathState::Box7,
-                '8' => PathState::Box8,
-                '9' => PathState::Box9,
-                '.' => PathState::Continue,
-                '|' => PathState::Gap,
-                '=' => PathState::Data,
-                'u' => PathState::Up,
-                'd' => PathState::Down,
-                _ => PathState::X,
+                '1' => CycleState::Top,
+                '0' => CycleState::Bottom,
+                'z' => CycleState::Middle,
+                'x' => CycleState::X,
+                'p' => CycleState::PosedgeClockUnmarked,
+                'P' => CycleState::PosedgeClockMarked,
+                'n' => CycleState::NegedgeClockUnmarked,
+                'N' => CycleState::NegedgeClockMarked,
+                '2' => CycleState::Box2,
+                '3' => CycleState::Box3,
+                '4' => CycleState::Box4,
+                '5' => CycleState::Box5,
+                '6' => CycleState::Box6,
+                '7' => CycleState::Box7,
+                '8' => CycleState::Box8,
+                '9' => CycleState::Box9,
+                '.' => CycleState::Continue,
+                '|' => CycleState::Gap,
+                '=' => CycleState::Data,
+                'u' => CycleState::Up,
+                'd' => CycleState::Down,
+                _ => CycleState::X,
             };
 
             cycles.push(state)
@@ -217,7 +241,7 @@ pub struct AssembledFigure<'a> {
     bottom_cycle_marker: Option<CycleMarker>,
 
     lines: Vec<AssembledLine<'a>>,
-    groups: Vec<WaveGroup<'a>>,
+    groups: Vec<GroupMarker<'a>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -237,20 +261,6 @@ impl<'a> AssembledFigure<'a> {
     }
 }
 
-pub struct WaveGroup<'a> {
-    depth: u32,
-
-    label: Option<&'a str>,
-
-    start: u32,
-    end: u32,
-}
-
-pub struct AssembledLine<'a> {
-    text: &'a str,
-    depth: u32,
-    path: AssembledWavePath,
-}
 
 impl AssembledLine<'_> {
     fn is_empty(&self) -> bool {
@@ -258,7 +268,7 @@ impl AssembledLine<'_> {
     }
 }
 
-impl WaveGroup<'_> {
+impl GroupMarker<'_> {
     pub fn len(&self) -> u32 {
         self.end - self.start
     }
@@ -281,7 +291,7 @@ impl Figure {
         bottom_cycle_marker: Option<CycleMarker>,
 
         hscale: u16,
-        lines: Vec<WaveLine>,
+        sections: Vec<FigureSection>,
     ) -> Self {
         Self {
             title,
@@ -291,11 +301,11 @@ impl Figure {
             bottom_cycle_marker,
 
             hscale,
-            lines,
+            sections,
         }
     }
 
-    pub fn assemble_with_options(&self, options: &WaveOptions) -> Result<AssembledFigure, ()> {
+    pub fn assemble_with_options(&self, options: &SignalOptions) -> Result<AssembledFigure, ()> {
         let top_cycle_marker = self.top_cycle_marker;
         let bottom_cycle_marker = self.bottom_cycle_marker;
         let hscale = self.hscale;
@@ -307,14 +317,14 @@ impl Figure {
 
         options.cycle_width *= hscale;
 
-        let mut lines = Vec::with_capacity(self.lines.len());
+        let mut lines = Vec::with_capacity(self.sections.len());
         let mut groups = Vec::new();
         let mut group_label_at_depth = Vec::new();
 
         let mut definitions = DefinitionTracker::default();
 
         let max_group_depth = self
-            .lines
+            .sections
             .iter()
             .map(|line| {
                 line.render_into(
@@ -359,12 +369,18 @@ impl Figure {
 
     #[inline]
     pub fn assemble(&self) -> Result<AssembledFigure, ()> {
-        self.assemble_with_options(&WaveOptions::default())
+        self.assemble_with_options(&SignalOptions::default())
     }
 }
 
-impl Wave {
-    pub fn new(name: String, cycles: Cycles, data: Vec<String>, period: u16, phase: CycleOffset) -> Self {
+impl Signal {
+    pub fn new(
+        name: String,
+        cycles: Cycles,
+        data: Vec<String>,
+        period: u16,
+        phase: CycleOffset,
+    ) -> Self {
         let period = NonZeroU16::new(period).unwrap_or(NonZeroU16::MIN);
 
         Self {
@@ -374,6 +390,10 @@ impl Wave {
             period,
             phase,
         }
+    }
+
+    fn cycles(&self) -> &[CycleState] {
+        &self.cycles.0
     }
 }
 

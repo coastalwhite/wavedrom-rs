@@ -8,15 +8,15 @@ pub struct ClockEdgeMarker {
     pub edge: ClockEdge,
 }
 
-pub struct WavePath<'a> {
-    states: Vec<PathState>,
+pub struct SignalPath<'a> {
+    states: Vec<CycleState>,
     period: NonZeroU16,
     phase: CycleOffset,
     data: &'a [String],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PathState {
+pub enum CycleState {
     Top,
     Bottom,
     Middle,
@@ -64,7 +64,7 @@ pub enum PathSegmentBackground {
 }
 
 #[derive(Debug, Clone)]
-pub struct WavePathSegment {
+pub struct SignalPathSegment {
     x: i32,
     y: i32,
     width: i32,
@@ -88,28 +88,28 @@ pub struct PathData {
     start_y: i32,
 
     is_fully_stroked: bool,
-    pub(crate) actions: Vec<PathCommand>,
+    actions: Vec<PathCommand>,
 }
 
 #[derive(Debug, Clone)]
-pub struct WaveOptions {
+pub struct SignalOptions {
     pub font_family: String,
     pub font_size: u32,
 
-    pub wave_height: u16,
+    pub signal_height: u16,
     pub cycle_width: u16,
     pub transition_offset: u16,
 
     pub backgrounds: [String; 8],
 }
 
-impl Default for WaveOptions {
+impl Default for SignalOptions {
     fn default() -> Self {
         Self {
             font_family: "Helvetica".to_string(),
             font_size: 14,
 
-            wave_height: 24,
+            signal_height: 24,
             cycle_width: 48,
             transition_offset: 4,
 
@@ -128,12 +128,12 @@ impl Default for WaveOptions {
 }
 
 #[derive(Debug, Clone)]
-pub struct AssembledWavePath {
+pub struct AssembledSignalPath {
     end_offset: CycleOffset,
-    segments: Vec<WavePathSegment>,
+    segments: Vec<SignalPathSegment>,
 }
 
-impl AssembledWavePath {
+impl AssembledSignalPath {
     pub fn is_empty(&self) -> bool {
         self.segments.is_empty()
     }
@@ -143,7 +143,7 @@ impl AssembledWavePath {
     }
 }
 
-impl WavePathSegment {
+impl SignalPathSegment {
     pub fn background(&self) -> Option<&PathSegmentBackground> {
         self.background.as_ref()
     }
@@ -182,13 +182,13 @@ impl WavePathSegment {
 }
 
 pub struct SignalSegmentIter<'a> {
-    inner: std::slice::Iter<'a, PathState>,
+    inner: std::slice::Iter<'a, CycleState>,
 
     cycle_offset: CycleOffset,
 
     period: NonZeroU16,
 
-    prev: Option<PathState>,
+    prev: Option<CycleState>,
 
     forward: PathData,
     backward: PathData,
@@ -199,13 +199,13 @@ pub struct SignalSegmentIter<'a> {
     clock_edge_markers: Vec<ClockEdgeMarker>,
     gaps: Vec<CycleOffset>,
 
-    options: &'a WaveOptions,
+    options: &'a SignalOptions,
 }
 
 #[derive(Debug)]
 pub struct SignalSegmentItem {
     pub end_cycle: CycleOffset,
-    pub segment: WavePathSegment,
+    pub segment: SignalPathSegment,
 }
 
 impl<'a> Iterator for SignalSegmentIter<'a> {
@@ -217,25 +217,25 @@ impl<'a> Iterator for SignalSegmentIter<'a> {
         loop {
             if let Some(state) = self.inner.next() {
                 let state = *state;
-                let wave_segment = self.transition(prev, state);
+                let signal_segment = self.transition(prev, state);
 
                 self.wave_path(state);
 
-                if let Some(wave_segment) = wave_segment {
-                    debug_assert_ne!(state, PathState::Continue);
-                    debug_assert_ne!(state, PathState::Gap);
+                if let Some(signal_segment) = signal_segment {
+                    debug_assert_ne!(state, CycleState::Continue);
+                    debug_assert_ne!(state, CycleState::Gap);
 
                     self.prev = Some(state);
                     let segment_item = Some(SignalSegmentItem {
                         end_cycle: self.cycle_offset,
-                        segment: wave_segment,
+                        segment: signal_segment,
                     });
 
                     self.cycle_offset += self.cycle_length(state);
 
                     return segment_item;
                 } else {
-                    if !matches!(state, PathState::Continue | PathState::Gap) {
+                    if !matches!(state, CycleState::Continue | CycleState::Gap) {
                         self.prev = Some(state);
                         prev = state;
                     }
@@ -272,11 +272,11 @@ impl<'a> SignalSegmentIter<'a> {
         self.gaps.push(self.cycle_offset)
     }
 
-    fn begin(&mut self, state: PathState) {
+    fn begin(&mut self, state: CycleState) {
         let t = i32::from(self.options.transition_offset);
-        let h = i32::from(self.options.wave_height);
+        let h = i32::from(self.options.signal_height);
 
-        use PathState::*;
+        use CycleState::*;
 
         match state {
             Top => self.forward.horizontal_line(t),
@@ -305,13 +305,13 @@ impl<'a> SignalSegmentIter<'a> {
         }
     }
 
-    fn wave_path(&mut self, mut state: PathState) {
+    fn wave_path(&mut self, mut state: CycleState) {
         let t = i32::from(self.options.transition_offset);
-        let h = i32::from(self.options.wave_height);
+        let h = i32::from(self.options.signal_height);
         let w = i32::from(self.options.cycle_width);
         let p = i32::from(self.period.get());
 
-        use PathState::*;
+        use CycleState::*;
 
         if state == Gap {
             self.gap();
@@ -352,11 +352,11 @@ impl<'a> SignalSegmentIter<'a> {
         }
     }
 
-    fn transition(&mut self, state: PathState, next: PathState) -> Option<WavePathSegment> {
+    fn transition(&mut self, state: CycleState, next: CycleState) -> Option<SignalPathSegment> {
         let t = i32::from(self.options.transition_offset);
-        let h = i32::from(self.options.wave_height);
+        let h = i32::from(self.options.signal_height);
 
-        use PathState::*;
+        use CycleState::*;
 
         match (state, next) {
             (Top, Top)
@@ -372,12 +372,12 @@ impl<'a> SignalSegmentIter<'a> {
                 self.forward.line(t, h / 2);
                 self.backward.line(-t, h / 2);
 
-                let wave_segment = self.commit_with_back_line(state.background());
+                let segment = self.commit_with_back_line(state.background());
 
                 self.forward.line(t, -h / 2);
                 self.backward.line(-t, -h / 2);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (Up, Up | Gap | Continue) | (Down, Down | Gap | Continue) => {
                 self.forward.dashed_horizontal_line(t * 2)
@@ -391,42 +391,42 @@ impl<'a> SignalSegmentIter<'a> {
             (Bottom, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
                 self.forward.horizontal_line(t);
 
-                let wave_segment = self.commit_without_back_line();
+                let segment = self.commit_without_back_line();
 
                 self.forward.line(t, -h);
                 self.backward.horizontal_line(-t);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (Middle, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
                 self.forward.horizontal_line(t);
 
-                let wave_segment = self.commit_without_back_line();
+                let segment = self.commit_without_back_line();
 
                 self.forward.line(t, -h / 2);
                 self.backward.line(-t, -h / 2);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (Top, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
                 self.forward.horizontal_line(t);
 
-                let wave_segment = self.commit_without_back_line();
+                let segment = self.commit_without_back_line();
 
                 self.forward.horizontal_line(t);
                 self.backward.line(-t, -h);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X, Top) => {
                 self.forward.horizontal_line(t);
                 self.backward.line(-t, h);
 
-                let wave_segment = self.commit_with_back_line(state.background());
+                let segment = self.commit_with_back_line(state.background());
 
                 self.forward.horizontal_line(t);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X, Middle) => {
                 self.forward.curve(0, h / 2, t, h / 2, t * 2, h / 2);
@@ -438,11 +438,11 @@ impl<'a> SignalSegmentIter<'a> {
                 self.forward.line(t, h);
                 self.backward.horizontal_line(-t);
 
-                let wave_segment = self.commit_with_back_line(state.background());
+                let segment = self.commit_with_back_line(state.background());
 
                 self.forward.horizontal_line(t);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (
                 PosedgeClockMarked | PosedgeClockUnmarked,
@@ -500,23 +500,23 @@ impl<'a> SignalSegmentIter<'a> {
                 PosedgeClockMarked | PosedgeClockUnmarked,
                 Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X,
             ) => {
-                let wave_segment = self.commit_without_back_line();
+                let segment = self.commit_without_back_line();
 
                 self.forward.line(t, -h);
                 self.backward.horizontal_line(-t);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (
                 NegedgeClockMarked | NegedgeClockUnmarked,
                 Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X,
             ) => {
-                let wave_segment = self.commit_without_back_line();
+                let segment = self.commit_without_back_line();
 
                 self.forward.horizontal_line(t);
                 self.backward.line(-t, -h);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (PosedgeClockMarked | PosedgeClockUnmarked, Bottom) => {
                 self.forward.horizontal_line(t);
@@ -594,53 +594,53 @@ impl<'a> SignalSegmentIter<'a> {
             (Up, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
                 self.forward.dashed_horizontal_line(t);
 
-                let wave_segment = self.commit_without_back_line();
+                let segment = self.commit_without_back_line();
 
                 self.forward.horizontal_line(t);
                 self.backward.line(-t, -h);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (Down, Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data) => {
                 self.forward.dashed_horizontal_line(t);
 
-                let wave_segment = self.commit_without_back_line();
+                let segment = self.commit_without_back_line();
 
                 self.forward.line(t, -h);
                 self.backward.horizontal_line(-t);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data, Up) => {
                 self.forward.horizontal_line(t);
                 self.backward.line(-t, h);
 
-                let wave_segment = self.commit_with_back_line(state.background());
+                let segment = self.commit_with_back_line(state.background());
 
                 self.forward.dashed_horizontal_line(t);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
             (Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data, Down) => {
                 self.forward.line(t, h);
                 self.backward.horizontal_line(-t);
 
-                let wave_segment = self.commit_with_back_line(state.background());
+                let segment = self.commit_with_back_line(state.background());
 
                 self.forward.dashed_horizontal_line(t);
 
-                return Some(wave_segment);
+                return Some(segment);
             }
         }
 
         None
     }
 
-    fn end(&mut self, state: PathState) -> WavePathSegment {
+    fn end(&mut self, state: CycleState) -> SignalPathSegment {
         let t = i32::from(self.options.transition_offset);
-        let h = i32::from(self.options.wave_height);
+        let h = i32::from(self.options.signal_height);
 
-        use PathState::*;
+        use CycleState::*;
 
         match state {
             Top | Bottom | Middle => {
@@ -666,7 +666,7 @@ impl<'a> SignalSegmentIter<'a> {
     fn commit_with_back_line(
         &mut self,
         background: Option<PathSegmentBackground>,
-    ) -> WavePathSegment {
+    ) -> SignalPathSegment {
         let segment_start_x = self.forward.start_x;
         let segment_start_y = self.forward.start_y;
         let segment_width = self.forward.current_x - self.forward.start_x;
@@ -698,7 +698,7 @@ impl<'a> SignalSegmentIter<'a> {
         let gaps = std::mem::take(&mut self.gaps);
         let actions = self.forward.take_and_restart_at(start_x, start_y).actions;
 
-        WavePathSegment {
+        SignalPathSegment {
             x: segment_start_x,
             y: segment_start_y,
             width: segment_width,
@@ -714,7 +714,7 @@ impl<'a> SignalSegmentIter<'a> {
         }
     }
 
-    fn commit_without_back_line(&mut self) -> WavePathSegment {
+    fn commit_without_back_line(&mut self) -> SignalPathSegment {
         let segment_start_x = self.forward.start_x;
         let segment_start_y = self.forward.start_y;
         let segment_width = self.forward.current_x - self.forward.start_x;
@@ -726,7 +726,7 @@ impl<'a> SignalSegmentIter<'a> {
         let gaps = std::mem::take(&mut self.gaps);
         let actions = self.forward.take_and_restart_at(start_x, start_y).actions;
 
-        WavePathSegment {
+        SignalPathSegment {
             x: segment_start_x,
             y: segment_start_y,
             width: segment_width,
@@ -741,8 +741,8 @@ impl<'a> SignalSegmentIter<'a> {
         }
     }
 
-    fn cycle_length(&self, mut state: PathState) -> CycleOffset {
-        use PathState::*;
+    fn cycle_length(&self, mut state: CycleState) -> CycleOffset {
+        use CycleState::*;
 
         if matches!(state, Continue | Gap) {
             state = self.prev.unwrap_or(X);
@@ -758,10 +758,10 @@ impl<'a> SignalSegmentIter<'a> {
     }
 }
 
-impl<'a> WavePath<'a> {
+impl<'a> SignalPath<'a> {
     #[inline]
     pub fn new(
-        states: Vec<PathState>,
+        states: Vec<CycleState>,
         period: NonZeroU16,
         phase: CycleOffset,
         data: &'a [String],
@@ -784,7 +784,7 @@ impl<'a> WavePath<'a> {
         self.states.len()
     }
 
-    pub fn assemble_with_options(&self, options: &WaveOptions) -> AssembledWavePath {
+    pub fn assemble_with_options(&self, options: &SignalOptions) -> AssembledSignalPath {
         let mut end_offset = CycleOffset::default();
         let segments = self
             .iter(options)
@@ -794,18 +794,18 @@ impl<'a> WavePath<'a> {
             })
             .collect();
 
-        AssembledWavePath {
+        AssembledSignalPath {
             end_offset,
             segments,
         }
     }
 
     #[inline]
-    pub fn assemble(&self) -> AssembledWavePath {
-        self.assemble_with_options(&WaveOptions::default())
+    pub fn assemble(&self) -> AssembledSignalPath {
+        self.assemble_with_options(&SignalOptions::default())
     }
 
-    pub fn iter(&'a self, options: &'a WaveOptions) -> SignalSegmentIter<'a> {
+    pub fn iter(&'a self, options: &'a SignalOptions) -> SignalSegmentIter<'a> {
         let mut iter = SignalSegmentIter {
             inner: self.states.iter(),
 
@@ -837,7 +837,7 @@ impl<'a> WavePath<'a> {
         let first_state = *first_state;
 
         match first_state {
-            PathState::Continue | PathState::Gap => iter.prev = Some(PathState::X),
+            CycleState::Continue | CycleState::Gap => iter.prev = Some(CycleState::X),
             _ => iter.prev = Some(first_state),
         }
 
@@ -850,8 +850,8 @@ impl<'a> WavePath<'a> {
     }
 }
 
-impl AssembledWavePath {
-    pub fn segments(&self) -> &[WavePathSegment] {
+impl AssembledSignalPath {
+    pub fn segments(&self) -> &[SignalPathSegment] {
         &self.segments
     }
 }
@@ -981,9 +981,9 @@ impl PathData {
     }
 }
 
-impl PathState {
+impl CycleState {
     fn background(self) -> Option<PathSegmentBackground> {
-        use PathState::*;
+        use CycleState::*;
 
         match self {
             Top | Bottom | Middle | NegedgeClockMarked | NegedgeClockUnmarked
@@ -997,7 +997,7 @@ impl PathState {
             Box7 => Some(PathSegmentBackground::B7),
             Box8 => Some(PathSegmentBackground::B8),
             Box9 => Some(PathSegmentBackground::B9),
-            Continue | PathState::Gap => None,
+            Continue | CycleState::Gap => None,
         }
     }
 }
@@ -1020,9 +1020,9 @@ mod tests {
         macro_rules! assert_cycle_length {
             ([$($item:ident),* $(,)?], $period:literal, ($phase_index:literal, $phase_in_offset:ident) => $result:literal) => {
                 let period = NonZeroU16::new($period).unwrap();
-                let options = WaveOptions::default();
-                let num_cycles = WavePath::new(
-                    vec![$(PathState::$item),*],
+                let options = SignalOptions::default();
+                let num_cycles = SignalPath::new(
+                    vec![$(CycleState::$item),*],
                     period,
                     $crate::CycleOffset::new($phase_index, $crate::InCycleOffset::$phase_in_offset),
                     &[],

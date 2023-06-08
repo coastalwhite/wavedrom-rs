@@ -1,5 +1,5 @@
 use wavedrom_rs::wavejson::WaveJson;
-use wavedrom_rs::{Figure, WaveOptions};
+use wavedrom_rs::{Figure, SignalOptions};
 
 fn main() {
     let data = r#"

@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{CycleMarker, Figure, Wave, WaveLine, WaveLineGroup, CycleOffset};
+use crate::{CycleMarker, Figure, Signal, FigureSection, FigureSectionGroup, CycleOffset};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaveJson {
-    pub signal: Vec<Signal>,
+    pub signal: Vec<SignalItem>,
     pub head: Option<Head>,
     pub foot: Option<Foot>,
     pub config: Option<Config>,
@@ -12,20 +12,20 @@ pub struct WaveJson {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum Signal {
+pub enum SignalItem {
     Group(Vec<SignalGroupItem>),
-    Item(SignalItem),
+    Item(SignalObject),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum SignalGroupItem {
     String(String),
-    Item(Signal),
+    Item(SignalItem),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SignalItem {
+pub struct SignalObject {
     pub name: Option<String>,
     pub wave: Option<String>,
     pub data: Option<SignalData>,
@@ -106,17 +106,17 @@ impl TryFrom<WaveJson> for Figure {
             value
                 .signal
                 .into_iter()
-                .map(WaveLine::try_from)
-                .collect::<Result<Vec<WaveLine>, ()>>()?,
+                .map(FigureSection::try_from)
+                .collect::<Result<Vec<FigureSection>, ()>>()?,
         ))
     }
 }
 
-impl TryFrom<Signal> for WaveLine {
+impl TryFrom<SignalItem> for FigureSection {
     type Error = ();
-    fn try_from(signal: Signal) -> Result<Self, Self::Error> {
+    fn try_from(signal: SignalItem) -> Result<Self, Self::Error> {
         match signal {
-            Signal::Group(items) => {
+            SignalItem::Group(items) => {
                 let mut label = None;
 
                 let items = items
@@ -129,22 +129,22 @@ impl TryFrom<Signal> for WaveLine {
 
                             None
                         }
-                        SignalGroupItem::Item(line) => Some(WaveLine::try_from(line)),
+                        SignalGroupItem::Item(line) => Some(FigureSection::try_from(line)),
                     })
-                    .collect::<Result<Vec<WaveLine>, ()>>()?;
+                    .collect::<Result<Vec<FigureSection>, ()>>()?;
 
-                Ok(WaveLine::Group(WaveLineGroup(label, items)))
+                Ok(FigureSection::Group(FigureSectionGroup(label, items)))
             }
-            Signal::Item(item) => Ok(WaveLine::Wave(Wave::try_from(item)?)),
+            SignalItem::Item(item) => Ok(FigureSection::Signal(Signal::try_from(item)?)),
         }
     }
 }
 
-impl TryFrom<SignalItem> for Wave {
+impl TryFrom<SignalObject> for Signal {
     type Error = ();
 
-    fn try_from(item: SignalItem) -> Result<Self, Self::Error> {
-        Ok(Wave::new(
+    fn try_from(item: SignalObject) -> Result<Self, Self::Error> {
+        Ok(Signal::new(
             item.name.unwrap_or_default(),
             item.wave.unwrap_or_default().parse().map_err(|_| ())?,
             item.data

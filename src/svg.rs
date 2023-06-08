@@ -2,9 +2,9 @@ use std::io;
 use std::marker::PhantomData;
 
 use crate::path::{ClockEdgeMarker, PathCommand, PathSegmentBackground};
-use crate::{ClockEdge, CycleMarker, WaveOptions};
+use crate::{ClockEdge, CycleMarker, SignalOptions};
 
-use super::path::AssembledWavePath;
+use super::path::AssembledSignalPath;
 use super::AssembledFigure;
 
 pub trait ToSvg {
@@ -29,7 +29,7 @@ pub struct RenderOptions {
     pub spacings: FigureSpacing,
     pub header: HeaderOptions,
     pub footer: FooterOptions,
-    pub wave_dimensions: WaveOptions,
+    pub wave_dimensions: SignalOptions,
     pub group_indicator_dimensions: GroupIndicatorDimension,
 }
 
@@ -324,7 +324,7 @@ impl<'a> SvgDimensions<'a> {
 
     #[inline]
     fn wave_height(&self) -> u32 {
-        self.options.wave_dimensions.wave_height.into()
+        self.options.wave_dimensions.signal_height.into()
     }
 
     #[inline]
@@ -375,7 +375,7 @@ impl Default for RenderOptions {
             spacings: FigureSpacing::default(),
             header: HeaderOptions::default(),
             footer: FooterOptions::default(),
-            wave_dimensions: WaveOptions::default(),
+            wave_dimensions: SignalOptions::default(),
             group_indicator_dimensions: GroupIndicatorDimension::default(),
         }
     }
@@ -549,19 +549,19 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
         if self.definitions.has_posedge_marker {
             write!(writer, r##"<g id="pei">"##)?;
-            posedge_arrow(writer, wave_dimensions.wave_height)?;
+            posedge_arrow(writer, wave_dimensions.signal_height)?;
             write!(writer, r##"</g>"##)?;
         }
 
         if self.definitions.has_negedge_marker {
             write!(writer, r##"<g id="nei">"##)?;
-            negedge_arrow(writer, wave_dimensions.wave_height)?;
+            negedge_arrow(writer, wave_dimensions.signal_height)?;
             write!(writer, r##"</g>"##)?;
         }
 
         if self.definitions.has_gap {
             write!(writer, r##"<g id="gap">"##)?;
-            gap(writer, wave_dimensions.wave_height)?;
+            gap(writer, wave_dimensions.signal_height)?;
             write!(writer, r##"</g>"##)?;
         }
 
@@ -630,7 +630,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 continue;
             }
 
-            let height = group.len() * u32::from(wave_dimensions.wave_height)
+            let height = group.len() * u32::from(wave_dimensions.signal_height)
                 + (group.len() - 1) * spacings.line_to_line;
             let x = self.amount_labels_before(group.depth + 1)
                 * group_indicator_dimensions.label_height()
@@ -644,7 +644,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 + if group.start == 0 {
                     0
                 } else {
-                    group.start * u32::from(wave_dimensions.wave_height)
+                    group.start * u32::from(wave_dimensions.signal_height)
                         + group.start * spacings.line_to_line
                 };
 
@@ -691,7 +691,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 + if i == 0 {
                     0
                 } else {
-                    (u32::from(wave_dimensions.wave_height) + spacings.line_to_line) * i
+                    (u32::from(wave_dimensions.signal_height) + spacings.line_to_line) * i
                 };
 
             write!(writer, r##"<g transform="translate({x},{y})">"##)?;
@@ -701,7 +701,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                     writer,
                     r##"<g transform="translate(0,{y})"><text dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
                     font_size = font_size,
-                    y = wave_dimensions.wave_height / 2,
+                    y = wave_dimensions.signal_height / 2,
                     text = line.text,
                 )?;
             }
@@ -779,9 +779,9 @@ fn draw_dashed_horizontal_line(writer: &mut impl io::Write, dx: i32) -> io::Resu
 }
 
 fn write_signal(
-    wave_path: &AssembledWavePath,
+    wave_path: &AssembledSignalPath,
     writer: &mut impl io::Write,
-    options: &WaveOptions,
+    options: &SignalOptions,
     hscale: u16,
 ) -> io::Result<()> {
     for segment in wave_path.segments() {
@@ -850,13 +850,13 @@ fn write_signal(
                 font_size = options.font_size,
                 text = marker_text,
                 x = segment.x() + segment.width() / 2,
-                y = options.wave_height / 2,
+                y = options.signal_height / 2,
             )?;
         }
 
         for ClockEdgeMarker { x, edge } in segment.clock_edge_markers() {
             let x = *x;
-            let y = u32::from(options.wave_height) / 2;
+            let y = u32::from(options.signal_height) / 2;
 
             match edge {
                 ClockEdge::Positive => {
@@ -877,7 +877,7 @@ fn write_signal(
         for gap in segment.gaps() {
             let x = gap.width_offset(u32::from(options.cycle_width * hscale))
                 + u32::from(options.cycle_width * hscale) / 2;
-            let y = u32::from(options.wave_height) / 2;
+            let y = u32::from(options.signal_height) / 2;
 
             write!(
                 writer,
