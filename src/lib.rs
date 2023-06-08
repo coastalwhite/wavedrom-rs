@@ -115,11 +115,6 @@ impl FigureSection {
                 depth
             }
             Self::Group(FigureSectionGroup(label, sections)) => {
-                // TODO: Do something smarter here.
-                if depth > 4 {
-                    return depth;
-                }
-
                 match group_label_at_depth.get_mut(depth as usize) {
                     None => group_label_at_depth.push(label.is_some()),
                     Some(label_at_level) => *label_at_level |= label.is_some(),
