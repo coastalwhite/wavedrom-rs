@@ -290,12 +290,7 @@ impl<'a> SignalSegmentIter<'a> {
             }
             PosedgeClockMarked | PosedgeClockUnmarked => self.forward.restart_move_to(0, h),
             NegedgeClockMarked | NegedgeClockUnmarked => {}
-            Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X => {
-                self.forward.horizontal_line(t);
-                self.backward.vertical_line_no_stroke(-h);
-                self.backward.horizontal_line(-t);
-            }
-            Continue | Gap => {
+            Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X | Continue | Gap => {
                 self.forward.horizontal_line(t);
                 self.backward.vertical_line_no_stroke(-h);
                 self.backward.horizontal_line(-t);
