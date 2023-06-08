@@ -195,21 +195,9 @@ impl FromStr for Cycles {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EdgeMarker {
-    None,
-    Arrow,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ClockEdge {
     Positive,
     Negative,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CycleClock {
-    edge: ClockEdge,
-    has_arrows: bool,
 }
 
 pub struct AssembledFigure<'a> {
