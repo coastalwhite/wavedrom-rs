@@ -1,6 +1,6 @@
 use std::num::NonZeroU16;
 
-use crate::ClockEdge;
+use crate::{ClockEdge, CycleOffset};
 
 #[derive(Debug, Clone)]
 pub struct ClockEdgeMarker {
@@ -11,7 +11,7 @@ pub struct ClockEdgeMarker {
 pub struct WavePath<'a> {
     states: Vec<PathState>,
     period: NonZeroU16,
-    phase: u16,
+    phase: CycleOffset,
     data: &'a [String],
 }
 
@@ -75,7 +75,7 @@ pub struct WavePathSegment {
     actions: Vec<PathCommand>,
 
     text: Option<String>,
-    gaps: Vec<u32>,
+    gaps: Vec<CycleOffset>,
     clock_edge_markers: Vec<ClockEdgeMarker>,
 }
 
@@ -129,7 +129,7 @@ impl Default for WaveOptions {
 
 #[derive(Debug, Clone)]
 pub struct AssembledWavePath {
-    num_cycles: u32,
+    end_offset: CycleOffset,
     segments: Vec<WavePathSegment>,
 }
 
@@ -139,7 +139,7 @@ impl AssembledWavePath {
     }
 
     pub fn num_cycles(&self) -> u32 {
-        self.num_cycles
+        self.end_offset.cycle_width()
     }
 }
 
@@ -160,7 +160,7 @@ impl WavePathSegment {
         &self.clock_edge_markers
     }
 
-    pub fn gaps(&self) -> &[u32] {
+    pub fn gaps(&self) -> &[CycleOffset] {
         &self.gaps
     }
 
@@ -184,7 +184,7 @@ impl WavePathSegment {
 pub struct SignalSegmentIter<'a> {
     inner: std::slice::Iter<'a, PathState>,
 
-    cycle_index: u32,
+    cycle_offset: CycleOffset,
 
     period: NonZeroU16,
 
@@ -197,14 +197,14 @@ pub struct SignalSegmentIter<'a> {
     box_content: &'a [String],
 
     clock_edge_markers: Vec<ClockEdgeMarker>,
-    gaps: Vec<u32>,
+    gaps: Vec<CycleOffset>,
 
     options: &'a WaveOptions,
 }
 
 #[derive(Debug)]
 pub struct SignalSegmentItem {
-    pub end_cycle: u32,
+    pub end_cycle: CycleOffset,
     pub segment: WavePathSegment,
 }
 
@@ -227,11 +227,11 @@ impl<'a> Iterator for SignalSegmentIter<'a> {
 
                     self.prev = Some(state);
                     let segment_item = Some(SignalSegmentItem {
-                        end_cycle: self.cycle_index,
+                        end_cycle: self.cycle_offset,
                         segment: wave_segment,
                     });
 
-                    self.cycle_index += u32::from(self.cycle_length(state).get());
+                    self.cycle_offset += self.cycle_length(state);
 
                     return segment_item;
                 } else {
@@ -240,12 +240,12 @@ impl<'a> Iterator for SignalSegmentIter<'a> {
                         prev = state;
                     }
 
-                    self.cycle_index += u32::from(self.cycle_length(state).get());
+                    self.cycle_offset += self.cycle_length(state);
                 }
             } else {
                 self.prev = None;
                 return Some(SignalSegmentItem {
-                    end_cycle: self.cycle_index,
+                    end_cycle: self.cycle_offset,
                     segment: self.end(prev),
                 });
             }
@@ -269,7 +269,7 @@ impl<'a> SignalSegmentIter<'a> {
     }
 
     fn gap(&mut self) {
-        self.gaps.push(self.cycle_index)
+        self.gaps.push(self.cycle_offset)
     }
 
     fn begin(&mut self, state: PathState) {
@@ -741,26 +741,31 @@ impl<'a> SignalSegmentIter<'a> {
         }
     }
 
-    fn cycle_length(&self, mut state: PathState) -> NonZeroU16 {
+    fn cycle_length(&self, mut state: PathState) -> CycleOffset {
         use PathState::*;
 
         if matches!(state, Continue | Gap) {
             state = self.prev.unwrap_or(X);
         }
 
-        match state {
+        CycleOffset::new_rounded(match state {
             Top | Bottom | Middle | Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9
-            | Data | X | Down | Up => NonZeroU16::MIN,
+            | Data | X | Down | Up => 1,
             PosedgeClockUnmarked | PosedgeClockMarked | NegedgeClockUnmarked
-            | NegedgeClockMarked => self.period,
+            | NegedgeClockMarked => self.period.get().into(),
             Continue | Gap => unreachable!(),
-        }
+        })
     }
 }
 
 impl<'a> WavePath<'a> {
     #[inline]
-    pub fn new(states: Vec<PathState>, period: NonZeroU16, phase: u16, data: &'a [String]) -> Self {
+    pub fn new(
+        states: Vec<PathState>,
+        period: NonZeroU16,
+        phase: CycleOffset,
+        data: &'a [String],
+    ) -> Self {
         Self {
             states,
             period,
@@ -780,17 +785,17 @@ impl<'a> WavePath<'a> {
     }
 
     pub fn shape_with_options(&self, options: &WaveOptions) -> AssembledWavePath {
-        let mut num_cycles = 0;
+        let mut end_offset = CycleOffset::default();
         let segments = self
             .iter(options)
             .map(|i| {
-                num_cycles = i.end_cycle;
+                end_offset = i.end_cycle;
                 i.segment
             })
             .collect();
 
         AssembledWavePath {
-            num_cycles,
+            end_offset,
             segments,
         }
     }
@@ -801,18 +806,19 @@ impl<'a> WavePath<'a> {
     }
 
     pub fn iter(&'a self, options: &'a WaveOptions) -> SignalSegmentIter<'a> {
-        let phase_x = i32::from(self.phase) * i32::from(options.cycle_width) / 4;
-
         let mut iter = SignalSegmentIter {
             inner: self.states.iter(),
 
-            cycle_index: 0,
+            cycle_offset: self.phase,
 
             period: self.period,
 
             prev: None,
 
-            forward: PathData::new(phase_x, 0),
+            forward: PathData::new(
+                self.phase.width_offset(u32::from(options.cycle_width)) as i32,
+                0,
+            ),
             backward: PathData::new(0, 0),
 
             box_index: 0,
@@ -838,7 +844,7 @@ impl<'a> WavePath<'a> {
         iter.begin(first_state);
         iter.wave_path(first_state);
 
-        iter.cycle_index += u32::from(iter.cycle_length(first_state).get());
+        iter.cycle_offset += iter.cycle_length(first_state);
 
         iter
     }
@@ -1012,32 +1018,27 @@ mod tests {
     #[test]
     fn calculate_cycle_length() {
         macro_rules! assert_cycle_length {
-            ([$($item:ident),* $(,)?], $period:literal, $phase:literal => $result:literal) => {
+            ([$($item:ident),* $(,)?], $period:literal, ($phase_index:literal, $phase_in_offset:ident) => $result:literal) => {
                 let period = NonZeroU16::new($period).unwrap();
                 let options = WaveOptions::default();
                 let num_cycles = WavePath::new(
                     vec![$(PathState::$item),*],
                     period,
-                    $phase,
+                    $crate::CycleOffset::new($phase_index, $crate::InCycleOffset::$phase_in_offset),
                     &[],
-                ).iter(&options).last().map_or(0, |i| i.end_cycle);
-                assert_eq!(num_cycles, $result, "{:?}", WavePath::new(
-                    vec![$(PathState::$item),*],
-                    period,
-                    $phase,
-                    &[],
-                ).iter(&options).collect::<Vec<SignalSegmentItem>>());
+                ).iter(&options).last().map_or(0, |i| i.end_cycle.cycle_width());
+                assert_eq!(num_cycles, $result);
             };
         }
 
-        assert_cycle_length!([], 1, 0 => 0);
-        assert_cycle_length!([], 2, 0 => 0);
-        assert_cycle_length!([Box2], 1, 0 => 1);
-        assert_cycle_length!([Box2], 2, 0 => 1);
-        assert_cycle_length!([PosedgeClockMarked], 1, 0 => 1);
-        assert_cycle_length!([PosedgeClockMarked], 2, 0 => 2);
-        assert_cycle_length!([Box2, PosedgeClockMarked], 3, 0 => 4);
-        assert_cycle_length!([PosedgeClockMarked, NegedgeClockMarked], 3, 0 => 6);
-        assert_cycle_length!([PosedgeClockMarked, Continue, NegedgeClockMarked], 3, 0 => 9);
+        assert_cycle_length!([], 1, (0, OffsetNone) => 0);
+        assert_cycle_length!([], 2, (0, OffsetNone) => 0);
+        assert_cycle_length!([Box2], 1, (0, OffsetNone) => 1);
+        assert_cycle_length!([Box2], 2, (0, OffsetNone) => 1);
+        assert_cycle_length!([PosedgeClockMarked], 1, (0, OffsetNone) => 1);
+        assert_cycle_length!([PosedgeClockMarked], 2, (0, OffsetNone) => 2);
+        assert_cycle_length!([Box2, PosedgeClockMarked], 3, (0, OffsetNone) => 4);
+        assert_cycle_length!([PosedgeClockMarked, NegedgeClockMarked], 3, (0, OffsetNone) => 6);
+        assert_cycle_length!([PosedgeClockMarked, Continue, NegedgeClockMarked], 3, (0, OffsetNone) => 9);
     }
 }

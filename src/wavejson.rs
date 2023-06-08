@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{CycleMarker, Figure, Wave, WaveLine, WaveLineGroup};
+use crate::{CycleMarker, Figure, Wave, WaveLine, WaveLineGroup, CycleOffset};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaveJson {
@@ -153,7 +153,10 @@ impl TryFrom<SignalItem> for Wave {
                     SignalData::Multiple(data) => data,
                 }),
             item.period.map_or(0, |f| f.ceil() as u16),
-            item.phase.map_or(0, |f| (f * 4.).ceil() as u16),
+            match item.phase {
+                None => CycleOffset::default(),
+                Some(f) => CycleOffset::try_from(f)?,
+            },
         ))
     }
 }

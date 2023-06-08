@@ -868,7 +868,7 @@ fn write_signal(
         }
 
         for gap in segment.gaps() {
-            let x = u32::from(options.cycle_width * hscale) * *gap
+            let x = gap.width_offset(u32::from(options.cycle_width * hscale))
                 + u32::from(options.cycle_width * hscale) / 2;
             let y = u32::from(options.wave_height) / 2;
 
