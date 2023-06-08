@@ -784,7 +784,7 @@ impl<'a> WavePath<'a> {
         self.states.len()
     }
 
-    pub fn shape_with_options(&self, options: &WaveOptions) -> AssembledWavePath {
+    pub fn assemble_with_options(&self, options: &WaveOptions) -> AssembledWavePath {
         let mut end_offset = CycleOffset::default();
         let segments = self
             .iter(options)
@@ -801,8 +801,8 @@ impl<'a> WavePath<'a> {
     }
 
     #[inline]
-    pub fn shape(&self) -> AssembledWavePath {
-        self.shape_with_options(&WaveOptions::default())
+    pub fn assemble(&self) -> AssembledWavePath {
+        self.assemble_with_options(&WaveOptions::default())
     }
 
     pub fn iter(&'a self, options: &'a WaveOptions) -> SignalSegmentIter<'a> {

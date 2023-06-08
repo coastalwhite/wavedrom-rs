@@ -92,7 +92,7 @@ impl WaveLine {
                     text: &wave.name,
                     depth,
                     path: WavePath::new(wave.cycles.0.clone(), wave.period, wave.phase, &wave.data)
-                        .shape_with_options(wave_shape_options),
+                        .assemble_with_options(wave_shape_options),
                 });
 
                 depth
