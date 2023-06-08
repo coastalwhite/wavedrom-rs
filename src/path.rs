@@ -3,6 +3,7 @@ use std::num::NonZeroU16;
 use crate::{ClockEdge, CycleOffset};
 use crate::markers::ClockEdgeMarker;
 
+#[derive(Debug, Clone)]
 pub struct SignalPath<'a> {
     states: Vec<CycleState>,
     period: NonZeroU16,
@@ -758,11 +759,13 @@ impl<'a> SignalSegmentIter<'a> {
 impl<'a> SignalPath<'a> {
     #[inline]
     pub fn new(
-        states: Vec<CycleState>,
+        states: &[CycleState],
+        data: &'a [String],
         period: NonZeroU16,
         phase: CycleOffset,
-        data: &'a [String],
     ) -> Self {
+        let states = states.to_vec();
+
         Self {
             states,
             period,
@@ -1019,10 +1022,10 @@ mod tests {
                 let period = NonZeroU16::new($period).unwrap();
                 let options = SignalOptions::default();
                 let num_cycles = SignalPath::new(
-                    vec![$(CycleState::$item),*],
+                    &[$(CycleState::$item),*],
+                    &[],
                     period,
                     $crate::CycleOffset::new($phase_index, $crate::InCycleOffset::$phase_in_offset),
-                    &[],
                 ).iter(&options).last().map_or(0, |i| i.end_cycle.cycle_width());
                 assert_eq!(num_cycles, $result);
             };

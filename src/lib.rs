@@ -108,7 +108,7 @@ impl FigureSection {
                 lines.push(AssembledLine {
                     text: &signal.name,
                     depth,
-                    path: SignalPath::new(signal.cycles.0.clone(), signal.period, signal.phase, &signal.data)
+                    path: SignalPath::new(signal.cycles(), &signal.data, signal.period, signal.phase)
                         .assemble_with_options(wave_shape_options),
                 });
 
