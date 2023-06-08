@@ -9,9 +9,12 @@ pub use cycle_offset::{CycleOffset, InCycleOffset};
 
 #[cfg(feature = "serde")]
 pub mod wavejson;
+pub mod markers;
 
 pub use path::{AssembledSignalPath, CycleState, SignalOptions, SignalPath, SignalPathSegment};
 pub use svg::ToSvg;
+
+use markers::{GroupMarker, ClockEdge, CycleMarker};
 
 #[derive(Debug, Clone)]
 pub enum FigureSection {
@@ -29,16 +32,6 @@ pub struct Signal {
     data: Vec<String>,
     period: NonZeroU16,
     phase: CycleOffset,
-}
-
-#[derive(Debug, Clone)]
-pub struct GroupMarker<'a> {
-    depth: u32,
-
-    label: Option<&'a str>,
-
-    start: u32,
-    end: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -151,12 +144,12 @@ impl FigureSection {
                 }
                 let group_end = lines.len();
 
-                groups.push(GroupMarker {
+                groups.push(GroupMarker::new(
+                    group_start as u32,
+                    group_end as u32,
+                    label.as_ref().map(|s| &s[..]),
                     depth,
-                    label: label.as_ref().map(|s| &s[..]),
-                    start: group_start as u32,
-                    end: group_end as u32,
-                });
+                ));
 
                 max_depth
             }
@@ -218,12 +211,6 @@ impl FromStr for Cycles {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ClockEdge {
-    Positive,
-    Negative,
-}
-
 pub struct AssembledFigure<'a> {
     num_cycles: u32,
 
@@ -244,12 +231,6 @@ pub struct AssembledFigure<'a> {
     groups: Vec<GroupMarker<'a>>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct CycleMarker {
-    start: u32,
-    every: u32,
-}
-
 impl<'a> AssembledFigure<'a> {
     #[inline]
     fn amount_labels_before(&self, depth: u32) -> u32 {
@@ -265,20 +246,6 @@ impl<'a> AssembledFigure<'a> {
 impl AssembledLine<'_> {
     fn is_empty(&self) -> bool {
         self.path.is_empty() && self.text.is_empty()
-    }
-}
-
-impl GroupMarker<'_> {
-    pub fn len(&self) -> u32 {
-        self.end - self.start
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.start == self.end
-    }
-
-    pub fn label(&self) -> Option<&str> {
-        self.label
     }
 }
 

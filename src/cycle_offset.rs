@@ -4,10 +4,10 @@ use std::ops::{Add, AddAssign};
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum InCycleOffset {
     #[default]
-    OffsetNone,
-    OffsetQuarter,
-    OffsetHalf,
-    Offset3Quarter,
+    Begin,
+    Quarter,
+    Half,
+    ThreeQuarter,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -43,12 +43,12 @@ impl TryFrom<f32> for CycleOffset {
         }
 
         let in_offset = match (value.fract() * 4.).round() as u32 {
-            4 | 0 => InCycleOffset::OffsetNone,
-            1 => InCycleOffset::OffsetQuarter,
-            2 => InCycleOffset::OffsetHalf,
-            _ => InCycleOffset::Offset3Quarter,
+            4 | 0 => InCycleOffset::Begin,
+            1 => InCycleOffset::Quarter,
+            2 => InCycleOffset::Half,
+            _ => InCycleOffset::ThreeQuarter,
         };
-        let index = if value.fract() > 0.75 && in_offset == InCycleOffset::OffsetNone {
+        let index = if value.fract() > 0.75 && in_offset == InCycleOffset::Begin {
             value.ceil()
         } else {
             value.floor()
@@ -67,12 +67,12 @@ impl TryFrom<f64> for CycleOffset {
         }
 
         let in_offset = match ((value * 4.).round() % 4.) as u32 {
-            0 => InCycleOffset::OffsetNone,
-            1 => InCycleOffset::OffsetQuarter,
-            2 => InCycleOffset::OffsetHalf,
-            _ => InCycleOffset::Offset3Quarter,
+            0 => InCycleOffset::Begin,
+            1 => InCycleOffset::Quarter,
+            2 => InCycleOffset::Half,
+            _ => InCycleOffset::ThreeQuarter,
         };
-        let index = if value.fract() > 0.75 && in_offset == InCycleOffset::OffsetNone {
+        let index = if value.fract() > 0.75 && in_offset == InCycleOffset::Begin {
             value.ceil()
         } else {
             value.floor()
@@ -89,14 +89,14 @@ impl Add for CycleOffset {
         use InCycleOffset::*;
 
         let (in_offset, carry) = match (self.in_offset, rhs.in_offset) {
-            (x, OffsetNone) | (OffsetNone, x) => (x, 0),
-            (OffsetQuarter, OffsetQuarter) => (OffsetHalf, 0),
-            (OffsetQuarter, OffsetHalf) | (OffsetHalf, OffsetQuarter) => (Offset3Quarter, 0),
-            (OffsetHalf, OffsetHalf)
-            | (OffsetQuarter, Offset3Quarter)
-            | (Offset3Quarter, OffsetQuarter) => (OffsetNone, 1),
-            (OffsetHalf, Offset3Quarter) | (Offset3Quarter, OffsetHalf) => (OffsetQuarter, 1),
-            (Offset3Quarter, Offset3Quarter) => (OffsetHalf, 1),
+            (x, Begin) | (Begin, x) => (x, 0),
+            (Quarter, Quarter) => (Half, 0),
+            (Quarter, Half) | (Half, Quarter) => (ThreeQuarter, 0),
+            (Half, Half)
+            | (Quarter, ThreeQuarter)
+            | (ThreeQuarter, Quarter) => (Begin, 1),
+            (Half, ThreeQuarter) | (ThreeQuarter, Half) => (Quarter, 1),
+            (ThreeQuarter, ThreeQuarter) => (Half, 1),
         };
         let index = self.index + rhs.index + carry;
 
@@ -121,14 +121,14 @@ impl CycleOffset {
     pub fn new_rounded(index: u32) -> Self {
         Self {
             index,
-            in_offset: InCycleOffset::OffsetNone,
+            in_offset: InCycleOffset::Begin,
         }
     }
 
     pub fn cycle_width(self) -> u32 {
         self.index
             + match self.in_offset {
-                InCycleOffset::OffsetNone => 0,
+                InCycleOffset::Begin => 0,
                 _ => 1,
             }
     }
@@ -147,6 +147,22 @@ impl CycleOffset {
     pub fn width_offset(self, width: u32) -> u32 {
         width * self.index + self.in_offset.width_offset(width)
     }
+
+    pub fn half(&self) -> CycleOffset {
+        use InCycleOffset::*;
+
+        if self.index % 2 == 0 {
+            Self::new(self.index / 2, match self.in_offset {
+                Begin | Quarter => Begin,
+                Half | ThreeQuarter => Quarter,
+            })
+        } else {
+            Self::new(self.index / 2, match self.in_offset {
+                Begin | Quarter => Half,
+                Half | ThreeQuarter => ThreeQuarter,
+            })
+        }
+    }
 }
 
 impl InCycleOffset {
@@ -154,10 +170,10 @@ impl InCycleOffset {
         let w = f64::from(width);
 
         match self {
-            Self::OffsetNone => 0,
-            Self::OffsetQuarter => (w * 0.25).round() as u32,
-            Self::OffsetHalf => (w * 0.5).round() as u32,
-            Self::Offset3Quarter => (w * 0.75).round() as u32,
+            Self::Begin => 0,
+            Self::Quarter => (w * 0.25).round() as u32,
+            Self::Half => (w * 0.5).round() as u32,
+            Self::ThreeQuarter => (w * 0.75).round() as u32,
         }
     }
 }

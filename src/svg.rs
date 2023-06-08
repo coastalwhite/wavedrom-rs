@@ -1,8 +1,8 @@
 use std::io;
 use std::marker::PhantomData;
 
-use crate::path::{ClockEdgeMarker, PathCommand, PathSegmentBackground};
-use crate::{ClockEdge, CycleMarker, SignalOptions};
+use crate::path::{PathCommand, PathSegmentBackground};
+use crate::{ClockEdge, SignalOptions};
 
 use super::path::AssembledSignalPath;
 use super::AssembledFigure;
@@ -591,7 +591,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 y = dims.header_height() / 2
             )?;
         }
-        if let Some(CycleMarker { start, every }) = self.top_cycle_marker {
+        if let Some(cycle_marker) = self.top_cycle_marker {
+            let start = cycle_marker.start();
+            let every = cycle_marker.every();
+
             let marker_font_size = header.cycle_marker_font_size;
             let end = start + self.num_cycles;
 
@@ -632,29 +635,29 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
             let height = group.len() * u32::from(wave_dimensions.signal_height)
                 + (group.len() - 1) * spacings.line_to_line;
-            let x = self.amount_labels_before(group.depth + 1)
+            let x = self.amount_labels_before(group.depth() + 1)
                 * group_indicator_dimensions.label_height()
-                + if group.depth == 0 {
+                + if group.depth() == 0 {
                     0
                 } else {
-                    group.depth * group_indicator_dimensions.width
+                    group.depth() * group_indicator_dimensions.width
                 };
             let y = dims.header_height()
                 + paddings.schema_top
-                + if group.start == 0 {
+                + if group.start() == 0 {
                     0
                 } else {
-                    group.start * u32::from(wave_dimensions.signal_height)
-                        + group.start * spacings.line_to_line
+                    group.start() * u32::from(wave_dimensions.signal_height)
+                        + group.start() * spacings.line_to_line
                 };
 
-            if let Some(label) = group.label {
-                let x = if group.depth == 0 {
+            if let Some(label) = group.label() {
+                let x = if group.depth() == 0 {
                     0
                 } else {
-                    self.amount_labels_before(group.depth)
+                    self.amount_labels_before(group.depth())
                         * group_indicator_dimensions.label_height()
-                        + group.depth * group_indicator_dimensions.width
+                        + group.depth() * group_indicator_dimensions.width
                 };
 
                 // let label_width = get_text_width(label, &face, 8);
@@ -731,7 +734,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 y = dims.footer_y() + dims.footer_height() / 2
             )?;
         }
-        if let Some(CycleMarker { start, every }) = self.bottom_cycle_marker {
+        if let Some(cycle_marker) = self.bottom_cycle_marker {
+            let start = cycle_marker.start();
+            let every = cycle_marker.every();
+
             let marker_font_size = footer.cycle_marker_font_size;
             let end = start + self.num_cycles;
 
@@ -854,11 +860,11 @@ fn write_signal(
             )?;
         }
 
-        for ClockEdgeMarker { x, edge } in segment.clock_edge_markers() {
-            let x = *x;
+        for clock_edge_marker in segment.clock_edge_markers() {
+            let x = clock_edge_marker.at().width_offset(u32::from(options.cycle_width * hscale));
             let y = u32::from(options.signal_height) / 2;
 
-            match edge {
+            match clock_edge_marker.edge() {
                 ClockEdge::Positive => {
                     write!(
                         writer,
@@ -875,8 +881,7 @@ fn write_signal(
         }
 
         for gap in segment.gaps() {
-            let x = gap.width_offset(u32::from(options.cycle_width * hscale))
-                + u32::from(options.cycle_width * hscale) / 2;
+            let x = gap.width_offset(u32::from(options.cycle_width * hscale));
             let y = u32::from(options.signal_height) / 2;
 
             write!(

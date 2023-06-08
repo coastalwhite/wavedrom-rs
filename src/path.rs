@@ -1,12 +1,7 @@
 use std::num::NonZeroU16;
 
 use crate::{ClockEdge, CycleOffset};
-
-#[derive(Debug, Clone)]
-pub struct ClockEdgeMarker {
-    pub x: u32,
-    pub edge: ClockEdge,
-}
+use crate::markers::ClockEdgeMarker;
 
 pub struct SignalPath<'a> {
     states: Vec<CycleState>,
@@ -255,21 +250,21 @@ impl<'a> Iterator for SignalSegmentIter<'a> {
 
 impl<'a> SignalSegmentIter<'a> {
     fn posedge_marker(&mut self) {
-        self.clock_edge_markers.push(ClockEdgeMarker {
-            x: self.forward.current_x as u32,
-            edge: ClockEdge::Positive,
-        });
+        self.clock_edge_markers.push(ClockEdgeMarker::new(
+            self.cycle_offset,
+            ClockEdge::Positive,
+        ));
     }
 
     fn negedge_marker(&mut self) {
-        self.clock_edge_markers.push(ClockEdgeMarker {
-            x: self.forward.current_x as u32,
-            edge: ClockEdge::Negative,
-        });
+        self.clock_edge_markers.push(ClockEdgeMarker::new(
+            self.cycle_offset,
+            ClockEdge::Negative,
+        ));
     }
 
-    fn gap(&mut self) {
-        self.gaps.push(self.cycle_offset)
+    fn gap(&mut self, state: CycleState) {
+        self.gaps.push(self.cycle_offset + self.cycle_length(state).half())
     }
 
     fn begin(&mut self, state: CycleState) {
@@ -313,12 +308,14 @@ impl<'a> SignalSegmentIter<'a> {
 
         use CycleState::*;
 
+        let prev = self.prev.unwrap_or(X);
+
         if state == Gap {
-            self.gap();
+            self.gap(prev);
         }
 
         if matches!(state, Continue | Gap) {
-            state = self.prev.unwrap_or(X);
+            state = prev;
         }
 
         match state {
@@ -1031,14 +1028,14 @@ mod tests {
             };
         }
 
-        assert_cycle_length!([], 1, (0, OffsetNone) => 0);
-        assert_cycle_length!([], 2, (0, OffsetNone) => 0);
-        assert_cycle_length!([Box2], 1, (0, OffsetNone) => 1);
-        assert_cycle_length!([Box2], 2, (0, OffsetNone) => 1);
-        assert_cycle_length!([PosedgeClockMarked], 1, (0, OffsetNone) => 1);
-        assert_cycle_length!([PosedgeClockMarked], 2, (0, OffsetNone) => 2);
-        assert_cycle_length!([Box2, PosedgeClockMarked], 3, (0, OffsetNone) => 4);
-        assert_cycle_length!([PosedgeClockMarked, NegedgeClockMarked], 3, (0, OffsetNone) => 6);
-        assert_cycle_length!([PosedgeClockMarked, Continue, NegedgeClockMarked], 3, (0, OffsetNone) => 9);
+        assert_cycle_length!([], 1, (0, Begin) => 0);
+        assert_cycle_length!([], 2, (0, Begin) => 0);
+        assert_cycle_length!([Box2], 1, (0, Begin) => 1);
+        assert_cycle_length!([Box2], 2, (0, Begin) => 1);
+        assert_cycle_length!([PosedgeClockMarked], 1, (0, Begin) => 1);
+        assert_cycle_length!([PosedgeClockMarked], 2, (0, Begin) => 2);
+        assert_cycle_length!([Box2, PosedgeClockMarked], 3, (0, Begin) => 4);
+        assert_cycle_length!([PosedgeClockMarked, NegedgeClockMarked], 3, (0, Begin) => 6);
+        assert_cycle_length!([PosedgeClockMarked, Continue, NegedgeClockMarked], 3, (0, Begin) => 9);
     }
 }
