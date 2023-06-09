@@ -6,5 +6,12 @@ members = [
     "mdbook-wavedrom",
 ]
 
+[workspace.package]
+version = "0.1.0"
+authors = ["Gijs Burghoorn <me@gburghoorn.com>"]
+repository = "https://github.com/coastalwhite/wavedrom-rs"
+homepage = "https://github.com/coastalwhite/wavedrom-rs"
+edition = "2021"
+
 [workspace.dependencies]
 clap = "4.3.2"

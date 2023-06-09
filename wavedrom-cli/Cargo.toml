@@ -1,8 +1,10 @@
 [package]
 name = "wavedrom-cli"
-version = "0.1.0"
-edition = "2021"
-include = ["/src", "/helvetica.ttf"]
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+edition.workspace = true
 
 [[bin]]
 name = "wavedrom"
