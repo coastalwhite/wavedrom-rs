@@ -58,30 +58,30 @@ pub struct FigureSpacing {
 
 #[derive(Debug, Clone)]
 pub struct GroupIndicatorDimension {
-    width: u32,
+    pub width: u32,
 
-    spacing: u32,
+    pub spacing: u32,
 
-    label_spacing: u32,
-    label_fontsize: u32,
+    pub label_spacing: u32,
+    pub label_fontsize: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct HeaderOptions {
-    font_size: u32,
-    height: u32,
+    pub font_size: u32,
+    pub height: u32,
 
-    cycle_marker_height: u32,
-    cycle_marker_font_size: u32,
+    pub cycle_marker_height: u32,
+    pub cycle_marker_font_size: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct FooterOptions {
-    font_size: u32,
-    height: u32,
+    pub font_size: u32,
+    pub height: u32,
 
-    cycle_marker_height: u32,
-    cycle_marker_font_size: u32,
+    pub cycle_marker_height: u32,
+    pub cycle_marker_font_size: u32,
 }
 
 struct SvgDimensions<'a> {
@@ -870,8 +870,8 @@ fn write_signal(
             write!(
                 writer,
                 r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
-                font_family = options.font_family,
-                font_size = options.font_size,
+                font_family = "Helvetica",
+                font_size = options.marker_font_size,
                 text = marker_text,
                 x = segment.x() + segment.width() / 2,
                 y = options.signal_height / 2,

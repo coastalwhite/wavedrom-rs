@@ -89,8 +89,7 @@ pub struct PathData {
 
 #[derive(Debug, Clone)]
 pub struct SignalOptions {
-    pub font_family: String,
-    pub font_size: u32,
+    pub marker_font_size: u32,
 
     pub signal_height: u16,
     pub cycle_width: u16,
@@ -102,8 +101,7 @@ pub struct SignalOptions {
 impl Default for SignalOptions {
     fn default() -> Self {
         Self {
-            font_family: "Helvetica".to_string(),
-            font_size: 14,
+            marker_font_size: 14,
 
             signal_height: 24,
             cycle_width: 48,

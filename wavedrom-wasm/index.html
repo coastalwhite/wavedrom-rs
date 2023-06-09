@@ -39,45 +39,193 @@ onclick="toggleVisibility('render-settings')" href="#">
 					</div>
 				</div>
 			</div>
-			<div class="lg:w-1/2 flex-1 grow flex flex-col bg-gray-100 border-r">
+			<div class="lg:w-1/2 flex-1 grow flex flex-col bg-gray-100 border-r
+h-screen">
 				<textarea class="w-full outline-none resize-none flex-1 bg-transparent p-4" id="input" spellcheck="false"></textarea>
-				<div id="render-settings" class="bg-gray-700 flex-1 w-full p-4 text-md hidden text-white">
-                    <h2 class="text-lg font-bold">Render Settings</h2>
-                    <div>
-                        <h3 class="font-bold mt-4">Wave Dimensions</h3>
-                        <table class="w-full">
+				<div id="render-settings" class="bg-gray-700 overflow-y-auto flex-1 w-full p-4 text-md hidden text-white">
+                    <div class="w-full">
+                        <h2 class="text-lg font-bold">Render Settings</h2>
+                        <table class="w-full table-fixed">
                             <tr>
-                                <td>Wave Height (pixels):</td>
-                                <td><input type="number" /></td>
+                                <td>Font Size (px):</td>
+                                <td><input class="text-black" id="param:font-size" type="number" /></td>
                             </tr>
                             <tr>
-                                <td>Cycle Width (pixels):</td>
-                                <td><input type="number" /></td>
-                            </tr>
-                            <tr>
-                                <td>Transition Offset (pixels):</td>
-                                <td><input type="number" /></td>
+                                <td>Background:</td>
+                                <td>
+                                    <input id="param:background-enabled" type="checkbox" />
+                                    <input class="text-black" id="param:background" type="color" />
+                                </td>
                             </tr>
                         </table>
                     </div>
-                    <div>
-                        <h3 class="font-bold mt-4">Wave Dimensions</h3>
-                        <table class="w-full">
+                    <div class="w-full">
+                        <h3 class="font-bold mt-4">Signal Options</h3>
+                        <table class="w-full table-fixed">
                             <tr>
-                                <td>Wave Height (pixels):</td>
-                                <td><input type="number" /></td>
+                                <td>Signal Height (px):</td>
+                                <td><input class="text-black" id="param:signal-height" type="number" /></td>
                             </tr>
                             <tr>
-                                <td>Cycle Width (pixels):</td>
-                                <td><input type="number" /></td>
+                                <td>Cycle Width (px):</td>
+                                <td><input class="text-black" id="param:cycle-width" type="number" /></td>
                             </tr>
                             <tr>
-                                <td>Transition Offset (pixels):</td>
-                                <td><input type="number" /></td>
+                                <td>Transition Offset (px):</td>
+                                <td><input class="text-black" id="param:transition-offset" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Marker Font Size (px):</td>
+                                <td><input class="text-black" id="param:marker-font-size" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Background 2:</td>
+                                <td><input class="text-black" id="param:bg-box2" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Background 3:</td>
+                                <td><input class="text-black" id="param:bg-box3" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Background 4:</td>
+                                <td><input class="text-black" id="param:bg-box4" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Background 5:</td>
+                                <td><input class="text-black" id="param:bg-box5" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Background 6:</td>
+                                <td><input class="text-black" id="param:bg-box6" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Background 7:</td>
+                                <td><input class="text-black" id="param:bg-box7" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Background 8:</td>
+                                <td><input class="text-black" id="param:bg-box8" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Background 9:</td>
+                                <td><input class="text-black" id="param:bg-box9" type="color" /></td>
                             </tr>
                         </table>
                     </div>
-                    
+                    <div class="w-full">
+                        <h3 class="font-bold mt-4">Figure Padding</h3>
+                        <table class="w-full table-fixed">
+                            <tr>
+                                <td>Top (px):</td>
+                                <td><input class="text-black" id="param:padding-figure-top" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Bottom (px):</td>
+                                <td><input class="text-black" id="param:padding-figure-bottom" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Left (px):</td>
+                                <td><input class="text-black" id="param:padding-figure-left" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Right (px):</td>
+                                <td><input class="text-black" id="param:padding-figure-right" type="number" /></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="w-full">
+                        <h3 class="font-bold mt-4">Schema Padding</h3>
+                        <table class="w-full table-fixed">
+                            <tr>
+                                <td>Top (px):</td>
+                                <td><input class="text-black" id="param:padding-schema-top" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Bottom (px):</td>
+                                <td><input class="text-black" id="param:padding-schema-bottom" type="number" /></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="w-full">
+                        <h3 class="font-bold mt-4">Spacing</h3>
+                        <table class="w-full table-fixed">
+                            <tr>
+                                <td>Signal Names to Schema</td>
+                                <td><input class="text-black" id="param:spacing-textbox-to-schema" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Group Indicators to Signal Names:</td>
+                                <td><input class="text-black" id="param:spacing-groupbox-to-textbox" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Line to Line:</td>
+                                <td><input class="text-black" id="param:spacing-line-to-line" type="number" /></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="w-full">
+                        <h3 class="font-bold mt-4">Group Indicator Options</h3>
+                        <table class="w-full table-fixed">
+                            <tr>
+                                <td>Indicator Width</td>
+                                <td><input class="text-black" id="param:group-indicator-width" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Indicator Spacing:</td>
+                                <td><input class="text-black" id="param:group-indicator-spacing" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Label Font Size</td>
+                                <td><input class="text-black" id="param:group-indicator-label-fontsize" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Label Spacing:</td>
+                                <td><input class="text-black" id="param:group-indicator-label-spacing" type="number" /></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="w-full">
+                        <h3 class="font-bold mt-4">Header Options</h3>
+                        <table class="w-full table-fixed">
+                            <tr>
+                                <td>Font Size</td>
+                                <td><input class="text-black" id="param:header-fontsize" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Height:</td>
+                                <td><input class="text-black" id="param:header-height" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Cycle Enumeration Marker Font Size</td>
+                                <td><input class="text-black" id="param:top-cycle-marker-fontsize" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Cycle Enumeration Marker Height</td>
+                                <td><input class="text-black" id="param:top-cycle-marker-height" type="number" /></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="w-full">
+                        <h3 class="font-bold mt-4">Footer Options</h3>
+                        <table class="w-full table-fixed">
+                            <tr>
+                                <td>Font Size</td>
+                                <td><input class="text-black" id="param:footer-fontsize" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Height:</td>
+                                <td><input class="text-black" id="param:footer-height" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Cycle Enumeration Marker Font Size</td>
+                                <td><input class="text-black" id="param:bottom-cycle-marker-fontsize" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Cycle Enumeration Marker Height</td>
+                                <td><input class="text-black" id="param:bottom-cycle-marker-height" type="number" /></td>
+                            </tr>
+                        </table>
+                    </div>
 				</div>
 				<div class="bg-gray-300 h-16 w-full p-4 text-xl flex flex-row space-x-2">
 					<!-- Filled by the Javascript -->
