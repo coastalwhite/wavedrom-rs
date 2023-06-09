@@ -1,5 +1,5 @@
 use wavedrom::wavejson::WaveJson;
-use wavedrom::{Figure, WaveOptions};
+use wavedrom::Figure;
 
 fn main() {
     let data = r#"
@@ -48,9 +48,8 @@ fn main() {
     for _ in 0..100000 {
         let rendered = figure.assemble().unwrap();
         // for line in rendered.lines {
-            // let assembled = line.path.render_with_options(&WaveOptions::default());
-            // assert!(assembled.segments().len() != 0);
+        // let assembled = line.path.render_with_options(&WaveOptions::default());
+        // assert!(assembled.segments().len() != 0);
         // }
-
     }
 }
