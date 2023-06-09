@@ -8,7 +8,6 @@ use wavedrom::{svg::ToSvg, wavejson::WaveJson, Figure};
 pub enum InsertionError {
     Json(JsonError),
     InvalidFigure,
-    Assemble,
     WriteSvg,
     InvalidUtf8,
 }
@@ -25,7 +24,6 @@ impl Display for InsertionError {
         match self {
             Self::Json(err) => write!(f, "{err}"),
             Self::InvalidFigure => write!(f, "Failed to form a figure from the given WaveJson"),
-            Self::Assemble => write!(f, "Failed to assemble WaveDrom figure"),
             Self::WriteSvg => write!(f, "Failed to write svg of WaveDrom figure"),
             Self::InvalidUtf8 => write!(f, "Wavedrom returned invalid UTF-8"),
         }
@@ -86,7 +84,6 @@ pub fn insert_wavedrom(content: &str) -> Result<String, InsertionError> {
 
             wavedrom_figure
                 .assemble()
-                .map_err(|_| InsertionError::Assemble)?
                 .write_svg(&mut wavedrom_code)
                 .map_err(|_| InsertionError::WriteSvg)?;
 

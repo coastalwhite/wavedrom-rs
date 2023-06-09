@@ -266,7 +266,7 @@ impl Figure {
         }
     }
 
-    pub fn assemble_with_options(&self, options: &SignalOptions) -> Result<AssembledFigure, ()> {
+    pub fn assemble_with_options(&self, options: &SignalOptions) -> AssembledFigure {
         let top_cycle_marker = self.top_cycle_marker;
         let bottom_cycle_marker = self.bottom_cycle_marker;
         let hscale = self.hscale;
@@ -305,9 +305,9 @@ impl Figure {
             .map(|line| line.path.num_cycles())
             .max()
             .unwrap_or(0);
-        let num_cycles = u32::try_from(num_cycles).map_err(|_| ())?;
+        let num_cycles = num_cycles as u32;
 
-        Ok(AssembledFigure {
+        AssembledFigure {
             num_cycles,
 
             hscale,
@@ -325,11 +325,11 @@ impl Figure {
 
             lines,
             groups,
-        })
+        }
     }
 
     #[inline]
-    pub fn assemble(&self) -> Result<AssembledFigure, ()> {
+    pub fn assemble(&self) -> AssembledFigure {
         self.assemble_with_options(&SignalOptions::default())
     }
 }

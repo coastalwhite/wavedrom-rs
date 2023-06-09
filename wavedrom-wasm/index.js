@@ -3,7 +3,6 @@ const ERROR_MSGS = [
     "Succesful Build",
     "Invalid JSON",
     "Invalid JSON value",
-    "Failed to Assemble SVG",
     "Failed to Render SVG",
     "Invalid UTF-8",
     "Unknown Error",

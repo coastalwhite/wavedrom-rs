@@ -46,7 +46,7 @@ fn main() {
     let figure: Figure = wavejson.try_into().unwrap();
 
     for _ in 0..100000 {
-        let rendered = figure.assemble().unwrap();
+        let rendered = figure.assemble();
         // for line in rendered.lines {
         // let assembled = line.path.render_with_options(&WaveOptions::default());
         // assert!(assembled.segments().len() != 0);

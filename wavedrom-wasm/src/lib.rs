@@ -15,9 +15,8 @@ pub extern "C" fn free(ptr: *mut u8, size: usize) {
 enum RenderError {
     JsonDeserializeError = 1,
     JsonParseError = 2,
-    ShapeError = 3,
-    WriteError = 4,
-    InvalidUtf8 = 5,
+    WriteError = 3,
+    InvalidUtf8 = 4,
 }
 
 fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
@@ -30,12 +29,10 @@ fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
     let Ok(figure) = Figure::try_from(wavejson) else {
         return Err(RenderError::JsonParseError);
     };
-    let Ok(rendered) = figure.assemble() else {
-        return Err(RenderError::ShapeError);
-    };
+
     let mut buffer = vec![0; 5];
 
-    let Ok(()) = rendered.write_svg(&mut buffer) else {
+    let Ok(()) = figure.assemble().write_svg(&mut buffer) else {
         return Err(RenderError::WriteError);
     };
 
