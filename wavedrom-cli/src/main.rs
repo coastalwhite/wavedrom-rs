@@ -1,5 +1,5 @@
-use wavedrom_rs::wavejson::WaveJson;
-use wavedrom_rs::{Figure, SignalOptions};
+use wavedrom::wavejson::WaveJson;
+use wavedrom::{Figure, WaveOptions};
 
 fn main() {
     let data = r#"
@@ -42,7 +42,7 @@ fn main() {
             ]
         }
         "#;
-    let wavejson: WaveJson = serde_json::from_str(data).unwrap();
+    let wavejson: WaveJson = WaveJson::from_str(data).unwrap();
     let figure: Figure = wavejson.try_into().unwrap();
 
     for _ in 0..100000 {

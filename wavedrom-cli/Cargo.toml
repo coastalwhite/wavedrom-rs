@@ -1,0 +1,13 @@
+[package]
+name = "wavedrom-cli"
+version = "0.1.0"
+edition = "2021"
+include = ["/src", "/helvetica.ttf"]
+
+[[bin]]
+name = "wavedrom"
+path = "src/main.rs"
+
+[dependencies.wavedrom]
+path = "../wavedrom-core"
+features = ["embed_font", "wavejson"]

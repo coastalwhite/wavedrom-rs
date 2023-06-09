@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{CycleMarker, CycleOffset, Figure, FigureSection, FigureSectionGroup, Signal};
+use crate::{
+    CycleEnumerationMarker, CycleOffset, Figure, FigureSection, FigureSectionGroup, Signal,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaveJson {
@@ -73,8 +75,8 @@ impl TryFrom<WaveJson> for Figure {
         let (title, top_cycle_marker) = if let Some(head) = value.head {
             let title = head.text;
             let top_cycle_marker = match (head.tick, head.every) {
-                (Some(start), Some(every)) => Some(CycleMarker::new(start, every)),
-                (Some(start), None) => Some(CycleMarker::new(start, 1)),
+                (Some(start), Some(every)) => Some(CycleEnumerationMarker::new(start, every)),
+                (Some(start), None) => Some(CycleEnumerationMarker::new(start, 1)),
                 (None, _) => None,
             };
 
@@ -85,8 +87,8 @@ impl TryFrom<WaveJson> for Figure {
         let (footer, bottom_cycle_marker) = if let Some(foot) = value.foot {
             let footer = foot.text;
             let bottom_cycle_marker = match (foot.tock, foot.every) {
-                (Some(start), Some(every)) => Some(CycleMarker::new(start, every)),
-                (Some(start), None) => Some(CycleMarker::new(start, 1)),
+                (Some(start), Some(every)) => Some(CycleEnumerationMarker::new(start, every)),
+                (Some(start), None) => Some(CycleEnumerationMarker::new(start, 1)),
                 (None, _) => None,
             };
 

@@ -13,7 +13,7 @@ pub mod markers;
 
 pub use path::{AssembledSignalPath, CycleState, SignalOptions, SignalPath, SignalPathSegment};
 
-use markers::{GroupMarker, ClockEdge, CycleMarker};
+use markers::{GroupMarker, ClockEdge, CycleEnumerationMarker};
 
 #[derive(Debug, Clone)]
 pub enum FigureSection {
@@ -45,8 +45,8 @@ pub struct Figure {
     title: Option<String>,
     footer: Option<String>,
 
-    top_cycle_marker: Option<CycleMarker>,
-    bottom_cycle_marker: Option<CycleMarker>,
+    top_cycle_marker: Option<CycleEnumerationMarker>,
+    bottom_cycle_marker: Option<CycleEnumerationMarker>,
 
     hscale: u16,
 
@@ -218,8 +218,8 @@ pub struct AssembledFigure<'a> {
     title: Option<&'a str>,
     footer: Option<&'a str>,
 
-    top_cycle_marker: Option<CycleMarker>,
-    bottom_cycle_marker: Option<CycleMarker>,
+    top_cycle_marker: Option<CycleEnumerationMarker>,
+    bottom_cycle_marker: Option<CycleEnumerationMarker>,
 
     lines: Vec<AssembledLine<'a>>,
     groups: Vec<GroupMarker<'a>>,
@@ -248,8 +248,8 @@ impl Figure {
         title: Option<String>,
         footer: Option<String>,
 
-        top_cycle_marker: Option<CycleMarker>,
-        bottom_cycle_marker: Option<CycleMarker>,
+        top_cycle_marker: Option<CycleEnumerationMarker>,
+        bottom_cycle_marker: Option<CycleEnumerationMarker>,
 
         hscale: u16,
         sections: Vec<FigureSection>,

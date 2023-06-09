@@ -1,31 +1,5 @@
-[package]
-name = "wavedrom-rs"
-version = "0.1.0"
-edition = "2021"
-include = ["/src", "/helvetica.ttf"]
-
-[lib]
-name = "wavedrom_rs"
-path = "src/lib.rs"
-
-[[bin]]
-name = "wavedrom"
-path = "src/main.rs"
-
-[dependencies.ttf-parser]
-version = "0.19.0"
-optional = true
-
-[dependencies.serde]
-version = "1.0"
-features = ["derive"]
-optional = true
-
-[dependencies.serde_json]
-version = "1.0"
-optional = true
-
-[features]
-default = ["wavejson", "embed_font"]
-wavejson = ["serde", "serde_json"]
-embed_font = ["ttf-parser"]
+[workspace]
+members = [
+	"wavedrom-core",
+	"wavedrom-cli",
+]
