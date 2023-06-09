@@ -1,55 +1,102 @@
-use wavedrom::wavejson::WaveJson;
+use std::io::{stdin, stdout, Read};
+use std::path::PathBuf;
+
+use clap::{value_parser, Arg, Command};
 use wavedrom::Figure;
 
+static ABOUT: &str = r#"
+A Signal Diagram Generator from WaveJson.
+
+By default, this application attempts to read a file from STDIN and output to STDOUT. An input file can be given with the -i/--input flag and a output file can be passed with the -o/--output file.
+"#;
+
+pub fn make_app() -> Command {
+    Command::new("wavedrom")
+        .about(ABOUT.trim())
+        .arg(
+            Arg::new("input")
+                .short('i')
+                .long("input")
+                .value_name("INPUT FILE")
+                .value_parser(value_parser!(PathBuf)),
+        )
+        .arg(
+            Arg::new("output")
+                .short('o')
+                .long("output")
+                .value_name("OUTPUT FILE")
+                .value_parser(value_parser!(PathBuf)),
+        )
+}
+
 fn main() {
-    let data = r#"
-        {
-            "signal": [
-                [
-                    "xyz",
-                    { "name": "0", "wave": "0" },
-                    { "name": "1", "wave": "1" },
-                    { "name": "2", "wave": "2" },
-                    { "name": "z", "wave": "z" },
-                    { "name": "x", "wave": "x" },
-                    { "name": "p", "wave": "p" },
-                    { "name": "P", "wave": "P" },
-                    { "name": "n", "wave": "n" },
-                    { "name": "N", "wave": "N" }
-                ],
-                [
-                    { "name": "0001020z0x0p0P0n0N0", "wave": "0001020z0x0p0P0n0N0" },
-                    { "name": "1011121z1x1p0P0n0N0", "wave": "1011121z1x1p1P1n1N1" },
-                    { "name": "2021222z2x2p2P2n2N2", "wave": "2021222z2x2p2P2n2N2" },
-                    { "name": "z0z1z2zzzxzpzPznzNz", "wave": "z0z1z2zzzxzpzPznzNz" },
-                    { "name": "x0x1x2xzxxxpxPxnxNx", "wave": "x0x1x2xzxxxpxPxnxNx" },
-                    { "name": "p0p1p2pzpxpppPpnpNp", "wave": "p0p1p2pzpxpppPpnpNp" },
-                    { "name": "P0P1P2PzPxPpPPPnPNP", "wave": "P0P1P2PzPxPpPPPnPNP" },
-                    { "name": "n0n1n2nznxnpnPnnnNn", "wave": "n0n1n2nznxnpnPnnnNn" },
-                    { "name": "N0N1N2NzNxNpNPNnNNN", "wave": "N0N1N2NzNxNpNPNnNNN" }
-                ],
-                [
-                    { "name": "012345zx", "wave": "012345zx" },
-                    {
-                        "name": "02....3...0",
-                        "wave": "02....3...0",
-                        "data": [
-                            "0xDEAD",
-                            "0xBEEF"
-                        ]
-                    }
-                ]
-            ]
+    let app = make_app().get_matches();
+
+    let content = match app.get_one::<PathBuf>("input") {
+        None => {
+            let mut buffer = Vec::new();
+            let mut stdin = stdin().lock();
+            match stdin.read_to_end(&mut buffer) {
+                Ok(_) => {}
+                Err(err) => {
+                    eprintln!("[ERROR]: Failed to read stdin until end. Reason: {err}");
+                    std::process::exit(1);
+                }
+            }
+
+            match String::from_utf8(buffer) {
+                Ok(s) => s,
+                Err(err) => {
+                    eprintln!("[ERROR]: Stdin does not contain valid UTF-8. Reason: {err}");
+                    std::process::exit(1);
+                }
+            }
         }
-        "#;
+        Some(input_path) => match std::fs::read_to_string(input_path) {
+            Ok(content) => content,
+            Err(err) => {
+                eprintln!("[ERROR]: Failed to read content from file. Reason: {err}");
+                std::process::exit(1);
+            }
+        },
+    };
 
-    let figure = Figure::from_json5(data).unwrap();
+    let figure = match Figure::from_json5(&content) {
+        Ok(figure) => figure,
+        Err(err) => {
+            eprintln!("[ERROR]: Failed to parse content of file. Reason:");
+            eprintln!("{err}");
+            std::process::exit(1);
+        }
+    };
 
-    for _ in 0..100000 {
-        let rendered = figure.assemble();
-        // for line in rendered.lines {
-        // let assembled = line.path.render_with_options(&WaveOptions::default());
-        // assert!(assembled.segments().len() != 0);
-        // }
+    let assembled = figure.assemble();
+
+    use wavedrom::svg::ToSvg;
+    let result = match app.get_one::<PathBuf>("output") {
+        None => assembled.write_svg(&mut stdout().lock()),
+        Some(output_path) => {
+            let mut output_file = match std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(output_path)
+            {
+                Ok(f) => f,
+                Err(err) => {
+                    eprintln!("[ERROR]: Failed to open output file. Reason: {err}");
+                    std::process::exit(1);
+                }
+            };
+
+            assembled.write_svg(&mut output_file)
+        }
+    };
+
+    match result {
+        Ok(_) => {}
+        Err(err) => {
+            eprintln!("[ERROR]: Failed to write out svg. Reason: {err}");
+            std::process::exit(1);
+        }
     }
 }
