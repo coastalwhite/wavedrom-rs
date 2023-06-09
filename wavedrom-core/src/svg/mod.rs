@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io;
 
 use crate::path::{PathCommand, PathSegmentBackground};
@@ -413,6 +414,24 @@ impl GroupIndicatorDimension {
     }
 }
 
+fn escape_str(s: &str) -> Cow<str> {
+    if !s.contains(&['<', '>', '"', '&']) {
+        return Cow::Borrowed(s);
+    }
+    
+    let mut output = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '<' => output.push_str("&lt;"),
+            '>' => output.push_str("&gt;"),
+            '"' => output.push_str("&quot;"),
+            '&' => output.push_str("&amp;"),
+            _ => output.push(c),
+        }
+    }
+    Cow::Owned(output)
+}
+
 fn gap(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
     let wave_height = f32::from(wave_height);
 
@@ -572,9 +591,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             let title_font_size = header.font_size;
             write!(
                 writer,
-                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{title_font_size}" letter-spacing="0"><tspan>{title}</tspan></text>"##,
+                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{title_font_size}" letter-spacing="0"><tspan>{text}</tspan></text>"##,
                 x = dims.header_width() / 2,
-                y = dims.header_height() / 2
+                y = dims.header_height() / 2,
+                text = escape_str(title),
             )?;
         }
         if let Some(cycle_marker) = self.top_cycle_marker {
@@ -592,7 +612,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                         x = dims.schema_x()
                             + dims.cycle_width() * (offset - start)
                             + dims.cycle_width() / 2,
-                        y = dims.header_height()
+                        y = dims.header_height(),
                     )?;
                 }
             }
@@ -649,10 +669,11 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 // let label_width = get_text_width(label, &face, 8);
                 write!(
                     writer,
-                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0" transform="rotate(270)"><tspan>{label}</tspan></text></g>"##,
+                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0" transform="rotate(270)"><tspan>{text}</tspan></text></g>"##,
                     font_size = group_indicator_dimensions.label_fontsize,
                     x = x + group_indicator_dimensions.label_spacing + 2,
                     y = y + height / 2,
+                    text = escape_str(label),
                 )?;
             }
 
@@ -691,7 +712,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                     r##"<g transform="translate(0,{y})"><text dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
                     font_size = font_size,
                     y = wave_dimensions.signal_height / 2,
-                    text = line.text,
+                    text = escape_str(line.text),
                 )?;
             }
 
@@ -715,9 +736,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             let footer_font_size = footer.font_size;
             write!(
                 writer,
-                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{footer_font_size}" letter-spacing="0"><tspan>{footer_text}</tspan></text>"##,
+                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{footer_font_size}" letter-spacing="0"><tspan>{text}</tspan></text>"##,
                 x = dims.footer_width() / 2,
-                y = dims.footer_y() + dims.footer_height() / 2
+                y = dims.footer_y() + dims.footer_height() / 2,
+                text = escape_str(footer_text),
             )?;
         }
         if let Some(cycle_marker) = self.bottom_cycle_marker {
