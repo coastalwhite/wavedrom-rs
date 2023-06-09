@@ -62,6 +62,18 @@ pub struct Config {
     pub skin: Option<String>,
 }
 
+impl Figure {
+    #[cfg(feature = "serde_json")]
+    pub fn from_json(s: &str) -> Result<Self, serde_json::Error> {
+        WaveJson::from_json(s).map(Into::into)
+    }
+
+    #[cfg(feature = "json5")]
+    pub fn from_json5(s: &str) -> Result<Self, json5::Error> {
+        WaveJson::from_json5(s).map(Into::into)
+    }
+}
+
 impl WaveJson {
     #[cfg(feature = "serde_json")]
     pub fn from_json(s: &str) -> Result<Self, serde_json::Error> {
@@ -74,9 +86,8 @@ impl WaveJson {
     }
 }
 
-impl TryFrom<WaveJson> for Figure {
-    type Error = ();
-    fn try_from(value: WaveJson) -> Result<Self, Self::Error> {
+impl From<WaveJson> for Figure {
+    fn from(value: WaveJson) -> Self {
         let (title, top_cycle_marker) = if let Some(head) = value.head {
             let title = head.text;
             let top_cycle_marker = match (head.tick, head.every) {
@@ -104,7 +115,7 @@ impl TryFrom<WaveJson> for Figure {
 
         let hscale = value.config.and_then(|config| config.hscale).unwrap_or(1);
 
-        Ok(Figure::new(
+        Figure::new(
             title,
             footer,
             top_cycle_marker,
@@ -113,15 +124,14 @@ impl TryFrom<WaveJson> for Figure {
             value
                 .signal
                 .into_iter()
-                .map(FigureSection::try_from)
-                .collect::<Result<Vec<FigureSection>, ()>>()?,
-        ))
+                .map(FigureSection::from)
+                .collect::<Vec<FigureSection>>(),
+        )
     }
 }
 
-impl TryFrom<SignalItem> for FigureSection {
-    type Error = ();
-    fn try_from(signal: SignalItem) -> Result<Self, Self::Error> {
+impl From<SignalItem> for FigureSection {
+    fn from(signal: SignalItem) -> Self {
         match signal {
             SignalItem::Group(items) => {
                 let mut label = None;
@@ -136,24 +146,22 @@ impl TryFrom<SignalItem> for FigureSection {
 
                             None
                         }
-                        SignalGroupItem::Item(line) => Some(FigureSection::try_from(line)),
+                        SignalGroupItem::Item(line) => Some(FigureSection::from(line)),
                     })
-                    .collect::<Result<Vec<FigureSection>, ()>>()?;
+                    .collect::<Vec<FigureSection>>();
 
-                Ok(FigureSection::Group(FigureSectionGroup(label, items)))
+                FigureSection::Group(FigureSectionGroup(label, items))
             }
-            SignalItem::Item(item) => Ok(FigureSection::Signal(Signal::try_from(item)?)),
+            SignalItem::Item(item) => FigureSection::Signal(Signal::from(item)),
         }
     }
 }
 
-impl TryFrom<SignalObject> for Signal {
-    type Error = ();
-
-    fn try_from(item: SignalObject) -> Result<Self, Self::Error> {
-        Ok(Signal::new(
+impl From<SignalObject> for Signal {
+    fn from(item: SignalObject) -> Self {
+        Signal::new(
             item.name.unwrap_or_default(),
-            item.wave.unwrap_or_default().parse().map_err(|_| ())?,
+            crate::Cycles::from_str(&item.wave.unwrap_or_default()),
             item.data
                 .map_or_else(Vec::new, |signal_data| match signal_data {
                     SignalData::One(data) => vec![data],
@@ -162,9 +170,9 @@ impl TryFrom<SignalObject> for Signal {
             item.period.map_or(0, |f| f.ceil() as u16),
             match item.phase {
                 None => CycleOffset::default(),
-                Some(f) => CycleOffset::try_from(f)?,
+                Some(f) => CycleOffset::try_from(f).unwrap_or_default(),
             },
-        ))
+        )
     }
 }
 

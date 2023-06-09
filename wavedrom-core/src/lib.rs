@@ -1,5 +1,4 @@
 use std::num::NonZeroU16;
-use std::str::FromStr;
 
 #[cfg(feature = "json5")]
 pub use json5;
@@ -7,11 +6,14 @@ pub use json5;
 #[cfg(feature = "serde_json")]
 pub use serde_json;
 
+
 mod cycle_offset;
 mod path;
 pub mod svg;
+mod shortcuts;
 
 pub use cycle_offset::{CycleOffset, InCycleOffset};
+pub use shortcuts::*;
 
 #[cfg(feature = "serde")]
 pub mod wavejson;
@@ -172,10 +174,8 @@ impl Figure {
     }
 }
 
-impl FromStr for Cycles {
-    type Err = usize;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl Cycles {
+    fn from_str(s: &str) -> Self {
         let mut cycles = Vec::with_capacity(s.len());
 
         for c in s.chars() {
@@ -207,7 +207,7 @@ impl FromStr for Cycles {
             cycles.push(state)
         }
 
-        Ok(Self(cycles))
+        Self(cycles)
     }
 }
 

@@ -42,8 +42,8 @@ fn main() {
             ]
         }
         "#;
-    let wavejson: WaveJson = WaveJson::from_str(data).unwrap();
-    let figure: Figure = wavejson.try_into().unwrap();
+
+    let figure = Figure::from_json5(data).unwrap();
 
     for _ in 0..100000 {
         let rendered = figure.assemble();
