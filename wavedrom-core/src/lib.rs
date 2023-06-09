@@ -1,6 +1,12 @@
 use std::num::NonZeroU16;
 use std::str::FromStr;
 
+#[cfg(feature = "json5")]
+pub use json5;
+
+#[cfg(feature = "serde_json")]
+pub use serde_json;
+
 mod cycle_offset;
 mod path;
 pub mod svg;

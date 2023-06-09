@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
-use serde_json::error::Error as JsonError;
+use wavedrom::json5::Error as JsonError;
 use wavedrom::{svg::ToSvg, wavejson::WaveJson, Figure};
 
 #[derive(Debug)]
@@ -78,7 +78,7 @@ pub fn insert_wavedrom(content: &str) -> Result<String, InsertionError> {
 
             let mut wavedrom_code = Vec::new();
 
-            let wavejson = WaveJson::from_str(&diagram_content)?;
+            let wavejson = WaveJson::from_json5(&diagram_content)?;
             let wavedrom_figure =
                 Figure::try_from(wavejson).map_err(|_| InsertionError::InvalidFigure)?;
 

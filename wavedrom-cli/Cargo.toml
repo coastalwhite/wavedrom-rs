@@ -10,4 +10,3 @@ path = "src/main.rs"
 
 [dependencies.wavedrom]
 path = "../wavedrom-core"
-features = ["embed_font", "wavejson"]

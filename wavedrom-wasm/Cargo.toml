@@ -8,8 +8,3 @@ crate-type = ["cdylib"]
 
 [dependencies.wavedrom]
 path = "../wavedrom-core"
-default-features = false
-features = ["serde", "embed_font"]
-
-[dependencies]
-json5 = "0.4.1"

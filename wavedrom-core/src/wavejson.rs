@@ -62,10 +62,15 @@ pub struct Config {
     pub skin: Option<String>,
 }
 
-#[cfg(feature = "serde_json")]
 impl WaveJson {
-    pub fn from_str(s: &str) -> Result<Self, serde_json::Error> {
+    #[cfg(feature = "serde_json")]
+    pub fn from_json(s: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(s)
+    }
+
+    #[cfg(feature = "json5")]
+    pub fn from_json5(s: &str) -> Result<Self, json5::Error> {
+        json5::from_str(s)
     }
 }
 
