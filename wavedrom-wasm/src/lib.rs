@@ -2,7 +2,7 @@ use wavedrom::wavejson::WaveJson;
 use wavedrom::Figure;
 
 mod render_options;
-pub use render_options::{modify_parameter, get_parameter_default};
+pub use render_options::{get_parameter_default, modify_parameter};
 
 use crate::render_options::get_options;
 

@@ -1,6 +1,6 @@
 use std::sync::{Mutex, MutexGuard};
 
-use wavedrom::svg::RenderOptions;
+use wavedrom::svg::options::RenderOptions;
 
 #[repr(u32)]
 enum RenderParameter {

@@ -10,7 +10,7 @@ mod json5 {
     use std::fmt::Display;
     use std::io;
 
-    use crate::svg::RenderOptions;
+    use crate::svg::options::RenderOptions;
 
     #[derive(Debug)]
     pub enum RenderJson5Error {
@@ -68,7 +68,7 @@ mod serde_json {
     use std::fmt::Display;
     use std::io;
 
-    use crate::svg::RenderOptions;
+    use crate::svg::options::RenderOptions;
 
     pub fn render_json(json: &str, writer: &mut impl io::Write) -> Result<(), RenderJsonError> {
         render_json_with_options(json, writer, &RenderOptions::default())
