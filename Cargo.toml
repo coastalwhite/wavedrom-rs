@@ -2,5 +2,6 @@
 members = [
 	"wavedrom-core",
 	"wavedrom-cli",
+	"wavedrom-wasm",
     "mdbook-wavedrom",
 ]

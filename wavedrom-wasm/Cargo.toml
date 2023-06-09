@@ -1,13 +1,13 @@
 [package]
-name = "rust"
+name = "wavedrom-wasm"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
-[dependencies.wavedrom-rs]
-path = "../.."
+[dependencies.wavedrom]
+path = "../wavedrom-core"
 default-features = false
 features = ["serde", "embed_font"]
 

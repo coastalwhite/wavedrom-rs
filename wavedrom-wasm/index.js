@@ -105,7 +105,7 @@ function render_svg(input, output, error, memory, malloc, free, render) {
     }
 }
 
-fetch("./rust/target/wasm32-unknown-unknown/release/rust.wasm")
+fetch("./wavedrom.wasm")
   .then((response) => response.arrayBuffer())
   .then((bytes) => WebAssembly.instantiate(bytes, { env: {} }))
   .then((results) => {

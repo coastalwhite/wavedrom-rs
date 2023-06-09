@@ -1,5 +1,5 @@
-use wavedrom_rs::wavejson::WaveJson;
-use wavedrom_rs::Figure;
+use wavedrom::wavejson::WaveJson;
+use wavedrom::Figure;
 
 #[no_mangle]
 pub extern "C" fn malloc(size: usize) -> *const u8 {
@@ -21,7 +21,7 @@ enum RenderError {
 }
 
 fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
-    use wavedrom_rs::ToSvg;
+    use wavedrom::svg::ToSvg;
 
     let Ok(wavejson) = json5::from_str::<WaveJson>(json) else {
         return Err(RenderError::JsonDeserializeError);
@@ -40,12 +40,11 @@ fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
     };
 
     let size = buffer.len() - 5;
-    let [b0, b1, b2, b3] = size.to_be_bytes();
+    let bs = size.to_be_bytes();
 
-    buffer[1] = b0;
-    buffer[2] = b1;
-    buffer[3] = b2;
-    buffer[4] = b3;
+    for i in 0..4 {
+        buffer[i+1] = bs[i];
+    }
 
     Ok(buffer)
 }
