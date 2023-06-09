@@ -28,6 +28,8 @@ pub trait ToSvg {
 #[derive(Debug, Clone)]
 pub struct RenderOptions {
     pub font_size: u32,
+    /// TODO: Make this a proper color
+    pub background: Option<String>,
     pub paddings: FigurePadding,
     pub spacings: FigureSpacing,
     pub header: HeaderOptions,
@@ -374,6 +376,7 @@ impl Default for RenderOptions {
     fn default() -> Self {
         Self {
             font_size: 14,
+            background: None,
             paddings: FigurePadding::default(),
             spacings: FigureSpacing::default(),
             header: HeaderOptions::default(),
@@ -522,6 +525,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
     ) -> io::Result<()> {
         let RenderOptions {
             font_size,
+            background,
             paddings,
             spacings,
             wave_dimensions,
@@ -577,6 +581,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             schema_height = dims.schema_height(),
         )?;
         write!(writer, "</defs>")?;
+
+        if let Some(background) = background {
+            write!(writer, r##"<rect width="100%" height="100%" fill="{background}"/>"##)?;
+        }
 
         // Figure container
         write!(
