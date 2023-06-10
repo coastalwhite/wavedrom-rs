@@ -45,6 +45,7 @@ fn escape_str(s: &str) -> Cow<str> {
             _ => output.push(c),
         }
     }
+
     Cow::Owned(output)
 }
 
@@ -185,7 +186,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             write!(writer, r##"</g>"##)?;
         }
 
-        if self.definitions.has_gap {
+        if self.definitions.has_gaps {
             write!(writer, r##"<g id="gap">"##)?;
             gap(writer, wave_dimensions.signal_height)?;
             write!(writer, r##"</g>"##)?;
@@ -210,9 +211,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         }
 
 
+
         
         // Header Text
-        if let Some(title) = self.title {
+        if let Some(title) = self.header_text {
             let title_font_size = header.font_size;
             write!(
                 writer,
@@ -268,7 +270,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
         // Group Indicators
         write!(writer, r##"<g>"##)?;
-        for group in self.groups.iter() {
+        for group in self.group_markers.iter() {
             if group.is_empty() {
                 continue;
             }
@@ -377,7 +379,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
 
         // Footer Text
-        if let Some(footer_text) = self.footer {
+        if let Some(footer_text) = self.footer_text {
             let footer_font_size = footer.font_size;
             write!(
                 writer,

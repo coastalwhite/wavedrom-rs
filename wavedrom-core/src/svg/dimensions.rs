@@ -76,7 +76,7 @@ impl<'a> SvgDimensions<'a> {
 
         let mut height = 0;
 
-        if self.figure.title.is_some() {
+        if self.figure.header_text.is_some() {
             height += header.height;
         }
 
@@ -108,7 +108,7 @@ impl<'a> SvgDimensions<'a> {
 
         let mut height = 0;
 
-        if self.figure.footer.is_some() {
+        if self.figure.footer_text.is_some() {
             height += footer.height;
         }
 

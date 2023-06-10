@@ -1,3 +1,6 @@
+#![deny(rustdoc::broken_intra_doc_links)]
+// #![deny(missing_docs)]
+
 use std::num::NonZeroU16;
 
 #[cfg(feature = "json5")]
@@ -41,6 +44,9 @@ pub struct Signal {
     phase: CycleOffset,
 }
 
+/// A line of the [`AssembledFigure`].
+///
+/// This contains the shaped signal path, the group nesting depth and the name of the signal line.
 #[derive(Debug, Clone)]
 pub struct AssembledLine<'a> {
     text: &'a str,
@@ -50,8 +56,8 @@ pub struct AssembledLine<'a> {
 
 #[derive(Debug, Clone)]
 pub struct Figure {
-    title: Option<String>,
-    footer: Option<String>,
+    header_text: Option<String>,
+    footer_text: Option<String>,
 
     top_cycle_marker: Option<CycleEnumerationMarker>,
     bottom_cycle_marker: Option<CycleEnumerationMarker>,
@@ -82,10 +88,10 @@ impl From<Signal> for FigureSection {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct DefinitionTracker {
     has_undefined: bool,
-    has_gap: bool,
+    has_gaps: bool,
     has_posedge_marker: bool,
     has_negedge_marker: bool,
 }
@@ -105,7 +111,7 @@ impl FigureSection {
                 for state in signal.cycles() {
                     match state {
                         CycleState::X => definitions.has_undefined = true,
-                        CycleState::Gap => definitions.has_gap = true,
+                        CycleState::Gap => definitions.has_gaps = true,
                         CycleState::PosedgeClockMarked => definitions.has_posedge_marker = true,
                         CycleState::NegedgeClockMarked => definitions.has_negedge_marker = true,
                         _ => {}
@@ -162,8 +168,8 @@ impl FigureSection {
 impl Figure {
     pub fn from_lines<T: Into<FigureSection>>(lines: impl IntoIterator<Item = T>) -> Self {
         Self {
-            title: None,
-            footer: None,
+            header_text: None,
+            footer_text: None,
 
             top_cycle_marker: None,
             bottom_cycle_marker: None,
@@ -211,6 +217,11 @@ impl Cycles {
     }
 }
 
+/// A [`Figure`] that has been assembled with the [`Figure::assemble`] or
+/// [`Figure::assemble_with_options`] methods.
+///
+/// An assembled figure contains all the information necessary to perform rendering.
+#[derive(Debug)]
 pub struct AssembledFigure<'a> {
     num_cycles: u32,
 
@@ -221,14 +232,14 @@ pub struct AssembledFigure<'a> {
     group_label_at_depth: Vec<bool>,
     max_group_depth: u32,
 
-    title: Option<&'a str>,
-    footer: Option<&'a str>,
+    header_text: Option<&'a str>,
+    footer_text: Option<&'a str>,
 
     top_cycle_marker: Option<CycleEnumerationMarker>,
     bottom_cycle_marker: Option<CycleEnumerationMarker>,
 
     lines: Vec<AssembledLine<'a>>,
-    groups: Vec<GroupMarker<'a>>,
+    group_markers: Vec<GroupMarker<'a>>,
 }
 
 impl<'a> AssembledFigure<'a> {
@@ -239,6 +250,94 @@ impl<'a> AssembledFigure<'a> {
             .take(depth as usize)
             .filter(|x| **x)
             .count() as u32
+    }
+
+    /// Returns the maximum cycle width over all lines.
+    #[inline]
+    pub fn num_cycles(&self) -> u32 {
+        self.num_cycles
+    }
+
+    /// Returns the scaling factor for the horizontal axis.
+    #[inline]
+    pub fn horizontal_scale(&self) -> u16 {
+        self.hscale
+    }
+
+    /// Returns whether the [`AssembledFigure`] contains any [`CycleState::X`]
+    #[inline]
+    pub fn has_undefined(&self) -> bool {
+        self.definitions.has_undefined
+    }
+
+    /// Returns whether the [`AssembledFigure`] contains any [`CycleState::Gap`]
+    #[inline]
+    pub fn has_gaps(&self) -> bool {
+        self.definitions.has_gaps
+    }
+
+    /// Returns whether the [`AssembledFigure`] contains any [`CycleState::PosedgeClockMarked`]
+    #[inline]
+    pub fn has_posedge_marker(&self) -> bool {
+        self.definitions.has_posedge_marker
+    }
+
+    /// Returns whether the [`AssembledFigure`] contains any [`CycleState::NegedgeClockMarked`]
+    #[inline]
+    pub fn has_negedge_marker(&self) -> bool {
+        self.definitions.has_negedge_marker
+    }
+
+    /// Returns the whether there is a label at group nesting level `depth`.
+    #[inline]
+    pub fn has_group_label_at_depth(&self, depth: u32) -> bool {
+        let Ok(depth) = usize::try_from(depth) else {
+            return false;
+        };
+
+        self.group_label_at_depth.get(depth).cloned().unwrap_or(false)
+    }
+
+    /// Returns the maximum depth of the group nesting.
+    #[inline]
+    pub fn group_nesting(&self) -> u32 {
+        self.max_group_depth
+    }
+
+    /// Returns the lines that the [`AssembledFigure`] contains
+    #[inline]
+    pub fn lines(&self) -> &[AssembledLine<'a>] {
+        &self.lines
+    }
+
+    /// Returns the markers for the group nestings
+    #[inline]
+    pub fn group_markers(&self) -> &[GroupMarker<'a>] {
+        &self.group_markers
+    }
+
+    /// Returns a potential header text of the [`AssembledFigure`]
+    #[inline]
+    pub fn header_text(&self) -> Option<&'a str> {
+        self.header_text
+    }
+
+    /// Returns a potential footer text of the [`AssembledFigure`]
+    #[inline]
+    pub fn footer_text(&self) -> Option<&'a str> {
+        self.footer_text
+    }
+
+    /// Returns a [`CycleEnumerationMarker`] above the signals of the [`AssembledFigure`]
+    #[inline]
+    pub fn top_cycle_marker(&self) -> Option<CycleEnumerationMarker> {
+        self.top_cycle_marker
+    }
+
+    /// Returns a [`CycleEnumerationMarker`] below the signals of the [`AssembledFigure`]
+    #[inline]
+    pub fn bottom_cycle_marker(&self) -> Option<CycleEnumerationMarker> {
+        self.bottom_cycle_marker
     }
 }
 
@@ -261,8 +360,8 @@ impl Figure {
         sections: Vec<FigureSection>,
     ) -> Self {
         Self {
-            title,
-            footer,
+            header_text: title,
+            footer_text: footer,
 
             top_cycle_marker,
             bottom_cycle_marker,
@@ -277,15 +376,15 @@ impl Figure {
         let bottom_cycle_marker = self.bottom_cycle_marker;
         let hscale = self.hscale;
 
-        let title = self.title.as_ref().map(|s| &s[..]);
-        let footer = self.footer.as_ref().map(|s| &s[..]);
+        let header_text = self.header_text.as_ref().map(|s| &s[..]);
+        let footer_text = self.footer_text.as_ref().map(|s| &s[..]);
 
         let mut options = options.clone();
 
         options.cycle_width *= hscale;
 
         let mut lines = Vec::with_capacity(self.sections.len());
-        let mut groups = Vec::new();
+        let mut group_markers = Vec::new();
         let mut group_label_at_depth = Vec::new();
 
         let mut definitions = DefinitionTracker::default();
@@ -296,7 +395,7 @@ impl Figure {
             .map(|line| {
                 line.render_into(
                     &mut lines,
-                    &mut groups,
+                    &mut group_markers,
                     &mut group_label_at_depth,
                     &mut definitions,
                     &options,
@@ -323,14 +422,14 @@ impl Figure {
             group_label_at_depth,
             max_group_depth,
 
-            title,
-            footer,
+            header_text,
+            footer_text,
 
             top_cycle_marker,
             bottom_cycle_marker,
 
             lines,
-            groups,
+            group_markers,
         }
     }
 
