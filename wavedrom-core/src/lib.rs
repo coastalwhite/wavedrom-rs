@@ -9,22 +9,21 @@ pub use json5;
 #[cfg(feature = "serde_json")]
 pub use serde_json;
 
-
 mod cycle_offset;
 mod path;
-pub mod svg;
 mod shortcuts;
+pub mod svg;
 
 pub use cycle_offset::{CycleOffset, InCycleOffset};
 pub use shortcuts::*;
 
+pub mod markers;
 #[cfg(feature = "serde")]
 pub mod wavejson;
-pub mod markers;
 
 pub use path::{AssembledSignalPath, CycleState, SignalOptions, SignalPath, SignalPathSegment};
 
-use markers::{GroupMarker, ClockEdge, CycleEnumerationMarker};
+use markers::{ClockEdge, CycleEnumerationMarker, GroupMarker};
 
 #[derive(Debug, Clone)]
 pub enum FigureSection {
@@ -108,6 +107,13 @@ impl FigureSection {
     ) -> u32 {
         match self {
             Self::Signal(signal) => {
+                // If the first state is a Gap or Continue this is also an undefined state.
+                if signal.cycles().first().map_or(false, |state| {
+                    matches!(state, CycleState::Continue | CycleState::Gap)
+                }) {
+                    definitions.has_undefined = true;
+                }
+
                 for state in signal.cycles() {
                     match state {
                         CycleState::X => definitions.has_undefined = true,
@@ -121,8 +127,13 @@ impl FigureSection {
                 lines.push(AssembledLine {
                     text: &signal.name,
                     depth,
-                    path: SignalPath::new(signal.cycles(), &signal.data, signal.period, signal.phase)
-                        .assemble_with_options(wave_shape_options),
+                    path: SignalPath::new(
+                        signal.cycles(),
+                        &signal.data,
+                        signal.period,
+                        signal.phase,
+                    )
+                    .assemble_with_options(wave_shape_options),
                 });
 
                 depth
@@ -295,7 +306,10 @@ impl<'a> AssembledFigure<'a> {
             return false;
         };
 
-        self.group_label_at_depth.get(depth).cloned().unwrap_or(false)
+        self.group_label_at_depth
+            .get(depth)
+            .cloned()
+            .unwrap_or(false)
     }
 
     /// Returns the maximum depth of the group nesting.
@@ -340,7 +354,6 @@ impl<'a> AssembledFigure<'a> {
         self.bottom_cycle_marker
     }
 }
-
 
 impl AssembledLine<'_> {
     fn is_empty(&self) -> bool {
