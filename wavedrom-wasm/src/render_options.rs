@@ -110,12 +110,12 @@ parameters![
     27, HeaderFontSize [header.font_size],
     28, HeaderHeight [header.height],
     29, TopCycleMarkerHeight [header.cycle_marker_height],
-    30, TopCycleMarkerFontSize [header.cycle_marker_font_size],
+    30, TopCycleMarkerFontSize [header.cycle_marker_fontsize],
 
     31, FooterFontSize [footer.font_size],
     32, FooterHeight [footer.height],
     33, BottomCycleMarkerHeight [footer.cycle_marker_height],
-    34, BottomCycleMarkerFontSize [footer.cycle_marker_font_size],
+    34, BottomCycleMarkerFontSize [footer.cycle_marker_fontsize],
 ];
 
 fn parse_background(value: u32) -> String {

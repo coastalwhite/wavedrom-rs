@@ -47,7 +47,7 @@ pub struct HeaderOptions {
     pub height: u32,
 
     pub cycle_marker_height: u32,
-    pub cycle_marker_font_size: u32,
+    pub cycle_marker_fontsize: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +56,7 @@ pub struct FooterOptions {
     pub height: u32,
 
     pub cycle_marker_height: u32,
-    pub cycle_marker_font_size: u32,
+    pub cycle_marker_fontsize: u32,
 }
 
 impl Default for HeaderOptions {
@@ -65,7 +65,7 @@ impl Default for HeaderOptions {
             font_size: 24,
             height: 32,
             cycle_marker_height: 12,
-            cycle_marker_font_size: 12,
+            cycle_marker_fontsize: 12,
         }
     }
 }
@@ -76,7 +76,7 @@ impl Default for FooterOptions {
             font_size: 24,
             height: 32,
             cycle_marker_height: 12,
-            cycle_marker_font_size: 12,
+            cycle_marker_fontsize: 12,
         }
     }
 }

@@ -225,7 +225,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             let start = cycle_marker.start();
             let every = cycle_marker.every();
 
-            let marker_font_size = header.cycle_marker_font_size;
+            let marker_font_size = header.cycle_marker_fontsize;
             let end = start + self.num_cycles;
 
             if every != 0 {
@@ -370,7 +370,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             let start = cycle_marker.start();
             let every = cycle_marker.every();
 
-            let marker_font_size = footer.cycle_marker_font_size;
+            let marker_font_size = footer.cycle_marker_fontsize;
             let end = start + self.num_cycles;
 
             if every != 0 {
