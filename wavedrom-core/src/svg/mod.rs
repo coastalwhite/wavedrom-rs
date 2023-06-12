@@ -7,13 +7,13 @@ use crate::{ClockEdge, SignalOptions};
 use super::path::AssembledSignalPath;
 use super::AssembledFigure;
 
-mod font;
 mod dimensions;
+mod font;
 pub mod options;
 
+use dimensions::SvgDimensions;
 pub use font::Font;
 use options::RenderOptions;
-use dimensions::SvgDimensions;
 
 pub trait ToSvg {
     type Options: Default;
@@ -161,6 +161,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             figure_height = dims.figure_height(),
         )?;
 
+
+
+
+        // Definitions
         write!(writer, "<defs>")?;
         if self.definitions.has_undefined {
             write!(
@@ -187,7 +191,6 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             write!(writer, r##"</g>"##)?;
         }
 
-        // Define the cycle-to-cycle background hint lines
         write!(
             writer,
             r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g>"##,
@@ -195,6 +198,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         )?;
         write!(writer, "</defs>")?;
 
+
+
+
+        // Background
         if let Some(background) = background {
             write!(
                 writer,
@@ -202,25 +209,23 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             )?;
         }
 
-        // Figure container
-        write!(
-            writer,
-            r##"<g transform="translate({padding_x},{padding_y})">"##,
-            padding_x = paddings.figure_left,
-            padding_y = paddings.figure_top,
-        )?;
 
-        // --- Start Header ---
+        
+        // Header Text
         if let Some(title) = self.title {
             let title_font_size = header.font_size;
             write!(
                 writer,
                 r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{title_font_size}" letter-spacing="0"><tspan>{text}</tspan></text>"##,
-                x = dims.header_width() / 2,
-                y = dims.header_height() / 2,
+                x = dims.header_x() + dims.header_width() / 2,
+                y = dims.header_y() + dims.header_height() / 2,
                 text = escape_str(title),
             )?;
         }
+
+
+
+        // Top Cycle Enumeration Markers
         if let Some(cycle_marker) = self.top_cycle_marker {
             let start = cycle_marker.start();
             let every = cycle_marker.every();
@@ -229,6 +234,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             let end = start + self.num_cycles;
 
             if every != 0 {
+                write!(writer, "<g>")?;
                 for offset in (start..end).step_by(every as usize) {
                     write!(
                         writer,
@@ -236,28 +242,32 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                         x = dims.schema_x()
                             + dims.cycle_width() * (offset - start)
                             + dims.cycle_width() / 2,
-                        y = dims.header_height(),
+                        y = dims.header_y() + dims.header_height(),
                     )?;
                 }
+                write!(writer, "</g>")?;
             }
         }
-        // --- End Header ---
 
-        write!(
-            writer,
-            r##"<g transform="translate({schema_x},{schema_y})">"##,
-            schema_x = dims.schema_x(),
-            schema_y = dims.schema_y(),
-        )?;
+
+
+
+        // Cycle Hint Lines
+        write!(writer, r##"<g>"##)?;
         for i in 0..=self.num_cycles {
             write!(
                 writer,
-                r##"<use transform="translate({x})" xlink:href="#cl"/>"##,
-                x = i * dims.cycle_width()
+                r##"<use transform="translate({x},{y})" xlink:href="#cl"/>"##,
+                x = dims.schema_x() + i * dims.cycle_width(),
+                y = dims.schema_y(),
             )?;
         }
         write!(writer, r##"</g>"##)?;
 
+
+
+        // Group Indicators
+        write!(writer, r##"<g>"##)?;
         for group in self.groups.iter() {
             if group.is_empty() {
                 continue;
@@ -265,14 +275,15 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
             let height = group.len() * u32::from(wave_dimensions.signal_height)
                 + (group.len() - 1) * spacings.line_to_line;
-            let x = self.amount_labels_before(group.depth() + 1)
-                * group_indicator_dimensions.label_height()
+            let x = paddings.figure_left
+                + self.amount_labels_before(group.depth() + 1)
+                    * group_indicator_dimensions.label_height()
                 + if group.depth() == 0 {
                     0
                 } else {
                     group.depth() * group_indicator_dimensions.width
                 };
-            let y = dims.header_height()
+            let y = dims.schema_y()
                 + paddings.schema_top
                 + if group.start() == 0 {
                     0
@@ -308,7 +319,13 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 w = group_indicator_dimensions.width,
             )?;
         }
+        write!(writer, r##"</g>"##)?;
 
+
+
+
+        // Signal Lines
+        write!(writer, "<g>")?;
         for (i, line) in self.lines.iter().enumerate() {
             if line.is_empty() {}
 
@@ -320,7 +337,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 .has_textbox()
                 .then_some(dims.textbox_x())
                 .unwrap_or(dims.schema_x());
-            let y = dims.header_height()
+            let y = dims.schema_y()
                 + paddings.schema_top
                 + if i == 0 {
                     0
@@ -354,8 +371,12 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
             write!(writer, r##"</g>"##)?;
         }
+        write!(writer, "</g>")?;
 
-        // --- Start Footer ---
+
+
+
+        // Footer Text
         if let Some(footer_text) = self.footer {
             let footer_font_size = footer.font_size;
             write!(
@@ -366,6 +387,11 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 text = escape_str(footer_text),
             )?;
         }
+
+
+
+
+        // Bottom Cycle Enumeration Markers
         if let Some(cycle_marker) = self.bottom_cycle_marker {
             let start = cycle_marker.start();
             let every = cycle_marker.every();
@@ -374,6 +400,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             let end = start + self.num_cycles;
 
             if every != 0 {
+                write!(writer, "<g>")?;
                 for offset in (start..end).step_by(every as usize) {
                     write!(
                         writer,
@@ -384,11 +411,12 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                         y = dims.footer_y()
                     )?;
                 }
+                write!(writer, "</g>")?;
             }
         }
         // --- End Footer ---
 
-        write!(writer, "</g></svg>")?;
+        write!(writer, "</svg>")?;
 
         Ok(())
     }

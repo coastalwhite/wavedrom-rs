@@ -87,10 +87,10 @@ impl<'a> SvgDimensions<'a> {
         height
     }
 
-    // #[inline]
-    // fn header_x(&self) -> u32 {
-    //     self.options.paddings.figure_left
-    // }
+    #[inline]
+    pub fn header_x(&self) -> u32 {
+        self.options.paddings.figure_left
+    }
 
     #[inline]
     pub fn header_y(&self) -> u32 {

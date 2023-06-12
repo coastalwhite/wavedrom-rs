@@ -190,6 +190,7 @@ mod tests {
             "signal": [
                 [
                     "xyz",
+                    { "name": "=", "wave": "=" },
                     { "name": "0", "wave": "0" },
                     { "name": "1", "wave": "1" },
                     { "name": "2", "wave": "2" },
@@ -256,10 +257,13 @@ mod tests {
                 ]
             ],
             "head": {
-                "text": "Interaction Test Figure"
+                "text": "Interaction Test Figure",
+                "tick": 3
             },
             "foot": {
-                "text": "Some Footer Text"
+                "text": "Some Footer Text",
+                "tock": 42,
+                "every": 3
             },
             "config": {
                 "hscale": 1
@@ -270,7 +274,7 @@ mod tests {
         let wavejson: WaveJson = serde_json::from_str(data).unwrap();
         let figure: Figure = wavejson.try_into().unwrap();
 
-        let rendered = figure.assemble().unwrap();
+        let rendered = figure.assemble();
 
         let mut file = std::fs::OpenOptions::new()
             .read(true)
