@@ -1,4 +1,4 @@
-use std::io::{stdin, stdout, Read};
+use std::io::{stdin, stdout, Read, BufWriter};
 use std::path::PathBuf;
 
 use clap::{value_parser, Arg, Command};
@@ -74,9 +74,12 @@ fn main() {
 
     use wavedrom::svg::ToSvg;
     let result = match app.get_one::<PathBuf>("output") {
-        None => assembled.write_svg(&mut stdout().lock()),
+        None => {
+            let mut writer = BufWriter::new(stdout().lock());
+            assembled.write_svg(&mut writer)
+        },
         Some(output_path) => {
-            let mut output_file = match std::fs::OpenOptions::new()
+            let output_file = match std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .open(output_path)
@@ -88,7 +91,8 @@ fn main() {
                 }
             };
 
-            assembled.write_svg(&mut output_file)
+            let mut writer = BufWriter::new(output_file);
+            assembled.write_svg(&mut writer)
         }
     };
 
