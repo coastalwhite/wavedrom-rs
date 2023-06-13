@@ -214,6 +214,10 @@ impl LineEdgeMarkersBuilder {
         let mut lines = Vec::new();
 
         for edge in edges {
+            if edge.from == edge.to {
+                continue;
+            }
+
             let Some(from) = self.node_positions.get(&edge.from) else {
                 continue;
             };
