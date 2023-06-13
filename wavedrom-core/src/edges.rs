@@ -186,10 +186,6 @@ impl LineEdgeMarkersBuilder {
     pub fn add_signal(&mut self, signal: &Signal) {
         let line_number = self.line_number;
 
-        if signal.node.is_empty() {
-            return;
-        }
-
         for (i, c) in signal.node.chars().enumerate() {
             if c == '.' {
                 continue;
@@ -247,6 +243,40 @@ impl LineEdgeMarkersBuilder {
             lines,
             text_nodes: self.text_nodes,
         }
+    }
+}
+
+impl LineEdgeMarkers<'_> {
+    pub fn lines(&self) -> &[LineEdge] {
+        &self.lines
+    }
+
+    pub fn text_nodes(&self) -> &[LineEdgeText] {
+        &self.text_nodes
+    }
+}
+
+impl LineEdge<'_> {
+    pub fn from(&self) -> &InSignalPosition {
+        &self.from
+    }
+
+    pub fn to(&self) -> &InSignalPosition {
+        &self.to
+    }
+
+    pub fn variant(&self) -> &EdgeVariant {
+        &self.variant
+    }
+}
+
+impl InSignalPosition {
+    pub fn x(&self) -> CycleOffset {
+        self.x
+    }
+
+    pub fn y(&self) -> u32 {
+        self.y
     }
 }
 

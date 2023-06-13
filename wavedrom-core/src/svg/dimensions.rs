@@ -1,6 +1,6 @@
+use crate::svg::font::Font;
 use crate::svg::options::RenderOptions;
 use crate::AssembledFigure;
-use crate::svg::font::Font;
 
 pub struct SvgDimensions<'a> {
     figure: &'a AssembledFigure<'a>,
@@ -132,8 +132,21 @@ impl<'a> SvgDimensions<'a> {
     pub fn has_textbox(&self) -> bool {
         self.figure.lines.iter().any(|line| !line.text.is_empty())
     }
+    #[inline]
     pub fn textbox_width(&self) -> u32 {
         self.textbox_width.unwrap_or(0)
+    }
+
+    pub fn signal_top(&self, idx: u32) -> u32 {
+        self.schema_y()
+            + self.options.paddings.schema_top
+            + if idx == 0 {
+                0
+            } else {
+                (u32::from(self.options.wave_dimensions.signal_height)
+                    + self.options.spacings.line_to_line)
+                    * idx
+            }
     }
 
     // #[inline]

@@ -209,11 +209,11 @@ mod tests {
             "signal": [
                 [
                     "xyz",
-                    { "name": "=", "wave": "=" },
+                    { "name": "=", "wave": "=", "node": "a....." },
                     { "name": "0", "wave": "0" },
                     { "name": "1", "wave": "1" },
                     { "name": "2", "wave": "2" },
-                    { "name": "z", "wave": "z" },
+                    { "name": "z", "wave": "z", "node": ".....b" },
                     { "name": "x", "wave": "x" },
                     { "name": "p", "wave": "p" },
                     { "name": "P", "wave": "P" },
@@ -286,7 +286,8 @@ mod tests {
             },
             "config": {
                 "hscale": 1
-            }
+            },
+            "edge": ["a<->b xyz"]
         }
         "#;
 
