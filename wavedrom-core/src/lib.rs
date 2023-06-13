@@ -71,7 +71,7 @@ pub struct Figure {
 
     hscale: u16,
 
-    edges: Vec<EdgeDefinition<'static>>,
+    edges: Vec<EdgeDefinition>,
 
     sections: Vec<FigureSection>,
 }
@@ -345,6 +345,8 @@ impl Figure {
 
         hscale: u16,
         sections: Vec<FigureSection>,
+
+        edges: Vec<EdgeDefinition>,
     ) -> Self {
         Self {
             header_text: title,
@@ -353,7 +355,7 @@ impl Figure {
             top_cycle_marker,
             bottom_cycle_marker,
 
-            edges: Vec::new(),
+            edges,
 
             hscale,
             sections,
@@ -487,6 +489,7 @@ impl Signal {
         name: String,
         cycles: Cycles,
         data: Vec<String>,
+        node: String,
         period: u16,
         phase: CycleOffset,
     ) -> Self {
@@ -496,7 +499,7 @@ impl Signal {
             name,
             cycles,
             data,
-            node: String::new(),
+            node,
             period,
             phase,
         }

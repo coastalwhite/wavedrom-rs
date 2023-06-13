@@ -1,7 +1,10 @@
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CycleEnumerationMarker, CycleOffset, Figure, FigureSection, FigureSectionGroup, Signal,
+    CycleEnumerationMarker, CycleOffset, EdgeDefinition, Figure, FigureSection, FigureSectionGroup,
+    Signal,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -10,6 +13,7 @@ pub struct WaveJson {
     pub head: Option<Head>,
     pub foot: Option<Foot>,
     pub config: Option<Config>,
+    pub edge: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +35,7 @@ pub struct SignalObject {
     pub name: Option<String>,
     pub wave: Option<String>,
     pub data: Option<SignalData>,
+    pub node: Option<String>,
     pub period: Option<f32>,
     pub phase: Option<f32>,
 }
@@ -115,17 +120,30 @@ impl From<WaveJson> for Figure {
 
         let hscale = value.config.and_then(|config| config.hscale).unwrap_or(1);
 
+        let sections = value
+            .signal
+            .into_iter()
+            .map(FigureSection::from)
+            .collect::<Vec<FigureSection>>();
+
+        let mut edges = Vec::new();
+
+        if let Some(edge) = value.edge {
+            for e in edge {
+                if let Ok(def) = EdgeDefinition::from_str(&e) {
+                    edges.push(def);
+                }
+            }
+        }
+
         Figure::new(
             title,
             footer,
             top_cycle_marker,
             bottom_cycle_marker,
             hscale,
-            value
-                .signal
-                .into_iter()
-                .map(FigureSection::from)
-                .collect::<Vec<FigureSection>>(),
+            sections,
+            edges,
         )
     }
 }
@@ -159,20 +177,21 @@ impl From<SignalItem> for FigureSection {
 
 impl From<SignalObject> for Signal {
     fn from(item: SignalObject) -> Self {
-        Signal::new(
-            item.name.unwrap_or_default(),
-            crate::Cycles::from_str(&item.wave.unwrap_or_default()),
-            item.data
-                .map_or_else(Vec::new, |signal_data| match signal_data {
-                    SignalData::One(data) => vec![data],
-                    SignalData::Multiple(data) => data,
-                }),
-            item.period.map_or(0, |f| f.ceil() as u16),
-            match item.phase {
-                None => CycleOffset::default(),
-                Some(f) => CycleOffset::try_from(f).unwrap_or_default(),
-            },
-        )
+        let name = item.name.unwrap_or_default();
+        let cycles = crate::Cycles::from_str(&item.wave.unwrap_or_default());
+        let data = item
+            .data
+            .map_or_else(Vec::new, |signal_data| match signal_data {
+                SignalData::One(data) => vec![data],
+                SignalData::Multiple(data) => data,
+            });
+        let node = item.node.unwrap_or_default();
+        let period = item.period.map_or(0, |f| f.ceil() as u16);
+        let phase = item.phase.map_or_else(CycleOffset::default, |f| {
+            CycleOffset::try_from(f).unwrap_or_default()
+        });
+
+        Signal::new(name, cycles, data, node, period, phase)
     }
 }
 

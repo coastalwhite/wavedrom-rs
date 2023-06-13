@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use crate::{CycleOffset, Signal};
 
@@ -29,13 +30,13 @@ pub struct InSignalPosition {
     y: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub struct EdgeDefinition<'a> {
+pub struct EdgeDefinition {
     variant: EdgeVariant,
     from: char,
     to: char,
-    text: Option<Cow<'a, str>>,
+    text: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -209,7 +210,7 @@ impl LineEdgeMarkersBuilder {
         self.line_number += 1;
     }
 
-    pub fn build<'a>(self, edges: &[EdgeDefinition<'a>]) -> LineEdgeMarkers<'a> {
+    pub fn build<'a>(self, edges: &'a [EdgeDefinition]) -> LineEdgeMarkers<'a> {
         let mut lines = Vec::new();
 
         for edge in edges {
@@ -223,7 +224,11 @@ impl LineEdgeMarkersBuilder {
             let from = from.clone();
             let to = to.clone();
 
-            let text = edge.text.clone();
+            let text = if let Some(text) = &edge.text {
+                Some(Cow::Borrowed(&text[..]))
+            } else {
+                None
+            };
             let variant = edge.variant;
 
             lines.push(LineEdge {
@@ -241,8 +246,10 @@ impl LineEdgeMarkersBuilder {
     }
 }
 
-impl<'a> EdgeDefinition<'a> {
-    pub fn from_str(s: &'a str) -> Result<Self, usize> {
+impl FromStr for EdgeDefinition {
+    type Err = usize;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let start_len = s.len();
         let s = s.trim_start();
         let start_idx = start_len - s.len();
@@ -261,7 +268,7 @@ impl<'a> EdgeDefinition<'a> {
 
         let (s, to) = take(s).ok_or(start_idx)?;
 
-        let text = (!s.is_empty()).then_some(Cow::Borrowed(s.trim_start()));
+        let text = (!s.is_empty()).then_some(s.trim_start().to_string());
 
         Ok(Self {
             variant,
@@ -269,26 +276,6 @@ impl<'a> EdgeDefinition<'a> {
             to,
             text,
         })
-    }
-
-    pub fn to_owned(&self) -> EdgeDefinition<'static> {
-        EdgeDefinition {
-            variant: self.variant,
-            from: self.from,
-            to: self.to,
-            text: self.text.as_ref().map(|text| Cow::Owned(text.to_string())),
-        }
-    }
-}
-
-impl<'a> Clone for EdgeDefinition<'a> {
-    fn clone(&self) -> Self {
-        Self {
-            variant: self.variant,
-            from: self.from,
-            to: self.to,
-            text: self.text.clone(),
-        }
     }
 }
 
