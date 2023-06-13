@@ -10,6 +10,7 @@ pub use json5;
 pub use serde_json;
 
 mod cycle_offset;
+mod edges;
 mod path;
 mod shortcuts;
 pub mod svg;
@@ -21,9 +22,15 @@ pub mod markers;
 #[cfg(feature = "serde")]
 pub mod wavejson;
 
+pub use edges::{
+    EdgeArrowType, EdgeDefinition, EdgeVariant, LineEdgeMarkers, SharpEdgeVariant,
+    SplineEdgeVariant,
+};
 pub use path::{AssembledSignalPath, CycleState, SignalOptions, SignalPath, SignalPathSegment};
 
 use markers::{ClockEdge, CycleEnumerationMarker, GroupMarker};
+
+use self::edges::LineEdgeMarkersBuilder;
 
 #[derive(Debug, Clone)]
 pub enum FigureSection {
@@ -39,6 +46,7 @@ pub struct Signal {
     name: String,
     cycles: Cycles,
     data: Vec<String>,
+    node: String,
     period: NonZeroU16,
     phase: CycleOffset,
 }
@@ -62,6 +70,8 @@ pub struct Figure {
     bottom_cycle_marker: Option<CycleEnumerationMarker>,
 
     hscale: u16,
+
+    edges: Vec<EdgeDefinition<'static>>,
 
     sections: Vec<FigureSection>,
 }
@@ -95,84 +105,44 @@ struct DefinitionTracker {
     has_negedge_marker: bool,
 }
 
-impl FigureSection {
-    fn render_into<'a>(
-        &'a self,
-        lines: &'_ mut Vec<AssembledLine<'a>>,
-        groups: &'_ mut Vec<GroupMarker<'a>>,
-        group_label_at_depth: &mut Vec<bool>,
-        definitions: &mut DefinitionTracker,
-        wave_shape_options: &SignalOptions,
-        depth: u32,
-    ) -> u32 {
-        match self {
-            Self::Signal(signal) => {
-                // If the first state is a Gap or Continue this is also an undefined state.
-                if signal.cycles().first().map_or(false, |state| {
-                    matches!(state, CycleState::Continue | CycleState::Gap)
-                }) {
-                    definitions.has_undefined = true;
-                }
+enum SectionItem<'a> {
+    GroupStart(&'a FigureSectionGroup),
+    GroupEnd(u32),
+    Signal(u32, &'a Signal),
+}
 
-                for state in signal.cycles() {
-                    match state {
-                        CycleState::X => definitions.has_undefined = true,
-                        CycleState::Gap => definitions.has_gaps = true,
-                        CycleState::PosedgeClockMarked => definitions.has_posedge_marker = true,
-                        CycleState::NegedgeClockMarked => definitions.has_negedge_marker = true,
-                        _ => {}
-                    }
-                }
+struct SectionIterator<'a> {
+    top_level: std::slice::Iter<'a, FigureSection>,
+    sections: Vec<std::slice::Iter<'a, FigureSection>>,
+}
 
-                lines.push(AssembledLine {
-                    text: &signal.name,
-                    depth,
-                    path: SignalPath::new(
-                        signal.cycles(),
-                        &signal.data,
-                        signal.period,
-                        signal.phase,
-                    )
-                    .assemble_with_options(wave_shape_options),
-                });
-
-                depth
-            }
-            Self::Group(FigureSectionGroup(label, sections)) => {
-                match group_label_at_depth.get_mut(depth as usize) {
-                    None => group_label_at_depth.push(label.is_some()),
-                    Some(label_at_level) => *label_at_level |= label.is_some(),
-                }
-
-                let mut max_depth = depth + 1;
-
-                let group_start = lines.len();
-                for wave_line in sections {
-                    let group_depth = wave_line.render_into(
-                        lines,
-                        groups,
-                        group_label_at_depth,
-                        definitions,
-                        wave_shape_options,
-                        depth + 1,
-                    );
-
-                    if group_depth > max_depth {
-                        max_depth = group_depth;
-                    }
-                }
-                let group_end = lines.len();
-
-                groups.push(GroupMarker::new(
-                    group_start as u32,
-                    group_end as u32,
-                    label.as_ref().map(|s| &s[..]),
-                    depth,
-                ));
-
-                max_depth
-            }
+impl<'a> SectionIterator<'a> {
+    fn new(sections: &'a [FigureSection]) -> Self {
+        Self {
+            top_level: sections.into_iter(),
+            sections: Vec::new(),
         }
+    }
+}
+
+impl<'a> Iterator for SectionIterator<'a> {
+    type Item = SectionItem<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let depth = self.sections.len() as u32;
+        let iter = self.sections.last_mut().unwrap_or(&mut self.top_level);
+
+        Some(match iter.next() {
+            None => {
+                let _ = self.sections.pop()?;
+                SectionItem::GroupEnd(depth)
+            }
+            Some(FigureSection::Group(group)) => {
+                self.sections.push(group.1.iter());
+                SectionItem::GroupStart(group)
+            }
+            Some(FigureSection::Signal(signal)) => SectionItem::Signal(depth, signal),
+        })
     }
 }
 
@@ -184,6 +154,8 @@ impl Figure {
 
             top_cycle_marker: None,
             bottom_cycle_marker: None,
+
+            edges: Vec::new(),
 
             hscale: 1,
             sections: lines.into_iter().map(T::into).collect(),
@@ -251,6 +223,8 @@ pub struct AssembledFigure<'a> {
 
     lines: Vec<AssembledLine<'a>>,
     group_markers: Vec<GroupMarker<'a>>,
+
+    line_edge_markers: LineEdgeMarkers<'a>,
 }
 
 impl<'a> AssembledFigure<'a> {
@@ -379,6 +353,8 @@ impl Figure {
             top_cycle_marker,
             bottom_cycle_marker,
 
+            edges: Vec::new(),
+
             hscale,
             sections,
         }
@@ -401,22 +377,74 @@ impl Figure {
         let mut group_label_at_depth = Vec::new();
 
         let mut definitions = DefinitionTracker::default();
+        let mut max_group_depth = 0;
 
-        let max_group_depth = self
-            .sections
-            .iter()
-            .map(|line| {
-                line.render_into(
-                    &mut lines,
-                    &mut group_markers,
-                    &mut group_label_at_depth,
-                    &mut definitions,
-                    &options,
-                    0,
-                )
-            })
-            .max()
-            .unwrap_or_default();
+        let mut line_edge_markers = LineEdgeMarkersBuilder::new();
+
+        let mut idx = 0;
+
+        let section_iter = SectionIterator::new(&self.sections);
+        let mut groups = Vec::new();
+        for section_item in section_iter {
+            match section_item {
+                SectionItem::Signal(depth, signal) => {
+                    max_group_depth = u32::max(max_group_depth, depth);
+
+                    line_edge_markers.add_signal(signal);
+
+                    idx += 1;
+
+                    // If the first state is a Gap or Continue this is also an undefined state.
+                    if signal.cycles().first().map_or(false, |state| {
+                        matches!(state, CycleState::Continue | CycleState::Gap)
+                    }) {
+                        definitions.has_undefined = true;
+                    }
+
+                    for state in signal.cycles() {
+                        match state {
+                            CycleState::X => definitions.has_undefined = true,
+                            CycleState::Gap => definitions.has_gaps = true,
+                            CycleState::PosedgeClockMarked => definitions.has_posedge_marker = true,
+                            CycleState::NegedgeClockMarked => definitions.has_negedge_marker = true,
+                            _ => {}
+                        }
+                    }
+
+                    lines.push(AssembledLine {
+                        text: &signal.name,
+                        depth,
+                        path: SignalPath::new(
+                            signal.cycles(),
+                            &signal.data,
+                            signal.period,
+                            signal.phase,
+                        )
+                        .assemble_with_options(&options),
+                    });
+                }
+                SectionItem::GroupStart(group) => groups.push((idx, group)),
+                SectionItem::GroupEnd(depth) => {
+                    let (start_idx, FigureSectionGroup(label, _)) = groups
+                        .pop()
+                        .expect("A group should be been pushe for this end");
+
+                    match group_label_at_depth.get_mut(depth as usize) {
+                        None => group_label_at_depth.push(label.is_some()),
+                        Some(label_at_level) => *label_at_level |= label.is_some(),
+                    }
+
+                    group_markers.push(GroupMarker::new(
+                        start_idx,
+                        idx,
+                        label.as_ref().map(|s| &s[..]),
+                        depth,
+                    ));
+                }
+            }
+        }
+
+        let line_edge_markers = line_edge_markers.build(&self.edges);
 
         let num_cycles = lines
             .iter()
@@ -443,6 +471,8 @@ impl Figure {
 
             lines,
             group_markers,
+
+            line_edge_markers,
         }
     }
 
@@ -466,6 +496,7 @@ impl Signal {
             name,
             cycles,
             data,
+            node: String::new(),
             period,
             phase,
         }
