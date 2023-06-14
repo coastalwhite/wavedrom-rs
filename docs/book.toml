@@ -1,0 +1,17 @@
+[book]
+authors = ["Gijs Burghoorn"]
+language = "en"
+multilingual = false
+src = "src"
+title = "A Hitchhiker's Guide to WaveDrom-rs"
+description = "A Installation Guide and Reference Guide for WaveDrom-rs"
+
+[build]
+create-missing = false
+
+[output.html]
+mathjax-support = false
+git-repository-url = "https://github.com/coastalwhite/wavedrom-rs/tree/main/docs"
+edit-url-template = "https://github.com/coastalwhite/wavedrom-rs/edit/main/docs/{path}"
+
+[preprocessor.wavedrom]

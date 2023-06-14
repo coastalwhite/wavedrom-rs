@@ -19,7 +19,25 @@ There are currently four ways to use `wavedrom-rs`:
 - [As a Command-Line Application][cli]
 - [As a MdBook Preprocessor][mdbook-wavedrom]
 
-# License
+## Features
+
+- [x] All wavedrom-rs Signal Types
+- [x] Signal Groups
+- [x] Marker Edges
+- [x] Header and Footer Text
+- [x] Cycle Enumeration Markers
+- [x] Editor Website through WASM
+- [x] MdBook Preprocessor
+- [ ] Full Customization via Skin
+
+## Documentation
+
+This project uses the same syntax for wavejson as the original
+[WaveDrom][wavedrom-js] project. Therefore, the original [Hitchhiker's Guide to
+WaveDrom][hitchhiker] is still a good introduction into several concepts of
+of WaveJson. Additionally, this repository maintains a [book][book].
+
+## License
 
 Licensed under a [MIT License](./LICENSE). The demo website utilizes icons from
 [Lucide][lucide] which are licensed under an ISC license.
@@ -29,3 +47,5 @@ Licensed under a [MIT License](./LICENSE). The demo website utilizes icons from
 [wavedrom-js]: https://wavedrom.com/
 [tutorial]: https://wavedrom.com/tutorial.html
 [lucide]: https://lucide.dev/
+[hitchhiker]: https://wavedrom.com/tutorial.html
+[book]: https://coastalwhite.github.io/wavedrom-rs
