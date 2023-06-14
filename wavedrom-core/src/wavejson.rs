@@ -182,7 +182,11 @@ impl From<SignalObject> for Signal {
         let data = item
             .data
             .map_or_else(Vec::new, |signal_data| match signal_data {
-                SignalData::One(data) => vec![data],
+                SignalData::One(data) => data
+                    .split(char::is_whitespace)
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+                    .collect(),
                 SignalData::Multiple(data) => data,
             });
         let node = item.node.unwrap_or_default();
