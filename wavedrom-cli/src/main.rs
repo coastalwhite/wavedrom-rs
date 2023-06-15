@@ -82,6 +82,7 @@ fn main() {
             let output_file = match std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
+                .append(false)
                 .open(output_path)
             {
                 Ok(f) => f,
