@@ -13,8 +13,10 @@ mod cycle_offset;
 mod edges;
 mod path;
 mod shortcuts;
+mod color;
 pub mod svg;
 
+pub use color::Color;
 pub use cycle_offset::{CycleOffset, InCycleOffset};
 pub use shortcuts::*;
 

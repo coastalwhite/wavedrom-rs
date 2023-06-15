@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
 use wavedrom::json5::Error as JsonError;
+use wavedrom::Color;
 use wavedrom::svg::options::RenderOptions;
 use wavedrom::{svg::ToSvg, wavejson::WaveJson, Figure};
 
@@ -109,7 +110,7 @@ pub fn insert_wavedrom(content: &str) -> Result<String, InsertionError> {
                 Figure::try_from(wavejson).map_err(|_| InsertionError::InvalidFigure)?;
 
             let mut options = RenderOptions::default();
-            options.background = Some("#FFF".to_string());
+            options.background = Some(Color::WHITE);
 
             wavedrom_figure
                 .assemble()

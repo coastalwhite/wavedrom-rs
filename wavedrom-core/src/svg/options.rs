@@ -1,10 +1,11 @@
+use crate::color::Color;
 use crate::path::SignalOptions;
 
 #[derive(Debug, Clone)]
 pub struct RenderOptions {
     pub font_size: u32,
     /// TODO: Make this a proper color
-    pub background: Option<String>,
+    pub background: Option<Color>,
     pub paddings: FigurePadding,
     pub spacings: FigureSpacing,
     pub header: HeaderOptions,

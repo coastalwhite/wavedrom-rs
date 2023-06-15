@@ -447,23 +447,23 @@ fn write_signal(
     hscale: u16,
 ) -> io::Result<()> {
     for segment in wave_path.segments() {
-        let fill = match segment.background() {
-            Some(PathSegmentBackground::B2) => &options.backgrounds[0],
-            Some(PathSegmentBackground::B3) => &options.backgrounds[1],
-            Some(PathSegmentBackground::B4) => &options.backgrounds[2],
-            Some(PathSegmentBackground::B5) => &options.backgrounds[3],
-            Some(PathSegmentBackground::B6) => &options.backgrounds[4],
-            Some(PathSegmentBackground::B7) => &options.backgrounds[5],
-            Some(PathSegmentBackground::B8) => &options.backgrounds[6],
-            Some(PathSegmentBackground::B9) => &options.backgrounds[7],
-            Some(PathSegmentBackground::Undefined) => "url(#x-bg)",
-            None => "none",
-        };
-
         let x = segment.x();
         let y = segment.y();
 
-        write!(writer, r##"<path fill="{fill}" d=""##)?;
+        write!(writer, r##"<path fill=""##)?;
+        match segment.background() {
+            Some(PathSegmentBackground::B2) => write!(writer, "{}", options.backgrounds[0])?,
+            Some(PathSegmentBackground::B3) => write!(writer, "{}", options.backgrounds[1])?,
+            Some(PathSegmentBackground::B4) => write!(writer, "{}", options.backgrounds[2])?,
+            Some(PathSegmentBackground::B5) => write!(writer, "{}", options.backgrounds[3])?,
+            Some(PathSegmentBackground::B6) => write!(writer, "{}", options.backgrounds[4])?,
+            Some(PathSegmentBackground::B7) => write!(writer, "{}", options.backgrounds[5])?,
+            Some(PathSegmentBackground::B8) => write!(writer, "{}", options.backgrounds[6])?,
+            Some(PathSegmentBackground::B9) => write!(writer, "{}", options.backgrounds[7])?,
+            Some(PathSegmentBackground::Undefined) => write!(writer, "url(#x-bg)")?,
+            None => write!(writer, "none")?,
+        }
+        write!(writer, r#"" d=""#)?;
         write!(writer, "M{x},{y}")?;
         for action in segment.actions() {
             match action {

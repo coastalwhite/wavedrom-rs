@@ -1,7 +1,8 @@
 use std::num::NonZeroU16;
 
-use crate::{ClockEdge, CycleOffset};
+use crate::color::Color;
 use crate::markers::ClockEdgeMarker;
+use crate::{ClockEdge, CycleOffset};
 
 #[derive(Debug, Clone)]
 pub struct SignalPath<'a> {
@@ -95,7 +96,7 @@ pub struct SignalOptions {
     pub cycle_width: u16,
     pub transition_offset: u16,
 
-    pub backgrounds: [String; 8],
+    pub backgrounds: [Color; 8],
 }
 
 impl Default for SignalOptions {
@@ -108,14 +109,46 @@ impl Default for SignalOptions {
             transition_offset: 4,
 
             backgrounds: [
-                "#FFFFFF".to_string(),
-                "#F7F7A1".to_string(),
-                "#F9D49F".to_string(),
-                "#ADDEFF".to_string(),
-                "#ACD5B6".to_string(),
-                "#A4ABE1".to_string(),
-                "#E8A8F0".to_string(),
-                "#FBDADA".to_string(),
+                Color {
+                    red: 0xFF,
+                    green: 0xFF,
+                    blue: 0xFF,
+                },
+                Color {
+                    red: 0xF7,
+                    green: 0xF7,
+                    blue: 0xA1,
+                },
+                Color {
+                    red: 0xF9,
+                    green: 0xD4,
+                    blue: 0x9F,
+                },
+                Color {
+                    red: 0xAD,
+                    green: 0xDE,
+                    blue: 0xFF,
+                },
+                Color {
+                    red: 0xAC,
+                    green: 0xD5,
+                    blue: 0xB6,
+                },
+                Color {
+                    red: 0xA4,
+                    green: 0xAB,
+                    blue: 0xE1,
+                },
+                Color {
+                    red: 0xE8,
+                    green: 0xA8,
+                    blue: 0xF0,
+                },
+                Color {
+                    red: 0xFB,
+                    green: 0xDA,
+                    blue: 0xDA,
+                },
             ],
         }
     }
@@ -249,21 +282,18 @@ impl<'a> Iterator for SignalSegmentIter<'a> {
 
 impl<'a> SignalSegmentIter<'a> {
     fn posedge_marker(&mut self) {
-        self.clock_edge_markers.push(ClockEdgeMarker::new(
-            self.cycle_offset,
-            ClockEdge::Positive,
-        ));
+        self.clock_edge_markers
+            .push(ClockEdgeMarker::new(self.cycle_offset, ClockEdge::Positive));
     }
 
     fn negedge_marker(&mut self) {
-        self.clock_edge_markers.push(ClockEdgeMarker::new(
-            self.cycle_offset,
-            ClockEdge::Negative,
-        ));
+        self.clock_edge_markers
+            .push(ClockEdgeMarker::new(self.cycle_offset, ClockEdge::Negative));
     }
 
     fn gap(&mut self, state: CycleState) {
-        self.gaps.push(self.cycle_offset + self.cycle_length(state).half())
+        self.gaps
+            .push(self.cycle_offset + self.cycle_length(state).half())
     }
 
     fn begin(&mut self, state: CycleState) {
