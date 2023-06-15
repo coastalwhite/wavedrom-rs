@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use crate::{CycleOffset, Signal};
@@ -13,7 +13,9 @@ pub struct LineEdgeMarkers<'a> {
 #[derive(Debug, Clone)]
 pub struct LineEdge<'a> {
     from: InSignalPosition,
+    from_marker: Option<char>,
     to: InSignalPosition,
+    to_marker: Option<char>,
     text: Option<Cow<'a, str>>,
     variant: EdgeVariant,
 }
@@ -24,7 +26,7 @@ pub struct LineEdgeText {
     text: char,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InSignalPosition {
     x: CycleOffset,
     y: u32,
@@ -103,7 +105,51 @@ fn take(s: &str) -> Option<(&str, char)> {
     Some((chars.as_str(), c))
 }
 
+impl EdgeArrowType {
+    #[inline]
+    pub fn has_start_arrow(self) -> bool {
+        matches!(self, Self::Both | Self::Start)
+    }
+
+    #[inline]
+    pub fn has_end_arrow(self) -> bool {
+        matches!(self, Self::Both | Self::End)
+    }
+}
+
+impl SplineEdgeVariant {
+    #[inline]
+    pub fn arrow_type(self) -> EdgeArrowType {
+        match self {
+            SplineEdgeVariant::BothHorizontal(a)
+            | SplineEdgeVariant::StartHorizontal(a)
+            | SplineEdgeVariant::EndHorizontal(a) => a,
+        }
+    }
+}
+
+impl SharpEdgeVariant {
+    #[inline]
+    pub fn arrow_type(self) -> EdgeArrowType {
+        match self {
+            SharpEdgeVariant::Straight(a)
+            | SharpEdgeVariant::BothHorizontal(a)
+            | SharpEdgeVariant::StartHorizontal(a)
+            | SharpEdgeVariant::EndHorizontal(a) => a,
+            SharpEdgeVariant::Cross => EdgeArrowType::None,
+        }
+    }
+}
+
 impl EdgeVariant {
+    #[inline]
+    pub fn arrow_type(self) -> EdgeArrowType {
+        match self {
+            EdgeVariant::Spline(v) => v.arrow_type(),
+            EdgeVariant::Sharp(v) => v.arrow_type(),
+        }
+    }
+
     fn consume(s: &str) -> Option<(&str, Self)> {
         let (s, has_arrow_left) = take_char(s, '<');
 
@@ -197,17 +243,15 @@ impl LineEdgeMarkersBuilder {
             };
 
             self.node_positions.insert(c, at.clone());
-
-            if c.is_ascii_uppercase() {
-                self.text_nodes.push(LineEdgeText { at, text: c });
-            }
+            self.text_nodes.push(LineEdgeText { at, text: c });
         }
 
         self.line_number += 1;
     }
 
-    pub fn build<'a>(self, edges: &'a [EdgeDefinition]) -> LineEdgeMarkers<'a> {
+    pub fn build<'a>(mut self, edges: &'a [EdgeDefinition]) -> LineEdgeMarkers<'a> {
         let mut lines = Vec::new();
+        let mut used_text_nodes = HashSet::new();
 
         for edge in edges {
             if edge.from == edge.to {
@@ -221,6 +265,9 @@ impl LineEdgeMarkersBuilder {
                 continue;
             };
 
+            used_text_nodes.insert(edge.from);
+            used_text_nodes.insert(edge.to);
+
             let from = from.clone();
             let to = to.clone();
 
@@ -231,13 +278,21 @@ impl LineEdgeMarkersBuilder {
             };
             let variant = edge.variant;
 
+            let from_marker = (!edge.from.is_ascii_uppercase()).then_some(edge.from);
+            let to_marker = (!edge.to.is_ascii_uppercase()).then_some(edge.to);
+
             lines.push(LineEdge {
                 from,
+                from_marker,
                 to,
+                to_marker,
                 text,
                 variant,
             });
         }
+
+        self.text_nodes
+            .retain(|n| !used_text_nodes.contains(&n.text()) && !n.text().is_ascii_uppercase());
 
         LineEdgeMarkers {
             lines,
@@ -265,8 +320,30 @@ impl LineEdge<'_> {
         &self.to
     }
 
+    pub fn from_marker(&self) -> Option<char> {
+        self.from_marker
+    }
+
+    pub fn to_marker(&self) -> Option<char> {
+        self.to_marker
+    }
+
     pub fn variant(&self) -> &EdgeVariant {
         &self.variant
+    }
+
+    pub fn text(&self) -> Option<&str> {
+        self.text.as_ref().map(|s| &s[..])
+    }
+}
+
+impl LineEdgeText {
+    pub fn at(&self) -> &InSignalPosition {
+        &self.at
+    }
+
+    pub fn text(&self) -> char {
+        self.text
     }
 }
 

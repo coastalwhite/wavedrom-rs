@@ -5,26 +5,19 @@ use std::io;
 use crate::path::{PathCommand, PathSegmentBackground};
 use crate::{ClockEdge, EdgeArrowType, SignalOptions};
 
+use self::edges::write_line_edge;
+
 use super::path::AssembledSignalPath;
 use super::AssembledFigure;
 
 mod dimensions;
 mod font;
+mod edges;
 pub mod options;
 
 use dimensions::SvgDimensions;
 pub use font::Font;
 use options::RenderOptions;
-
-/// A f64 type that automatically rounds when formatting
-struct SVGF64(pub f64);
-
-impl Display for SVGF64 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = format!("{:.3}", self.0);
-        write!(f, "{}", s.trim_end_matches('0').trim_end_matches('.'))
-    }
-}
 
 pub trait ToSvg {
     type Options: Default;
@@ -400,222 +393,23 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         if !self.line_edge_markers.lines().is_empty() {
             write!(writer, "<g>")?;
             for line_edge in self.line_edge_markers.lines() {
-                let from = line_edge.from();
-                let to = line_edge.to();
-
-                let from_x =
-                    dims.schema_x() + from.x().width_offset(wave_dimensions.cycle_width.into());
-                let from_y =
-                    dims.signal_top(from.y()) + u32::from(wave_dimensions.signal_height / 2);
-
-                let to_x =
-                    dims.schema_x() + to.x().width_offset(wave_dimensions.cycle_width.into());
-                let to_y = dims.signal_top(to.y()) + u32::from(wave_dimensions.signal_height / 2);
-
-                write!(writer, r##"<g><path d="M{from_x},{from_y}"##)?;
-
-                struct ArrowDef {
-                    arrow_type: EdgeArrowType,
-                    begin_dir: (f64, f64),
-                    end_dir: (f64, f64),
-                }
-
-                let x_signum = (f64::from(to_x) - f64::from(from_x)).signum();
-                let y_signum = (f64::from(to_y) - f64::from(from_y)).signum();
-
-                let arrow = match *line_edge.variant() {
-                    crate::EdgeVariant::Spline(spline_edge) => match spline_edge {
-                        crate::SplineEdgeVariant::BothHorizontal(arrow_type) => {
-                            write!(
-                                writer,
-                                "C{hx},{from_y} {hx},{to_y} {to_x},{to_y}",
-                                hx = (from_x + to_x) / 2
-                            )?;
-
-                            Some(ArrowDef {
-                                arrow_type,
-                                begin_dir: (x_signum, 0.),
-                                end_dir: (x_signum, 0.),
-                            })
-                        }
-                        crate::SplineEdgeVariant::StartHorizontal(arrow_type) => {
-                            const C1_FACTOR: f64 = 0.25;
-                            const C2_FACTOR: f64 = 0.8;
-
-                            let dx = f64::from(to_x - from_x);
-
-                            let cx1 = f64::from(from_x) + dx * C1_FACTOR;
-                            let cx2 = f64::from(from_x) + dx * C2_FACTOR;
-
-                            write!(writer, "C{cx1},{from_y} {cx2},{from_y} {to_x},{to_y}")?;
-
-                            Some(ArrowDef {
-                                arrow_type,
-                                begin_dir: (cx1 - f64::from(from_x), 0.),
-                                end_dir: (
-                                    f64::from(to_x) - cx2,
-                                    f64::from(to_y) - f64::from(from_y),
-                                ),
-                            })
-                        }
-                        crate::SplineEdgeVariant::EndHorizontal(arrow_type) => {
-                            const C1_FACTOR: f64 = 0.2;
-                            const C2_FACTOR: f64 = 0.75;
-
-                            let dx = f64::from(to_x - from_x);
-
-                            let cx1 = f64::from(from_x) + dx * C1_FACTOR;
-                            let cx2 = f64::from(from_x) + dx * C2_FACTOR;
-
-                            write!(writer, "C{cx1},{to_y} {cx2},{to_y} {to_x},{to_y}")?;
-
-                            Some(ArrowDef {
-                                arrow_type,
-                                begin_dir: (
-                                    cx1 - f64::from(from_x),
-                                    f64::from(to_y) - f64::from(from_y),
-                                ),
-                                end_dir: (f64::from(to_x) - cx2, 0.),
-                            })
-                        }
-                    },
-                    crate::EdgeVariant::Sharp(sharp_edge) => match sharp_edge {
-                        crate::SharpEdgeVariant::Straight(arrow_type) => {
-                            if to_x == from_x {
-                                write!(writer, "V{to_y}")?;
-                            } else if to_y == from_y {
-                                write!(writer, "H{to_x}")?;
-                            } else {
-                                write!(writer, "L{to_x},{to_y}")?;
-                            }
-
-                            let dir = (
-                                f64::from(to_x) - f64::from(from_x),
-                                f64::from(to_y) - f64::from(from_y),
-                            );
-
-                            Some(ArrowDef {
-                                arrow_type,
-                                begin_dir: dir,
-                                end_dir: dir,
-                            })
-                        }
-                        crate::SharpEdgeVariant::BothHorizontal(arrow_type) => {
-                            if to_x == from_x {
-                                write!(writer, "V{to_y}")?;
-                            } else if to_y == from_y {
-                                write!(writer, "H{to_x}")?;
-                            } else {
-                                write!(writer, "H{hx}V{to_y}H{to_x}", hx = (from_x + to_x) / 2)?;
-                            }
-
-                            Some(ArrowDef {
-                                arrow_type,
-                                begin_dir: (x_signum, 0.),
-                                end_dir: (x_signum, 0.),
-                            })
-                        }
-                        crate::SharpEdgeVariant::StartHorizontal(arrow_type) => {
-                            if to_x == from_x {
-                                write!(writer, "V{to_y}")?;
-                            } else if to_y == from_y {
-                                write!(writer, "H{to_x}")?;
-                            } else {
-                                write!(writer, "H{to_x}V{to_y}")?;
-                            }
-
-                            Some(ArrowDef {
-                                arrow_type,
-                                begin_dir: (x_signum, 0.),
-                                end_dir: (0., y_signum),
-                            })
-                        }
-                        crate::SharpEdgeVariant::EndHorizontal(arrow_type) => {
-                            if to_x == from_x {
-                                write!(writer, "V{to_y}")?;
-                            } else if to_y == from_y {
-                                write!(writer, "H{to_x}")?;
-                            } else {
-                                write!(writer, "V{to_y}H{to_x}")?;
-                            }
-
-                            Some(ArrowDef {
-                                arrow_type,
-                                begin_dir: (0., y_signum),
-                                end_dir: (x_signum, 0.),
-                            })
-                        }
-                        crate::SharpEdgeVariant::Cross => {
-                            if to_x == from_x {
-                                write!(writer, "V{to_y}")?;
-                            } else if to_y == from_y {
-                                write!(writer, "H{to_x}")?;
-                            } else {
-                                write!(writer, "L{to_x},{to_y}")?;
-                            }
-
-                            const MHEIGHT: u32 = 5;
-
-                            if to_x == from_x {
-                                let start_x = from_x - MHEIGHT;
-                                write!(
-                                    writer,
-                                    "M{start_x},{from_y}h{height}M{start_x},{to_y}h{height}",
-                                    height = 2 * MHEIGHT
-                                )?;
-                            } else {
-                                if let Some((xoffset, yoffset)) = offset_in_dir(
-                                    (0, 0),
-                                    (
-                                        f64::from(from_y) - f64::from(to_y),
-                                        f64::from(to_x) - f64::from(from_x),
-                                    ),
-                                    MHEIGHT,
-                                ) {
-                                    write!(
-                                        writer,
-                                        "M{x1},{y1}L{x2},{y2}",
-                                        x1 = f64::from(from_x) + xoffset,
-                                        y1 = f64::from(from_y) + yoffset,
-                                        x2 = f64::from(from_x) - xoffset,
-                                        y2 = f64::from(from_y) - yoffset,
-                                    )?;
-
-                                    write!(
-                                        writer,
-                                        "M{x1},{y1}L{x2},{y2}",
-                                        x1 = f64::from(to_x) + xoffset,
-                                        y1 = f64::from(to_y) + yoffset,
-                                        x2 = f64::from(to_x) - xoffset,
-                                        y2 = f64::from(to_y) - yoffset,
-                                    )?;
-                                }
-                            }
-
-                            None
-                        }
-                    },
-                };
-
-                write!(
-                    writer,
-                    r##"" fill="none" stroke="#000" stroke-width="1"/>"##
-                )?;
-
-                if let Some(arrow) = arrow {
-                    write_edge_arrow_heads(
-                        writer,
-                        arrow.arrow_type,
-                        (from_x.into(), from_y.into()),
-                        arrow.begin_dir,
-                        (to_x.into(), to_y.into()),
-                        arrow.end_dir,
-                    )?;
-                }
-                write!(writer, "</g>")?;
+                write_line_edge(writer, line_edge.clone(), &dims, options, &font)?;
             }
             write!(writer, "</g>")?;
         }
+
+        // for text_node in self.line_edge_markers.text_nodes() {
+        //     let text = text_node.text().to_string();
+        //     let x = dims.schema_x()
+        //         + text_node
+        //             .at()
+        //             .x()
+        //             .width_offset(wave_dimensions.cycle_width.into());
+        //     let y =
+        //         dims.signal_top(text_node.at().y()) + u32::from(wave_dimensions.signal_height / 2);
+        //
+        //     write_edge_arrow_text(writer, (x.into(), y.into()), &text, &font)?;
+        // }
 
         write!(writer, "</svg>")?;
 
@@ -623,84 +417,6 @@ impl<'a> ToSvg for AssembledFigure<'a> {
     }
 }
 
-fn write_edge_arrow_head_path(
-    writer: &mut impl io::Write,
-    at: (f64, f64),
-    dir: (f64, f64),
-) -> io::Result<()> {
-    const ARROW_SIZE: u32 = 8;
-
-    let Some(end) = offset_in_dir(at, dir, ARROW_SIZE) else {
-        return Ok(());
-    };
-
-    let Some(v1) = offset_in_dir(end, (-dir.1, dir.0), f64::from(ARROW_SIZE / 2)) else {
-        return Ok(());
-    };
-
-    let Some(v2) = offset_in_dir(end, (-dir.1, dir.0), -f64::from(ARROW_SIZE / 2)) else {
-        return Ok(());
-    };
-
-    let at_x = SVGF64(at.0);
-    let at_y = SVGF64(at.1);
-
-    let v1x = SVGF64(v1.0);
-    let v1y = SVGF64(v1.1);
-
-    let v2x = SVGF64(v2.0);
-    let v2y = SVGF64(v2.1);
-
-    write!(writer, "M{at_x},{at_y}L{v1x},{v1y}L{v2x},{v2y}z")
-}
-
-fn write_edge_arrow_heads(
-    writer: &mut impl io::Write,
-    arrow_type: EdgeArrowType,
-    begin: (f64, f64),
-    begin_dir: (f64, f64),
-    end: (f64, f64),
-    end_dir: (f64, f64),
-) -> io::Result<()> {
-    write!(writer, r#"<path d=""#)?;
-
-    if matches!(arrow_type, EdgeArrowType::Start | EdgeArrowType::Both) {
-        write_edge_arrow_head_path(writer, begin, begin_dir)?;
-    }
-
-    if matches!(arrow_type, EdgeArrowType::End | EdgeArrowType::Both) {
-        write_edge_arrow_head_path(writer, end, (-end_dir.0, -end_dir.1))?;
-    }
-
-    write!(writer, r##"" fill="#000" stroke="none"/>"##)?;
-
-    Ok(())
-}
-
-fn offset_in_dir(
-    p: (impl Into<f64>, impl Into<f64>),
-    dir: (impl Into<f64>, impl Into<f64>),
-    amount: impl Into<f64>,
-) -> Option<(f64, f64)> {
-    let p = (p.0.into(), p.1.into());
-    let dir = (dir.0.into(), dir.1.into());
-    let amount = amount.into();
-
-    if dir == (0., 0.) {
-        None
-    } else if dir.0 == 0. {
-        Some((p.0, p.1 + dir.1.signum() * amount))
-    } else if dir.1 == 0. {
-        Some((p.0 + dir.0.signum() * amount, p.1))
-    } else {
-        let dydx = dir.1 / dir.0;
-
-        let xoffset = dir.0.signum() * amount / (1. + dydx * dydx).sqrt();
-        let yoffset = dydx * xoffset;
-
-        Some((p.0 + xoffset, p.1 + yoffset))
-    }
-}
 
 fn draw_dashed_horizontal_line(writer: &mut impl io::Write, dx: i32) -> io::Result<()> {
     let mut cx = 0i32;
