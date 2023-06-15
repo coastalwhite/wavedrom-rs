@@ -1,0 +1,10 @@
+
+{
+    signal: [
+        { wave: "2........" },
+    ],
+    head: {
+        text: "Hello World",
+        tick: 42
+    }
+}

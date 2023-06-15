@@ -1,0 +1,8 @@
+{
+	signal: [
+		{ wave: "22222" }
+	],
+	config: {
+		hscale: 2,
+	}
+}

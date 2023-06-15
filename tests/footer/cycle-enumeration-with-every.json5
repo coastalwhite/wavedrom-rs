@@ -1,0 +1,9 @@
+{
+    signal: [
+        { wave: "2........" },
+    ],
+    foot: {
+        tock: 42,
+        every: 3,
+    }
+}

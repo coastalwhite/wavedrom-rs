@@ -1,0 +1,22 @@
+{
+	signal: [
+		{ "name": "2", "wave": "2" },
+        { "name": "2.|", "wave": "2.|" },
+   		{ "name": "2021222z2x2p2P2n2N2.2", "wave": "2021222z2x2p2P2n2N2.2d2u2" },
+        { "name": "period 2, phase 0.5", "wave": "2", "period": 2, "phase": 0.5 },
+		{ "name": "023456789=x", "wave": "0123456789=x" },
+		{
+			"name": "02....3...0",
+			"wave": "02....3...0",
+			"data": [
+				"0xDEAD",
+				"0xBEEF"
+			]
+		},
+		{
+			"name": "2.2.2.2.",
+			"wave": "2.2.2.2.",
+			"data": "A B C D",
+		}
+	]
+}

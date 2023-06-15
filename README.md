@@ -37,6 +37,13 @@ This project uses the same syntax for wavejson as the original
 WaveDrom][hitchhiker] is still a good introduction into several concepts of
 of WaveJson. Additionally, this repository maintains a [book][book].
 
+## Testing
+
+Tests are written in the [`./tests`](./tests) directory and can be generated
+using the [`./tests/run.py`](./tests/run.py) scripts. This will generate a
+`result.html` in the `tests` directory that contains all the rendered SVGs for
+each `json5` file in the `./tests` directory.
+
 ## License
 
 Licensed under a [MIT License](./LICENSE). The demo website utilizes icons from

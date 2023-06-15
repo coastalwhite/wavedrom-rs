@@ -1,0 +1,9 @@
+{
+    signal: [
+        { wave: "2........" },
+    ],
+    head: {
+        tick: 42,
+        every: 3,
+    }
+}

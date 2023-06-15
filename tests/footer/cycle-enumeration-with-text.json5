@@ -1,0 +1,10 @@
+
+{
+    signal: [
+        { wave: "2........" },
+    ],
+    foot: {
+        text: "Hello World",
+        tock: 42
+    }
+}

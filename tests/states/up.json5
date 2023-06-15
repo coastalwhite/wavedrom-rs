@@ -1,0 +1,8 @@
+{
+	signal: [
+		{ "name": "u", "wave": "u" },
+        { "name": "u.|", "wave": "u.|" },
+        { "name": "u0u1u2uzuxupuPunuNu.u", "wave": "u0u1u2uzuxupuPunuNu.uduuu" },
+        { "name": "period 2, phase 0.5", "wave": "u", "period": 2, "phase": 0.5 }
+	]
+}

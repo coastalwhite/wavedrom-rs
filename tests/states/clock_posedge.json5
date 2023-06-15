@@ -1,0 +1,15 @@
+{
+	signal: [
+		{ "name": "p", "wave": "p" },
+        { "name": "p.|", "wave": "p.|" },
+        { "name": "p0p1p2pzpxpppPpnpNp.p", "wave": "p0p1p2pzpxpppPpnpNp.pdpup" },
+        { "name": "period 2, phase 0.5", "wave": "p", "period": 2, "phase": 0.5 },
+        { "name": "period 3, phase 0.25", "wave": "p..", "period": 3, "phase": 0.25 },
+        {},
+		{ "name": "P", "wave": "P" },
+        { "name": "P.|", "wave": "P.|" },
+        { "name": "P0P1P2PzPxPpPPPnPNP.P", "wave": "P0P1P2PzPxPpPPPnPNP.PdPuP" },
+        { "name": "period 2, phase 0.5", "wave": "P", "period": 2, "phase": 0.5 },
+        { "name": "period 3, phase 0.25", "wave": "P..", "period": 3, "phase": 0.25 },
+	]
+}
