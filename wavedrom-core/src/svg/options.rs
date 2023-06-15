@@ -87,7 +87,7 @@ impl Default for GroupIndicatorDimension {
             width: 4,
             spacing: 4,
 
-            label_spacing: 5,
+            label_spacing: 4,
             label_fontsize: 14,
         }
     }

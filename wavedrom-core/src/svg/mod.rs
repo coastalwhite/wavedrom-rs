@@ -11,8 +11,8 @@ use super::path::AssembledSignalPath;
 use super::AssembledFigure;
 
 mod dimensions;
-mod font;
 mod edges;
+mod font;
 pub mod options;
 
 use dimensions::SvgDimensions;
@@ -263,15 +263,23 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 continue;
             }
 
+            let depth = group.depth();
+            let num_labels_below = self.amount_labels_below(depth);
+
             let height = group.len() * u32::from(wave_dimensions.signal_height)
                 + (group.len() - 1) * spacings.line_to_line;
-            let x = paddings.figure_left
-                + self.amount_labels_before(group.depth() + 1)
-                    * group_indicator_dimensions.label_height()
-                + if group.depth() == 0 {
+            let x = dims.grouping_x()
+                + if num_labels_below == 0 {
                     0
                 } else {
-                    group.depth() * group_indicator_dimensions.width
+                    num_labels_below * group_indicator_dimensions.label_height()
+                        - group_indicator_dimensions.label_spacing
+                }
+                + if depth == 0 {
+                    0
+                } else {
+                    depth * group_indicator_dimensions.width
+                        + (depth - 1) * group_indicator_dimensions.spacing
                 };
             let y = dims.schema_y()
                 + paddings.schema_top
@@ -283,20 +291,13 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 };
 
             if let Some(label) = group.label() {
-                let x = if group.depth() == 0 {
-                    0
-                } else {
-                    self.amount_labels_before(group.depth())
-                        * group_indicator_dimensions.label_height()
-                        + group.depth() * group_indicator_dimensions.width
-                };
+                let x = x - group_indicator_dimensions.label_fontsize / 2;
 
                 // let label_width = get_text_width(label, &face, 8);
                 write!(
                     writer,
                     r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0" transform="rotate(270)"><tspan>{text}</tspan></text></g>"##,
                     font_size = group_indicator_dimensions.label_fontsize,
-                    x = x + group_indicator_dimensions.label_spacing + 2,
                     y = y + height / 2,
                     text = escape_str(label),
                 )?;
@@ -416,7 +417,6 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         Ok(())
     }
 }
-
 
 fn draw_dashed_horizontal_line(writer: &mut impl io::Write, dx: i32) -> io::Result<()> {
     let mut cx = 0i32;

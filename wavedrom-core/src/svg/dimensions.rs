@@ -199,13 +199,17 @@ impl<'a> SvgDimensions<'a> {
 
         let sum_indicator_widths = max_group_depth * group_indicator_dimensions.width;
         let spacing = (max_group_depth - 1) * group_indicator_dimensions.spacing;
-        let label_widths = self
+        let num_labels = self
             .figure
             .group_label_at_depth
             .iter()
             .filter(|x| **x)
-            .count() as u32
-            * group_indicator_dimensions.label_height();
+            .count() as u32;
+        let label_widths = if num_labels == 0 {
+            0
+        } else {
+           num_labels * group_indicator_dimensions.label_height() - group_indicator_dimensions.label_spacing
+        };
 
         sum_indicator_widths + spacing + label_widths
     }

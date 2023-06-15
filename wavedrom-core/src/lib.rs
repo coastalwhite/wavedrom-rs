@@ -106,7 +106,7 @@ struct DefinitionTracker {
 }
 
 enum SectionItem<'a> {
-    GroupStart(&'a FigureSectionGroup),
+    GroupStart(u32, &'a FigureSectionGroup),
     GroupEnd(u32),
     Signal(u32, &'a Signal),
 }
@@ -139,7 +139,7 @@ impl<'a> Iterator for SectionIterator<'a> {
             }
             Some(FigureSection::Group(group)) => {
                 self.sections.push(group.1.iter());
-                SectionItem::GroupStart(group)
+                SectionItem::GroupStart(depth + 1, group)
             }
             Some(FigureSection::Signal(signal)) => SectionItem::Signal(depth, signal),
         })
@@ -229,7 +229,7 @@ pub struct AssembledFigure<'a> {
 
 impl<'a> AssembledFigure<'a> {
     #[inline]
-    fn amount_labels_before(&self, depth: u32) -> u32 {
+    fn amount_labels_below(&self, depth: u32) -> u32 {
         self.group_label_at_depth
             .iter()
             .take(depth as usize)
@@ -425,16 +425,18 @@ impl Figure {
                         .assemble_with_options(&options),
                     });
                 }
-                SectionItem::GroupStart(group) => groups.push((idx, group)),
+                SectionItem::GroupStart(depth, group) => {
+                    match group_label_at_depth.get_mut(depth as usize) {
+                        None => group_label_at_depth.push(group.0.is_some()),
+                        Some(label_at_level) => *label_at_level |= group.0.is_some(),
+                    }
+
+                    groups.push((idx, group));
+                },
                 SectionItem::GroupEnd(depth) => {
                     let (start_idx, FigureSectionGroup(label, _)) = groups
                         .pop()
                         .expect("A group should be been pushe for this end");
-
-                    match group_label_at_depth.get_mut(depth as usize) {
-                        None => group_label_at_depth.push(label.is_some()),
-                        Some(label_at_level) => *label_at_level |= label.is_some(),
-                    }
 
                     group_markers.push(GroupMarker::new(
                         start_idx,
