@@ -149,6 +149,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             group_indicator_dimensions,
             header,
             footer,
+            edges,
         } = options;
 
         let font = Font::default();
@@ -431,7 +432,15 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 let y = dims.signal_top(text_node.at().y())
                     + u32::from(wave_dimensions.signal_height / 2);
 
-                write_edge_text(writer, (x.into(), y.into()), &text, 14, &font)?;
+                write_edge_text(
+                    writer,
+                    (x.into(), y.into()),
+                    &text,
+                    edges.node_font_size,
+                    edges.node_text_color,
+                    edges.node_background_color,
+                    &font,
+                )?;
             }
             write!(writer, "</g>")?;
         }

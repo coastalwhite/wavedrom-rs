@@ -4,7 +4,6 @@ use crate::path::SignalOptions;
 #[derive(Debug, Clone)]
 pub struct RenderOptions {
     pub font_size: u32,
-    /// TODO: Make this a proper color
     pub background: Option<Color>,
     pub paddings: FigurePadding,
     pub spacings: FigureSpacing,
@@ -12,6 +11,7 @@ pub struct RenderOptions {
     pub footer: FooterOptions,
     pub wave_dimensions: SignalOptions,
     pub group_indicator_dimensions: GroupIndicatorDimension,
+    pub edges: EdgeOptions,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +60,21 @@ pub struct FooterOptions {
     pub cycle_marker_fontsize: u32,
 }
 
+#[derive(Debug, Clone)]
+pub struct EdgeOptions {
+    pub node_font_size: u32,
+    pub node_text_color: Color,
+    pub node_background_color: Color,
+
+    pub edge_text_font_size: u32,
+    pub edge_text_color: Color,
+    pub edge_text_background_color: Color,
+
+    pub edge_color: Color,
+    pub edge_arrow_color: Color,
+    pub edge_arrow_size: u32,
+}
+
 impl Default for HeaderOptions {
     fn default() -> Self {
         Self {
@@ -94,6 +109,24 @@ impl Default for GroupIndicatorDimension {
     }
 }
 
+impl Default for EdgeOptions {
+    fn default() -> Self {
+        Self {
+            node_font_size: 14,
+            node_text_color: Color::BLACK,
+            node_background_color: Color::WHITE,
+
+            edge_text_font_size: 14,
+            edge_text_color: Color::BLACK,
+            edge_text_background_color: Color::WHITE,
+
+            edge_color: Color { red: 0, green: 0, blue: 255 },
+            edge_arrow_color: Color { red: 0, green: 0, blue: 255 },
+            edge_arrow_size: 8,
+        }
+    }
+}
+
 impl Default for RenderOptions {
     fn default() -> Self {
         Self {
@@ -105,6 +138,7 @@ impl Default for RenderOptions {
             footer: FooterOptions::default(),
             wave_dimensions: SignalOptions::default(),
             group_indicator_dimensions: GroupIndicatorDimension::default(),
+            edges: EdgeOptions::default(),
         }
     }
 }

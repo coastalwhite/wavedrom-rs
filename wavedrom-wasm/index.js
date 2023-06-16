@@ -81,6 +81,18 @@ const PARAMETERS = [
 	['footer-height', 32],
 	['bottom-cycle-marker-height', 33],
 	['bottom-cycle-marker-fontsize', 34],
+
+	['edge-node-fontsize', 35],
+    ['edge-node-text-color', 36,  serialize_color, deserialize_color],
+    ['edge-node-background-color', 37,  serialize_color, deserialize_color],
+
+	['edge-text-fontsize', 38],
+    ['edge-text-color', 39,  serialize_color, deserialize_color],
+    ['edge-text-background-color', 40,  serialize_color, deserialize_color],
+
+    ['edge-color', 41,  serialize_color, deserialize_color],
+    ['edge-arrow-color', 42,  serialize_color, deserialize_color],
+	['edge-arrow-size', 43],
 ];
 
 document.getElementById('input').value = `

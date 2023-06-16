@@ -80,8 +80,8 @@ parameters![
     FontSize[font_size],
     1,
     Background[background],
-    parse_opt_background,
-    serialize_opt_background,
+    parse_opt_color,
+    serialize_opt_color,
     2,
     SignalHeight[wave_dimensions.signal_height][u16],
     3,
@@ -92,36 +92,36 @@ parameters![
     MarkerFontSize[wave_dimensions.marker_font_size],
     6,
     BackgroundBox2[wave_dimensions.backgrounds[0]],
-    parse_background,
-    serialize_background,
+    parse_color,
+    serialize_color,
     7,
     BackgroundBox3[wave_dimensions.backgrounds[1]],
-    parse_background,
-    serialize_background,
+    parse_color,
+    serialize_color,
     8,
     BackgroundBox4[wave_dimensions.backgrounds[2]],
-    parse_background,
-    serialize_background,
+    parse_color,
+    serialize_color,
     9,
     BackgroundBox5[wave_dimensions.backgrounds[3]],
-    parse_background,
-    serialize_background,
+    parse_color,
+    serialize_color,
     10,
     BackgroundBox6[wave_dimensions.backgrounds[4]],
-    parse_background,
-    serialize_background,
+    parse_color,
+    serialize_color,
     11,
     BackgroundBox7[wave_dimensions.backgrounds[5]],
-    parse_background,
-    serialize_background,
+    parse_color,
+    serialize_color,
     12,
     BackgroundBox8[wave_dimensions.backgrounds[6]],
-    parse_background,
-    serialize_background,
+    parse_color,
+    serialize_color,
     13,
     BackgroundBox9[wave_dimensions.backgrounds[7]],
-    parse_background,
-    serialize_background,
+    parse_color,
+    serialize_color,
     14,
     PaddingFigureTop[paddings.figure_top],
     15,
@@ -164,36 +164,69 @@ parameters![
     BottomCycleMarkerHeight[footer.cycle_marker_height],
     34,
     BottomCycleMarkerFontSize[footer.cycle_marker_fontsize],
+
+    35,
+    EdgeNodeFontSize[edges.node_font_size],
+    36,
+    EdgeNodeTextColor[edges.node_text_color],
+    parse_color,
+    serialize_color,
+    37,
+    EdgeNodeBackgroundColor[edges.node_background_color],
+    parse_color,
+    serialize_color,
+
+    38,
+    EdgeTextFontSize[edges.edge_text_font_size],
+    39,
+    EdgeTextColor[edges.edge_text_color],
+    parse_color,
+    serialize_color,
+    40,
+    EdgeTextBackgroundColor[edges.edge_text_background_color],
+    parse_color,
+    serialize_color,
+
+    41,
+    EdgeColor[edges.edge_color],
+    parse_color,
+    serialize_color,
+    42,
+    EdgeArrowColor[edges.edge_arrow_color],
+    parse_color,
+    serialize_color,
+    43,
+    EdgeArrowSize[edges.edge_arrow_size],
 ];
 
-fn parse_background(value: u32) -> Color {
+fn parse_color(value: u32) -> Color {
     Color {
         red: ((value & 0x00FF_0000) >> 16) as u8,
         green: ((value & 0x0000_FF00) >> 8) as u8,
         blue: ((value & 0x0000_00FF) >> 0) as u8,
     }
 }
-fn parse_opt_background(value: u32) -> Option<Color> {
+fn parse_opt_color(value: u32) -> Option<Color> {
     if value & 0xFF00_0000 == 0 {
         return None;
     }
 
-    Some(parse_background(value))
+    Some(parse_color(value))
 }
 
-fn serialize_background(color: &Color) -> u32 {
+fn serialize_color(color: &Color) -> u32 {
     return (0xFF << 24)
         | ((color.red as u32) << 16)
         | ((color.green as u32) << 8)
         | (color.blue as u32);
 }
 
-fn serialize_opt_background(color: &Option<Color>) -> u32 {
+fn serialize_opt_color(color: &Option<Color>) -> u32 {
     let Some(color) = color else {
         return 0;
     };
 
-    serialize_background(color)
+    serialize_color(color)
 }
 
 static mut RENDER_OPTIONS: Option<Mutex<RenderOptions>> = None;

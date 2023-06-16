@@ -1,13 +1,12 @@
-use std::cmp::Ordering;
 use std::fmt::Display;
 use std::io;
 
 use crate::edges::LineEdge;
-use crate::{EdgeArrowType, EdgeVariant, SharpEdgeVariant, SplineEdgeVariant};
+use crate::{Color, EdgeArrowType, EdgeVariant, SharpEdgeVariant, SplineEdgeVariant};
 
 use super::dimensions::SvgDimensions;
 use super::options::RenderOptions;
-use super::{Font, escape_str};
+use super::{escape_str, Font};
 
 /// A f64 type that automatically rounds when formatting
 struct SVGF64(pub f64);
@@ -38,12 +37,8 @@ pub fn write_line_edge(
     options: &RenderOptions,
     font: &Font,
 ) -> io::Result<(f64, f64)> {
-    // 1. Calculate Start and End places
-    // 2. Draw Text Markers
-    // 3. Draw Line Edge
-    // 4. Draw Arrows
-
     let wave_dimensions = &options.wave_dimensions;
+    let edge_options = &options.edges;
 
     let from = edge.from();
     let to = edge.to();
@@ -394,7 +389,8 @@ pub fn write_line_edge(
 
     write!(
         writer,
-        r##"" fill="none" stroke="#000" stroke-width="1"/>"##
+        r##"" fill="none" stroke="{color}" stroke-width="1"/>"##,
+        color = edge_options.edge_color,
     )?;
 
     write_edge_arrow_heads(
@@ -404,6 +400,8 @@ pub fn write_line_edge(
         start.dir,
         end.origin,
         end.dir,
+        edge_options.edge_arrow_size,
+        edge_options.edge_arrow_color,
     )?;
 
     write!(writer, "</g>")?;
@@ -420,6 +418,7 @@ pub fn write_line_edge_markers(
     font: &Font,
 ) -> io::Result<()> {
     let wave_dimensions = &options.wave_dimensions;
+    let edge_options = &options.edges;
 
     let from = edge.from();
     let to = edge.to();
@@ -442,7 +441,9 @@ pub fn write_line_edge_markers(
             writer,
             (f64::from(from_x), f64::from(from_y)),
             &c.to_string(),
-            14,
+            edge_options.node_font_size,
+            edge_options.node_text_color,
+            edge_options.node_background_color,
             font,
         )?;
     }
@@ -452,13 +453,23 @@ pub fn write_line_edge_markers(
             writer,
             (f64::from(to_x), f64::from(to_y)),
             &c.to_string(),
-            14,
+            edge_options.node_font_size,
+            edge_options.node_text_color,
+            edge_options.node_background_color,
             font,
         )?;
     }
 
     if let Some(text) = edge.text() {
-        write_edge_text(writer, (middle_x, middle_y), text, 14, font)?;
+        write_edge_text(
+            writer,
+            (middle_x, middle_y),
+            text,
+            edge_options.edge_text_font_size,
+            edge_options.edge_text_color,
+            edge_options.edge_text_background_color,
+            font,
+        )?;
     }
 
     Ok(())
@@ -571,6 +582,8 @@ pub fn write_edge_text(
     at: (f64, f64),
     text: &str,
     font_size: u32,
+    text_color: Color,
+    background_color: Color,
     font: &Font,
 ) -> io::Result<()> {
     let width = font.get_text_width(text, font_size);
@@ -583,7 +596,7 @@ pub fn write_edge_text(
 
     write!(
         writer,
-        r##"<g><rect x="{rect_x}" y="{rect_y}" width="{width}" height="{font_size}" stroke="none" fill="#fff"/><text x="{text_x}" y="{text_y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="14" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
+        r##"<g><rect x="{rect_x}" y="{rect_y}" width="{width}" height="{font_size}" stroke="none" fill="{background_color}"/><text x="{text_x}" y="{text_y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0" fill="{text_color}"><tspan>{text}</tspan></text></g>"##,
         text_x = at.0,
         text_y = at.1,
         text = escape_str(text),
@@ -596,18 +609,17 @@ fn write_edge_arrow_head_path(
     writer: &mut impl io::Write,
     at: (f64, f64),
     dir: (f64, f64),
+    size: u32,
 ) -> io::Result<()> {
-    const ARROW_SIZE: u32 = 8;
-
-    let Some(end) = offset_in_dir(at, dir, ARROW_SIZE) else {
+    let Some(end) = offset_in_dir(at, dir, size) else {
         return Ok(());
     };
 
-    let Some(v1) = offset_in_dir(end, (-dir.1, dir.0), f64::from(ARROW_SIZE / 2)) else {
+    let Some(v1) = offset_in_dir(end, (-dir.1, dir.0), f64::from(size / 2)) else {
         return Ok(());
     };
 
-    let Some(v2) = offset_in_dir(end, (-dir.1, dir.0), -f64::from(ARROW_SIZE / 2)) else {
+    let Some(v2) = offset_in_dir(end, (-dir.1, dir.0), -f64::from(size / 2)) else {
         return Ok(());
     };
 
@@ -630,18 +642,20 @@ fn write_edge_arrow_heads(
     begin_dir: (f64, f64),
     end: (f64, f64),
     end_dir: (f64, f64),
+    arrow_size: u32,
+    arrow_color: Color,
 ) -> io::Result<()> {
     write!(writer, r#"<path d=""#)?;
 
     if matches!(arrow_type, EdgeArrowType::Start | EdgeArrowType::Both) {
-        write_edge_arrow_head_path(writer, begin, begin_dir)?;
+        write_edge_arrow_head_path(writer, begin, begin_dir, arrow_size)?;
     }
 
     if matches!(arrow_type, EdgeArrowType::End | EdgeArrowType::Both) {
-        write_edge_arrow_head_path(writer, end, (-end_dir.0, -end_dir.1))?;
+        write_edge_arrow_head_path(writer, end, (-end_dir.0, -end_dir.1), arrow_size)?;
     }
 
-    write!(writer, r##"" fill="#000" stroke="none"/>"##)?;
+    write!(writer, r##"" fill="{arrow_color}" stroke="none"/>"##)?;
 
     Ok(())
 }
