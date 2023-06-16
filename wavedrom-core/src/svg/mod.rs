@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::io;
 
 use crate::path::{PathCommand, PathSegmentBackground};
-use crate::{ClockEdge, SignalOptions};
+use crate::{ClockEdge, Color, SignalOptions};
 
 use self::edges::{write_edge_text, write_line_edge, write_line_edge_markers};
 
@@ -100,12 +100,12 @@ fn gap(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
     )
 }
 
-fn posedge_arrow(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
+fn posedge_arrow(writer: &mut impl io::Write, wave_height: u16, color: Color) -> io::Result<()> {
     let scale = i32::from(wave_height / 6);
 
     write!(
         writer,
-        r##"<path d="M{x1},{y1}L{x2},{y2}L{x3},{y3}H{hback}z" fill="#000" stroke="none"/>"##,
+        r##"<path d="M{x1},{y1}L{x2},{y2}L{x3},{y3}H{hback}z" fill="{color}" stroke="none"/>"##,
         x1 = -scale,
         y1 = scale,
         x2 = 0,
@@ -116,12 +116,12 @@ fn posedge_arrow(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()
     )
 }
 
-fn negedge_arrow(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
+fn negedge_arrow(writer: &mut impl io::Write, wave_height: u16, color: Color) -> io::Result<()> {
     let scale = i32::from(wave_height / 6);
 
     write!(
         writer,
-        r##"<path d="M{x1},{y1}L{x2},{y2}L{x3},{y3}H{hback}z" fill="#000" stroke="none"/>"##,
+        r##"<path d="M{x1},{y1}L{x2},{y2}L{x3},{y3}H{hback}z" fill="{color}" stroke="none"/>"##,
         x1 = -scale,
         y1 = -scale,
         x2 = 0,
@@ -141,7 +141,6 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         options: &Self::Options,
     ) -> io::Result<()> {
         let RenderOptions {
-            font_size,
             background,
             paddings,
             spacings,
@@ -171,19 +170,40 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         if self.definitions.has_undefined {
             write!(
                 writer,
-                r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)"><line x1="0" y="0" x2="0" y2="10" stroke="#000" stroke-width="1"/></pattern>"##
+                r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)">"##,
+            )?;
+
+            if let Some(background) = wave_dimensions.undefined_background {
+                write!(
+                    writer,
+                    r##"<rect x="0" y="0" width="4" height="10" fill="{background}"/>"##
+                )?;
+            }
+
+            write!(
+                writer,
+                r##"<line x1="0" y="0" x2="0" y2="10" stroke="{color}" stroke-width="1"/></pattern>"##,
+                color = wave_dimensions.undefined_color
             )?;
         }
 
         if self.definitions.has_posedge_marker {
             write!(writer, r##"<g id="pei">"##)?;
-            posedge_arrow(writer, wave_dimensions.signal_height)?;
+            posedge_arrow(
+                writer,
+                wave_dimensions.signal_height,
+                wave_dimensions.path_color,
+            )?;
             write!(writer, r##"</g>"##)?;
         }
 
         if self.definitions.has_negedge_marker {
             write!(writer, r##"<g id="nei">"##)?;
-            negedge_arrow(writer, wave_dimensions.signal_height)?;
+            negedge_arrow(
+                writer,
+                wave_dimensions.signal_height,
+                wave_dimensions.path_color,
+            )?;
             write!(writer, r##"</g>"##)?;
         }
 
@@ -195,7 +215,8 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
         write!(
             writer,
-            r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g>"##,
+            r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="{color}"/></g>"##,
+            color = wave_dimensions.hint_line_color,
             schema_height = dims.schema_height(),
         )?;
         write!(writer, "</defs>")?;
@@ -211,9 +232,11 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         // Header Text
         if let Some(title) = self.header_text {
             let title_font_size = header.font_size;
+            let title_color = header.color;
+
             write!(
                 writer,
-                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{title_font_size}" letter-spacing="0"><tspan>{text}</tspan></text>"##,
+                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{title_font_size}" fill="{title_color}" letter-spacing="0"><tspan>{text}</tspan></text>"##,
                 x = dims.header_x() + dims.header_width() / 2,
                 y = dims.header_y() + dims.header_height() / 2,
                 text = escape_str(title),
@@ -226,6 +249,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             let every = cycle_marker.every();
 
             let marker_font_size = header.cycle_marker_fontsize;
+            let marker_color = header.cycle_marker_color;
             let end = start + self.num_cycles;
 
             if every != 0 {
@@ -233,7 +257,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 for offset in (start..end).step_by(every as usize) {
                     write!(
                         writer,
-                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{marker_font_size}" letter-spacing="0"><tspan>{offset}</tspan></text>"##,
+                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{marker_font_size}" fill="{marker_color}" letter-spacing="0"><tspan>{offset}</tspan></text>"##,
                         x = dims.schema_x()
                             + dims.cycle_width() * (offset - start)
                             + dims.cycle_width() / 2,
@@ -258,6 +282,9 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
         // Group Indicators
         if !self.group_markers.is_empty() {
+            let label_font_size = group_indicator_dimensions.label_fontsize;
+            let label_color = group_indicator_dimensions.label_color;
+
             write!(writer, "<g>")?;
             for group in self.group_markers.iter() {
                 if group.is_empty() {
@@ -294,11 +321,9 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 if let Some(label) = group.label() {
                     let x = x - group_indicator_dimensions.label_fontsize / 2;
 
-                    // let label_width = get_text_width(label, &face, 8);
                     write!(
                         writer,
-                        r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0" transform="rotate(270)"><tspan>{text}</tspan></text></g>"##,
-                        font_size = group_indicator_dimensions.label_fontsize,
+                        r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{label_font_size}" fill="{label_color}" letter-spacing="0" transform="rotate(270)"><tspan>{text}</tspan></text></g>"##,
                         y = y + height / 2,
                         text = escape_str(label),
                     )?;
@@ -306,7 +331,8 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
                 write!(
                     writer,
-                    r##"<path fill="none" d="M{x},{y}m{w},0c-3,0 -{w},1 -{w},{w}v{h}c0,3 1,{w} {w},{w}" stroke="#000"/>"##,
+                    r##"<path fill="none" d="M{x},{y}m{w},0c-3,0 -{w},1 -{w},{w}v{h}c0,3 1,{w} {w},{w}" stroke="{color}"/>"##,
+                    color = group_indicator_dimensions.color,
                     h = height - group_indicator_dimensions.width * 2,
                     w = group_indicator_dimensions.width,
                 )?;
@@ -332,10 +358,12 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             write!(writer, r##"<g transform="translate({x},{y})">"##)?;
 
             if !line.text.is_empty() {
+                let name_font_size = wave_dimensions.name_font_size;
+                let name_color = wave_dimensions.name_color;
+
                 write!(
                     writer,
-                    r##"<g transform="translate(0,{y})"><text dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
-                    font_size = font_size,
+                    r##"<g transform="translate(0,{y})"><text dominant-baseline="middle" font-family="{font_family}" font-size="{name_font_size}" fill="{name_color}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
                     y = wave_dimensions.signal_height / 2,
                     text = escape_str(line.text),
                 )?;
@@ -360,9 +388,11 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         // Footer Text
         if let Some(footer_text) = self.footer_text {
             let footer_font_size = footer.font_size;
+            let footer_color = footer.color;
+
             write!(
                 writer,
-                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{footer_font_size}" letter-spacing="0"><tspan>{text}</tspan></text>"##,
+                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{footer_font_size}" fill="{footer_color}" letter-spacing="0"><tspan>{text}</tspan></text>"##,
                 x = dims.footer_width() / 2,
                 y = dims.footer_y() + dims.footer_height() / 2,
                 text = escape_str(footer_text),
@@ -375,6 +405,8 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             let every = cycle_marker.every();
 
             let marker_font_size = footer.cycle_marker_fontsize;
+            let marker_color = footer.cycle_marker_color;
+
             let end = start + self.num_cycles;
 
             if every != 0 {
@@ -382,7 +414,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 for offset in (start..end).step_by(every as usize) {
                     write!(
                         writer,
-                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{marker_font_size}" letter-spacing="0"><tspan>{offset}</tspan></text>"##,
+                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{marker_font_size}" fill="{marker_color}" letter-spacing="0"><tspan>{offset}</tspan></text>"##,
                         x = dims.schema_x()
                             + dims.cycle_width() * (offset - start)
                             + dims.cycle_width() / 2,
@@ -537,15 +569,20 @@ fn write_signal(
                 }?
             }
         }
-        write!(writer, r##"" stroke-width="1" stroke="#000"/>"##)?;
+        write!(
+            writer,
+            r##"" stroke-width="1" stroke="{path_color}"/>"##,
+            path_color = options.path_color
+        )?;
 
         if let Some(marker_text) = segment.marker_text() {
             write!(
                 writer,
-                r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
+                r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" fill="{color}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
                 font_family = "Helvetica",
                 font_size = options.marker_font_size,
                 text = marker_text,
+                color = options.marker_color,
                 x = segment.x() + segment.width() / 2,
                 y = options.signal_height / 2,
             )?;

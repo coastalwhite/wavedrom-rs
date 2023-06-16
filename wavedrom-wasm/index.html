@@ -47,14 +47,10 @@ h-screen">
                         <h2 class="text-lg font-bold">Render Settings</h2>
                         <table class="w-full table-fixed">
                             <tr>
-                                <td>Font Size (px):</td>
-                                <td><input class="text-black" id="param:font-size" type="number" /></td>
-                            </tr>
-                            <tr>
                                 <td>Background:</td>
                                 <td>
                                     <input id="param:background-enabled" type="checkbox" />
-                                    <input class="text-black" id="param:background" type="color" />
+                                    <input id="param:background" type="color" />
                                 </td>
                             </tr>
                         </table>
@@ -62,6 +58,30 @@ h-screen">
                     <div class="w-full">
                         <h3 class="font-bold mt-4">Signal Options</h3>
                         <table class="w-full table-fixed">
+                            <tr>
+                                <td>Marker Font Size (px):</td>
+                                <td><input class="text-black" id="param:signal-marker-fontsize" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Marker Text Color:</td>
+                                <td><input id="param:signal-marker-color" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Name Font Size (px):</td>
+                                <td><input class="text-black" id="param:signal-name-fontsize" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Name Text Color:</td>
+                                <td><input id="param:signal-name-color" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Path Color:</td>
+                                <td><input id="param:signal-path-color" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Hint Line Color:</td>
+                                <td><input id="param:signal-hint-line-color" type="color" /></td>
+                            </tr>
                             <tr>
                                 <td>Signal Height (px):</td>
                                 <td><input class="text-black" id="param:signal-height" type="number" /></td>
@@ -75,8 +95,15 @@ h-screen">
                                 <td><input class="text-black" id="param:transition-offset" type="number" /></td>
                             </tr>
                             <tr>
-                                <td>Marker Font Size (px):</td>
-                                <td><input class="text-black" id="param:marker-font-size" type="number" /></td>
+                                <td>Undefined Line Color:</td>
+                                <td><input id="param:signal-undefined-color" type="color" /></td>
+                            </tr>
+                            <tr>
+                                <td>Undefined Background Color:</td>
+                                <td>
+                                    <input id="param:signal-undefined-background-color-enabled" type="checkbox" />
+                                    <input id="param:signal-undefined-background-color" type="color" />
+                                </td>
                             </tr>
                             <tr>
                                 <td>Background 2:</td>
@@ -175,12 +202,20 @@ h-screen">
                                 <td><input class="text-black" id="param:group-indicator-spacing" type="number" /></td>
                             </tr>
                             <tr>
+                                <td>Indicator Color:</td>
+                                <td><input id="param:group-indicator-color" type="color" /></td>
+                            </tr>
+                            <tr>
                                 <td>Label Font Size</td>
                                 <td><input class="text-black" id="param:group-indicator-label-fontsize" type="number" /></td>
                             </tr>
                             <tr>
                                 <td>Label Spacing:</td>
                                 <td><input class="text-black" id="param:group-indicator-label-spacing" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Label Color:</td>
+                                <td><input id="param:group-indicator-label-color" type="color" /></td>
                             </tr>
                         </table>
                     </div>
@@ -196,12 +231,20 @@ h-screen">
                                 <td><input class="text-black" id="param:header-height" type="number" /></td>
                             </tr>
                             <tr>
+                                <td>Color:</td>
+                                <td><input id="param:header-color" type="color" /></td>
+                            </tr>
+                            <tr>
                                 <td>Cycle Enumeration Marker Font Size</td>
                                 <td><input class="text-black" id="param:top-cycle-marker-fontsize" type="number" /></td>
                             </tr>
                             <tr>
                                 <td>Cycle Enumeration Marker Height</td>
                                 <td><input class="text-black" id="param:top-cycle-marker-height" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Cycle Enumeration Marker Color:</td>
+                                <td><input id="param:top-cycle-marker-color" type="color" /></td>
                             </tr>
                         </table>
                     </div>
@@ -217,12 +260,20 @@ h-screen">
                                 <td><input class="text-black" id="param:footer-height" type="number" /></td>
                             </tr>
                             <tr>
+                                <td>Color:</td>
+                                <td><input id="param:footer-color" type="color" /></td>
+                            </tr>
+                            <tr>
                                 <td>Cycle Enumeration Marker Font Size</td>
                                 <td><input class="text-black" id="param:bottom-cycle-marker-fontsize" type="number" /></td>
                             </tr>
                             <tr>
                                 <td>Cycle Enumeration Marker Height</td>
                                 <td><input class="text-black" id="param:bottom-cycle-marker-height" type="number" /></td>
+                            </tr>
+                            <tr>
+                                <td>Cycle Enumeration Marker Color:</td>
+                                <td><input id="param:bottom-cycle-marker-color" type="color" /></td>
                             </tr>
                         </table>
                     </div>

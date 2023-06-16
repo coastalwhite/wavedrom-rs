@@ -21,7 +21,8 @@ macro_rules! surround_fn {
 }
 
 macro_rules! parameters {
-    ($($idx:literal, $name:ident [$($property:ident$([$prop_idx:literal])?).+] $([$as:ty])? $(, $deserialize_fn:ident, $serialize_fn:ident)?),+ $(,)?) => {
+    ($($name:ident [$($property:ident$([$prop_idx:literal])?).+] $([$as:ty])? $({$deserialize_fn:ident, $serialize_fn:ident})?),+ $(,)?) => {
+        #[repr(u32)]
         enum RenderParameter {
         $(
             $name,
@@ -32,7 +33,7 @@ macro_rules! parameters {
             fn from_u32(n: u32) -> Option<Self> {
                 Some(match n {
                     $(
-                    $idx => Self::$name,
+                    x if x == Self::$name as u32 => Self::$name,
                     )+
                     _ => return None,
                 })
@@ -76,126 +77,79 @@ macro_rules! parameters {
 }
 
 parameters![
-    0,
-    FontSize[font_size],
-    1,
-    Background[background],
-    parse_opt_color,
-    serialize_opt_color,
-    2,
+    Background[background]{parse_opt_color, serialize_opt_color},
+
+    SignalMarkerFontSize[wave_dimensions.marker_font_size],
+    SignalMarkerColor[wave_dimensions.marker_color]{parse_color, serialize_color},
+
+    SignalNameFontSize[wave_dimensions.name_font_size],
+    SignalNameColor[wave_dimensions.name_color]{parse_color, serialize_color},
+
+    SignalPathColor[wave_dimensions.path_color]{parse_color, serialize_color},
+
+    SignalHintLineColor[wave_dimensions.hint_line_color]{parse_color, serialize_color},
+
     SignalHeight[wave_dimensions.signal_height][u16],
-    3,
     CycleWidth[wave_dimensions.cycle_width][u16],
-    4,
     TransitionOffset[wave_dimensions.transition_offset][u16],
-    5,
-    MarkerFontSize[wave_dimensions.marker_font_size],
-    6,
-    BackgroundBox2[wave_dimensions.backgrounds[0]],
-    parse_color,
-    serialize_color,
-    7,
-    BackgroundBox3[wave_dimensions.backgrounds[1]],
-    parse_color,
-    serialize_color,
-    8,
-    BackgroundBox4[wave_dimensions.backgrounds[2]],
-    parse_color,
-    serialize_color,
-    9,
-    BackgroundBox5[wave_dimensions.backgrounds[3]],
-    parse_color,
-    serialize_color,
-    10,
-    BackgroundBox6[wave_dimensions.backgrounds[4]],
-    parse_color,
-    serialize_color,
-    11,
-    BackgroundBox7[wave_dimensions.backgrounds[5]],
-    parse_color,
-    serialize_color,
-    12,
-    BackgroundBox8[wave_dimensions.backgrounds[6]],
-    parse_color,
-    serialize_color,
-    13,
-    BackgroundBox9[wave_dimensions.backgrounds[7]],
-    parse_color,
-    serialize_color,
-    14,
+    
+    SignalUndefinedColor[wave_dimensions.undefined_color]{parse_color, serialize_color},
+    SignalUndefinedBackgroundColor[wave_dimensions.undefined_background]{parse_opt_color, serialize_opt_color},
+
+    BackgroundBox2[wave_dimensions.backgrounds[0]]{parse_color, serialize_color},
+    BackgroundBox3[wave_dimensions.backgrounds[1]]{parse_color, serialize_color},
+    BackgroundBox4[wave_dimensions.backgrounds[2]]{parse_color, serialize_color},
+    BackgroundBox5[wave_dimensions.backgrounds[3]]{parse_color, serialize_color},
+    BackgroundBox6[wave_dimensions.backgrounds[4]]{parse_color, serialize_color},
+    BackgroundBox7[wave_dimensions.backgrounds[5]]{parse_color, serialize_color},
+    BackgroundBox8[wave_dimensions.backgrounds[6]]{parse_color, serialize_color},
+    BackgroundBox9[wave_dimensions.backgrounds[7]]{parse_color, serialize_color},
+
     PaddingFigureTop[paddings.figure_top],
-    15,
     PaddingFigureBottom[paddings.figure_bottom],
-    16,
     PaddingFigureLeft[paddings.figure_left],
-    17,
     PaddingFigureRight[paddings.figure_right],
-    18,
     PaddingSchemaTop[paddings.schema_top],
-    19,
     PaddingSchemaBottom[paddings.schema_bottom],
-    20,
+
     SpacingTextboxToSchema[spacings.textbox_to_schema],
-    21,
     SpacingGroupboxToTextbox[spacings.groupbox_to_textbox],
-    22,
     SpacingLineToLine[spacings.line_to_line],
-    23,
+
     GroupIndicatorWidth[group_indicator_dimensions.width],
-    24,
     GroupIndicatorSpacing[group_indicator_dimensions.spacing],
-    25,
+    GroupIndicatorColor[group_indicator_dimensions.color]{parse_color, serialize_color},
+
     GroupIndicatorLabelSpacing[group_indicator_dimensions.label_spacing],
-    26,
     GroupIndicatorLabelFontSize[group_indicator_dimensions.label_fontsize],
-    27,
+    GroupIndicatorLabelColor[group_indicator_dimensions.label_color]{parse_color, serialize_color},
+
     HeaderFontSize[header.font_size],
-    28,
     HeaderHeight[header.height],
-    29,
+    HeaderColor[header.color]{parse_color, serialize_color},
+
     TopCycleMarkerHeight[header.cycle_marker_height],
-    30,
     TopCycleMarkerFontSize[header.cycle_marker_fontsize],
-    31,
+    TopCycleMarkerColor[header.cycle_marker_color]{parse_color, serialize_color},
+
     FooterFontSize[footer.font_size],
-    32,
     FooterHeight[footer.height],
-    33,
+    FooterColor[footer.color]{parse_color, serialize_color},
+
     BottomCycleMarkerHeight[footer.cycle_marker_height],
-    34,
     BottomCycleMarkerFontSize[footer.cycle_marker_fontsize],
+    BottomCycleMarkerColor[footer.cycle_marker_color]{parse_color, serialize_color},
 
-    35,
     EdgeNodeFontSize[edges.node_font_size],
-    36,
-    EdgeNodeTextColor[edges.node_text_color],
-    parse_color,
-    serialize_color,
-    37,
-    EdgeNodeBackgroundColor[edges.node_background_color],
-    parse_color,
-    serialize_color,
+    EdgeNodeTextColor[edges.node_text_color]{ parse_color, serialize_color },
+    EdgeNodeBackgroundColor[edges.node_background_color]{ parse_color, serialize_color },
 
-    38,
     EdgeTextFontSize[edges.edge_text_font_size],
-    39,
-    EdgeTextColor[edges.edge_text_color],
-    parse_color,
-    serialize_color,
-    40,
-    EdgeTextBackgroundColor[edges.edge_text_background_color],
-    parse_color,
-    serialize_color,
+    EdgeTextColor[edges.edge_text_color]{ parse_color, serialize_color },
+    EdgeTextBackgroundColor[edges.edge_text_background_color]{ parse_color, serialize_color },
 
-    41,
-    EdgeColor[edges.edge_color],
-    parse_color,
-    serialize_color,
-    42,
-    EdgeArrowColor[edges.edge_arrow_color],
-    parse_color,
-    serialize_color,
-    43,
+    EdgeColor[edges.edge_color]{ parse_color, serialize_color },
+    EdgeArrowColor[edges.edge_arrow_color]{ parse_color, serialize_color },
     EdgeArrowSize[edges.edge_arrow_size],
 ];
 

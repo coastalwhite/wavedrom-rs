@@ -95,10 +95,21 @@ pub struct PathData {
 #[derive(Debug, Clone)]
 pub struct SignalOptions {
     pub marker_font_size: u32,
+    pub marker_color: Color,
+
+    pub name_font_size: u32,
+    pub name_color: Color,
+
+    pub path_color: Color,
+
+    pub hint_line_color: Color,
 
     pub signal_height: u16,
     pub cycle_width: u16,
     pub transition_offset: u16,
+
+    pub undefined_color: Color,
+    pub undefined_background: Option<Color>,
 
     pub backgrounds: [Color; 8],
 }
@@ -107,10 +118,25 @@ impl Default for SignalOptions {
     fn default() -> Self {
         Self {
             marker_font_size: 14,
+            marker_color: Color::BLACK,
+
+            name_font_size: 14,
+            name_color: Color::BLACK,
+
+            path_color: Color::BLACK,
+
+            hint_line_color: Color {
+                red: 0xCC,
+                green: 0xCC,
+                blue: 0xCC,
+            },
 
             signal_height: 24,
             cycle_width: 48,
             transition_offset: 4,
+
+            undefined_color: Color::BLACK,
+            undefined_background: None,
 
             backgrounds: [
                 Color {
@@ -868,7 +894,7 @@ impl<'a> SignalSegmentIter<'a> {
                     self.negedge_marker();
                 }
 
-                self.forward.curve(t, 0, t, -h, 2*t, -h);
+                self.forward.curve(t, 0, t, -h, 2 * t, -h);
             }
             (HighUnmarked | HighMarked, Bottom) => {
                 if matches!(next, HighMarked) {
@@ -884,21 +910,21 @@ impl<'a> SignalSegmentIter<'a> {
                     self.posedge_marker();
                 }
 
-                self.forward.curve(t, 0, t, h, 2*t, h);
+                self.forward.curve(t, 0, t, h, 2 * t, h);
             }
             (HighUnmarked | HighMarked, Middle) => {
                 if matches!(next, HighMarked) {
                     self.posedge_marker();
                 }
 
-                self.forward.curve(0, t, t, h / 2, 2*t, h / 2);
+                self.forward.curve(0, t, t, h / 2, 2 * t, h / 2);
             }
             (LowUnmarked | LowMarked, Middle) => {
                 if matches!(next, LowMarked) {
                     self.negedge_marker();
                 }
 
-                self.forward.curve(0, -t, t, -h / 2, 2*t, -h / 2);
+                self.forward.curve(0, -t, t, -h / 2, 2 * t, -h / 2);
             }
         }
 

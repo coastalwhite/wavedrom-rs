@@ -15,7 +15,7 @@ impl<'a> SvgDimensions<'a> {
             figure
                 .lines
                 .iter()
-                .map(|line| font.get_text_width(line.text, options.font_size))
+                .map(|line| font.get_text_width(line.text, options.wave_dimensions.name_font_size))
                 .max()
                 .unwrap_or_default()
         });

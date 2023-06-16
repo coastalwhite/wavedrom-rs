@@ -3,7 +3,6 @@ use crate::path::SignalOptions;
 
 #[derive(Debug, Clone)]
 pub struct RenderOptions {
-    pub font_size: u32,
     pub background: Option<Color>,
     pub paddings: FigurePadding,
     pub spacings: FigureSpacing,
@@ -35,29 +34,34 @@ pub struct FigureSpacing {
 #[derive(Debug, Clone)]
 pub struct GroupIndicatorDimension {
     pub width: u32,
-
     pub spacing: u32,
+    pub color: Color,
 
     pub label_spacing: u32,
     pub label_fontsize: u32,
+    pub label_color: Color,
 }
 
 #[derive(Debug, Clone)]
 pub struct HeaderOptions {
     pub font_size: u32,
     pub height: u32,
+    pub color: Color,
 
     pub cycle_marker_height: u32,
     pub cycle_marker_fontsize: u32,
+    pub cycle_marker_color: Color,
 }
 
 #[derive(Debug, Clone)]
 pub struct FooterOptions {
     pub font_size: u32,
     pub height: u32,
+    pub color: Color,
 
     pub cycle_marker_height: u32,
     pub cycle_marker_fontsize: u32,
+    pub cycle_marker_color: Color,
 }
 
 #[derive(Debug, Clone)]
@@ -80,8 +84,11 @@ impl Default for HeaderOptions {
         Self {
             font_size: 24,
             height: 32,
+            color: Color::BLACK,
+
             cycle_marker_height: 12,
             cycle_marker_fontsize: 12,
+            cycle_marker_color: Color::BLACK,
         }
     }
 }
@@ -91,8 +98,11 @@ impl Default for FooterOptions {
         Self {
             font_size: 24,
             height: 32,
+            color: Color::BLACK,
+
             cycle_marker_height: 12,
             cycle_marker_fontsize: 12,
+            cycle_marker_color: Color::BLACK,
         }
     }
 }
@@ -103,8 +113,11 @@ impl Default for GroupIndicatorDimension {
             width: 4,
             spacing: 4,
 
+            color: Color::BLACK,
+
             label_spacing: 4,
             label_fontsize: 14,
+            label_color: Color::BLACK,
         }
     }
 }
@@ -130,7 +143,6 @@ impl Default for EdgeOptions {
 impl Default for RenderOptions {
     fn default() -> Self {
         Self {
-            font_size: 14,
             background: None,
             paddings: FigurePadding::default(),
             spacings: FigureSpacing::default(),
