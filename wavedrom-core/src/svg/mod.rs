@@ -244,7 +244,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         }
 
         // Cycle Hint Lines
-        write!(writer, r##"<g>"##)?;
+        write!(writer, "<g>")?;
         for i in 0..=self.num_cycles {
             write!(
                 writer,
@@ -253,63 +253,65 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 y = dims.schema_y(),
             )?;
         }
-        write!(writer, r##"</g>"##)?;
+        write!(writer, "</g>")?;
 
         // Group Indicators
-        write!(writer, r##"<g>"##)?;
-        for group in self.group_markers.iter() {
-            if group.is_empty() {
-                continue;
-            }
-
-            let depth = group.depth();
-            let num_labels_below = self.amount_labels_below(depth);
-
-            let height = group.len() * u32::from(wave_dimensions.signal_height)
-                + (group.len() - 1) * spacings.line_to_line;
-            let x = dims.grouping_x()
-                + if num_labels_below == 0 {
-                    0
-                } else {
-                    num_labels_below * group_indicator_dimensions.label_height()
-                        - group_indicator_dimensions.label_spacing
+        if !self.group_markers.is_empty() {
+            write!(writer, "<g>")?;
+            for group in self.group_markers.iter() {
+                if group.is_empty() {
+                    continue;
                 }
-                + if depth == 0 {
-                    0
-                } else {
-                    depth * group_indicator_dimensions.width
-                        + (depth - 1) * group_indicator_dimensions.spacing
-                };
-            let y = dims.schema_y()
-                + paddings.schema_top
-                + if group.start() == 0 {
-                    0
-                } else {
-                    group.start() * u32::from(wave_dimensions.signal_height)
-                        + group.start() * spacings.line_to_line
-                };
 
-            if let Some(label) = group.label() {
-                let x = x - group_indicator_dimensions.label_fontsize / 2;
+                let depth = group.depth();
+                let num_labels_below = self.amount_labels_below(depth);
 
-                // let label_width = get_text_width(label, &face, 8);
+                let height = group.len() * u32::from(wave_dimensions.signal_height)
+                    + (group.len() - 1) * spacings.line_to_line;
+                let x = dims.grouping_x()
+                    + if num_labels_below == 0 {
+                        0
+                    } else {
+                        num_labels_below * group_indicator_dimensions.label_height()
+                            - group_indicator_dimensions.label_spacing
+                    }
+                    + if depth == 0 {
+                        0
+                    } else {
+                        depth * group_indicator_dimensions.width
+                            + (depth - 1) * group_indicator_dimensions.spacing
+                    };
+                let y = dims.schema_y()
+                    + paddings.schema_top
+                    + if group.start() == 0 {
+                        0
+                    } else {
+                        group.start() * u32::from(wave_dimensions.signal_height)
+                            + group.start() * spacings.line_to_line
+                    };
+
+                if let Some(label) = group.label() {
+                    let x = x - group_indicator_dimensions.label_fontsize / 2;
+
+                    // let label_width = get_text_width(label, &face, 8);
+                    write!(
+                        writer,
+                        r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0" transform="rotate(270)"><tspan>{text}</tspan></text></g>"##,
+                        font_size = group_indicator_dimensions.label_fontsize,
+                        y = y + height / 2,
+                        text = escape_str(label),
+                    )?;
+                }
+
                 write!(
                     writer,
-                    r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" letter-spacing="0" transform="rotate(270)"><tspan>{text}</tspan></text></g>"##,
-                    font_size = group_indicator_dimensions.label_fontsize,
-                    y = y + height / 2,
-                    text = escape_str(label),
+                    r##"<path fill="none" d="M{x},{y}m{w},0c-3,0 -{w},1 -{w},{w}v{h}c0,3 1,{w} {w},{w}" stroke="#000"/>"##,
+                    h = height - group_indicator_dimensions.width * 2,
+                    w = group_indicator_dimensions.width,
                 )?;
             }
-
-            write!(
-                writer,
-                r##"<path fill="none" d="M{x},{y}m{w},0c-3,0 -{w},1 -{w},{w}v{h}c0,3 1,{w} {w},{w}" stroke="#000"/>"##,
-                h = height - group_indicator_dimensions.width * 2,
-                w = group_indicator_dimensions.width,
-            )?;
+            write!(writer, "</g>")?;
         }
-        write!(writer, r##"</g>"##)?;
 
         // Signal Lines
         write!(writer, "<g>")?;
@@ -390,6 +392,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             }
         }
 
+        // Edge markers
         if !self.line_edge_markers.lines().is_empty() {
             let mut middles = Vec::with_capacity(self.line_edge_markers.lines().len());
 
@@ -403,7 +406,6 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                     &font,
                 )?);
             }
-            write!(writer, "</g>")?;
 
             for (line_edge, middle) in self
                 .line_edge_markers
@@ -413,19 +415,25 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             {
                 write_line_edge_markers(writer, line_edge.clone(), middle, &dims, options, &font)?;
             }
+            write!(writer, "</g>")?;
         }
 
-        for text_node in self.line_edge_markers.text_nodes() {
-            let text = text_node.text().to_string();
-            let x = dims.schema_x()
-                + text_node
-                    .at()
-                    .x()
-                    .width_offset(wave_dimensions.cycle_width.into());
-            let y =
-                dims.signal_top(text_node.at().y()) + u32::from(wave_dimensions.signal_height / 2);
+        // Edge separate text markers
+        if !self.line_edge_markers.text_nodes().is_empty() {
+            write!(writer, "<g>")?;
+            for text_node in self.line_edge_markers.text_nodes() {
+                let text = text_node.text().to_string();
+                let x = dims.schema_x()
+                    + text_node
+                        .at()
+                        .x()
+                        .width_offset(wave_dimensions.cycle_width.into());
+                let y = dims.signal_top(text_node.at().y())
+                    + u32::from(wave_dimensions.signal_height / 2);
 
-            write_edge_text(writer, (x.into(), y.into()), &text, 14, &font)?;
+                write_edge_text(writer, (x.into(), y.into()), &text, 14, &font)?;
+            }
+            write!(writer, "</g>")?;
         }
 
         write!(writer, "</svg>")?;

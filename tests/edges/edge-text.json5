@@ -3,5 +3,5 @@
         { wave: "=....", node: "a...." },
         { wave: "=....", node: "....b" },
     ],
-    edge: [ "a<-~>b xyz", "b<~->a abc" ],
+    edge: [ "a<-~>b xyz", "a<~->b abc" ],
 }
