@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 use std::io;
 
-use crate::path::{PathCommand, PathSegmentBackground};
-use crate::{ClockEdge, Color, SignalOptions};
+use crate::path::{PathAssembleOptions, PathCommand, PathSegmentBackground};
+use crate::{ClockEdge, Color};
 
 use self::edges::{write_edge_text, write_line_edge, write_line_edge_markers};
+use self::options::SignalOptions;
 
 use super::path::AssembledSignalPath;
 use super::AssembledFigure;
@@ -100,8 +101,8 @@ fn gap(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
     )
 }
 
-fn posedge_arrow(writer: &mut impl io::Write, wave_height: u16, color: Color) -> io::Result<()> {
-    let scale = i32::from(wave_height / 6);
+fn posedge_arrow(writer: &mut impl io::Write, wave_height: u32, color: Color) -> io::Result<()> {
+    let scale = i64::from(wave_height / 6);
 
     write!(
         writer,
@@ -116,8 +117,8 @@ fn posedge_arrow(writer: &mut impl io::Write, wave_height: u16, color: Color) ->
     )
 }
 
-fn negedge_arrow(writer: &mut impl io::Write, wave_height: u16, color: Color) -> io::Result<()> {
-    let scale = i32::from(wave_height / 6);
+fn negedge_arrow(writer: &mut impl io::Write, wave_height: u32, color: Color) -> io::Result<()> {
+    let scale = i64::from(wave_height / 6);
 
     write!(
         writer,
@@ -142,21 +143,30 @@ impl<'a> ToSvg for AssembledFigure<'a> {
     ) -> io::Result<()> {
         let RenderOptions {
             background,
-            paddings,
-            spacings,
-            wave_dimensions,
-            group_indicator_dimensions,
+            padding,
+            spacing,
+            signal,
+            group_indicator,
             header,
             footer,
-            edges,
+            edge,
         } = options;
+
+        let PathAssembleOptions {
+            signal_height,
+            cycle_width,
+            transition_offset: _,
+        } = self.path_assemble_options;
+
+        let signal_height = u32::from(signal_height);
+        let cycle_width = u32::from(cycle_width);
 
         let font = Font::default();
         let font_family = font
             .get_font_family_name()
             .unwrap_or_else(|| "helvetica".to_string());
 
-        let dims = SvgDimensions::new(self, font, options);
+        let dims = SvgDimensions::new(self, font, options, self.path_assemble_options);
 
         write!(
             writer,
@@ -173,7 +183,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)">"##,
             )?;
 
-            if let Some(background) = wave_dimensions.undefined_background {
+            if let Some(background) = signal.undefined_background {
                 write!(
                     writer,
                     r##"<rect x="0" y="0" width="4" height="10" fill="{background}"/>"##
@@ -183,40 +193,32 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             write!(
                 writer,
                 r##"<line x1="0" y="0" x2="0" y2="10" stroke="{color}" stroke-width="1"/></pattern>"##,
-                color = wave_dimensions.undefined_color
+                color = signal.undefined_color
             )?;
         }
 
         if self.definitions.has_posedge_marker {
             write!(writer, r##"<g id="pei">"##)?;
-            posedge_arrow(
-                writer,
-                wave_dimensions.signal_height,
-                wave_dimensions.path_color,
-            )?;
+            posedge_arrow(writer, signal_height, signal.path_color)?;
             write!(writer, r##"</g>"##)?;
         }
 
         if self.definitions.has_negedge_marker {
             write!(writer, r##"<g id="nei">"##)?;
-            negedge_arrow(
-                writer,
-                wave_dimensions.signal_height,
-                wave_dimensions.path_color,
-            )?;
+            negedge_arrow(writer, signal_height, signal.path_color)?;
             write!(writer, r##"</g>"##)?;
         }
 
         if self.definitions.has_gaps {
             write!(writer, r##"<g id="gap">"##)?;
-            gap(writer, wave_dimensions.signal_height)?;
+            gap(writer, self.path_assemble_options.signal_height)?;
             write!(writer, r##"</g>"##)?;
         }
 
         write!(
             writer,
             r##"<g id="cl"><path fill="none" d="M0,0v{schema_height}" stroke-width="1" stroke-dasharray="2" stroke="{color}"/></g>"##,
-            color = wave_dimensions.hint_line_color,
+            color = signal.hint_line_color,
             schema_height = dims.schema_height(),
         )?;
         write!(writer, "</defs>")?;
@@ -282,8 +284,8 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
         // Group Indicators
         if !self.group_markers.is_empty() {
-            let label_font_size = group_indicator_dimensions.label_fontsize;
-            let label_color = group_indicator_dimensions.label_color;
+            let label_font_size = group_indicator.label_fontsize;
+            let label_color = group_indicator.label_color;
 
             write!(writer, "<g>")?;
             for group in self.group_markers.iter() {
@@ -294,32 +296,29 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 let depth = group.depth();
                 let num_labels_below = self.amount_labels_below(depth);
 
-                let height = group.len() * u32::from(wave_dimensions.signal_height)
-                    + (group.len() - 1) * spacings.line_to_line;
+                let height = group.len() * signal_height + (group.len() - 1) * spacing.line_to_line;
                 let x = dims.grouping_x()
                     + if num_labels_below == 0 {
                         0
                     } else {
-                        num_labels_below * group_indicator_dimensions.label_height()
-                            - group_indicator_dimensions.label_spacing
+                        num_labels_below * group_indicator.label_height()
+                            - group_indicator.label_spacing
                     }
                     + if depth == 0 {
                         0
                     } else {
-                        depth * group_indicator_dimensions.width
-                            + (depth - 1) * group_indicator_dimensions.spacing
+                        depth * group_indicator.width + (depth - 1) * group_indicator.spacing
                     };
                 let y = dims.schema_y()
-                    + paddings.schema_top
+                    + padding.schema_top
                     + if group.start() == 0 {
                         0
                     } else {
-                        group.start() * u32::from(wave_dimensions.signal_height)
-                            + group.start() * spacings.line_to_line
+                        group.start() * signal_height + group.start() * spacing.line_to_line
                     };
 
                 if let Some(label) = group.label() {
-                    let x = x - group_indicator_dimensions.label_fontsize / 2;
+                    let x = x - group_indicator.label_fontsize / 2;
 
                     write!(
                         writer,
@@ -332,9 +331,9 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 write!(
                     writer,
                     r##"<path fill="none" d="M{x},{y}m{w},0c-3,0 -{w},1 -{w},{w}v{h}c0,3 1,{w} {w},{w}" stroke="{color}"/>"##,
-                    color = group_indicator_dimensions.color,
-                    h = height - group_indicator_dimensions.width * 2,
-                    w = group_indicator_dimensions.width,
+                    color = group_indicator.color,
+                    h = height - group_indicator.width * 2,
+                    w = group_indicator.width,
                 )?;
             }
             write!(writer, "</g>")?;
@@ -358,13 +357,13 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             write!(writer, r##"<g transform="translate({x},{y})">"##)?;
 
             if !line.text.is_empty() {
-                let name_font_size = wave_dimensions.name_font_size;
-                let name_color = wave_dimensions.name_color;
+                let name_font_size = signal.name_font_size;
+                let name_color = signal.name_color;
 
                 write!(
                     writer,
                     r##"<g transform="translate(0,{y})"><text dominant-baseline="middle" font-family="{font_family}" font-size="{name_font_size}" fill="{name_color}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
-                    y = wave_dimensions.signal_height / 2,
+                    y = signal_height / 2,
                     text = escape_str(line.text),
                 )?;
             }
@@ -375,10 +374,10 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                     r##"<g transform="translate({schema_x})">"##,
                     schema_x = dims.schema_x() - dims.textbox_x()
                 )?;
-                write_signal(&line.path, writer, &wave_dimensions, self.hscale)?;
+                write_signal(&line.path, writer, &signal, self.hscale)?;
                 write!(writer, r##"</g>"##)?;
             } else {
-                write_signal(&line.path, writer, &wave_dimensions, self.hscale)?;
+                write_signal(&line.path, writer, &signal, self.hscale)?;
             }
 
             write!(writer, r##"</g>"##)?;
@@ -435,6 +434,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                     writer,
                     line_edge.clone(),
                     &dims,
+                    self.path_assemble_options,
                     options,
                     &font,
                 )?);
@@ -446,7 +446,15 @@ impl<'a> ToSvg for AssembledFigure<'a> {
                 .iter()
                 .zip(middles.into_iter())
             {
-                write_line_edge_markers(writer, line_edge.clone(), middle, &dims, options, &font)?;
+                write_line_edge_markers(
+                    writer,
+                    line_edge.clone(),
+                    middle,
+                    &dims,
+                    self.path_assemble_options,
+                    options,
+                    &font,
+                )?;
             }
             write!(writer, "</g>")?;
         }
@@ -456,21 +464,16 @@ impl<'a> ToSvg for AssembledFigure<'a> {
             write!(writer, "<g>")?;
             for text_node in self.line_edge_markers.text_nodes() {
                 let text = text_node.text().to_string();
-                let x = dims.schema_x()
-                    + text_node
-                        .at()
-                        .x()
-                        .width_offset(wave_dimensions.cycle_width.into());
-                let y = dims.signal_top(text_node.at().y())
-                    + u32::from(wave_dimensions.signal_height / 2);
+                let x = dims.schema_x() + text_node.at().x().width_offset(cycle_width.into());
+                let y = dims.signal_top(text_node.at().y()) + u32::from(signal_height / 2);
 
                 write_edge_text(
                     writer,
                     (x.into(), y.into()),
                     &text,
-                    edges.node_font_size,
-                    edges.node_text_color,
-                    edges.node_background_color,
+                    edge.node_font_size,
+                    edge.node_text_color,
+                    edge.node_background_color,
                     &font,
                 )?;
             }
@@ -511,6 +514,15 @@ fn write_signal(
     options: &SignalOptions,
     hscale: u16,
 ) -> io::Result<()> {
+    let PathAssembleOptions {
+        signal_height,
+        cycle_width,
+        transition_offset: _,
+    } = wave_path.options();
+
+    let signal_height = u32::from(*signal_height);
+    let cycle_width = u32::from(*cycle_width);
+
     for segment in wave_path.segments() {
         let x = segment.x();
         let y = segment.y();
@@ -584,15 +596,15 @@ fn write_signal(
                 text = marker_text,
                 color = options.marker_color,
                 x = segment.x() + segment.width() / 2,
-                y = options.signal_height / 2,
+                y = signal_height / 2,
             )?;
         }
 
         for clock_edge_marker in segment.clock_edge_markers() {
             let x = clock_edge_marker
                 .at()
-                .width_offset(u32::from(options.cycle_width * hscale));
-            let y = u32::from(options.signal_height) / 2;
+                .width_offset(cycle_width * u32::from(hscale));
+            let y = signal_height / 2;
 
             match clock_edge_marker.edge() {
                 ClockEdge::Positive => {
@@ -611,8 +623,8 @@ fn write_signal(
         }
 
         for gap in segment.gaps() {
-            let x = gap.width_offset(u32::from(options.cycle_width * hscale));
-            let y = u32::from(options.signal_height) / 2;
+            let x = gap.width_offset(cycle_width * u32::from(hscale));
+            let y = signal_height / 2;
 
             write!(
                 writer,

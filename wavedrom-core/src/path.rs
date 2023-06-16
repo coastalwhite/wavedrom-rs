@@ -1,6 +1,5 @@
 use std::num::NonZeroU16;
 
-use crate::color::Color;
 use crate::markers::ClockEdgeMarker;
 use crate::{ClockEdge, CycleOffset};
 
@@ -92,94 +91,19 @@ pub struct PathData {
     actions: Vec<PathCommand>,
 }
 
-#[derive(Debug, Clone)]
-pub struct SignalOptions {
-    pub marker_font_size: u32,
-    pub marker_color: Color,
-
-    pub name_font_size: u32,
-    pub name_color: Color,
-
-    pub path_color: Color,
-
-    pub hint_line_color: Color,
-
+#[derive(Debug, Clone, Copy)]
+pub struct PathAssembleOptions {
     pub signal_height: u16,
     pub cycle_width: u16,
     pub transition_offset: u16,
-
-    pub undefined_color: Color,
-    pub undefined_background: Option<Color>,
-
-    pub backgrounds: [Color; 8],
 }
 
-impl Default for SignalOptions {
+impl Default for PathAssembleOptions {
     fn default() -> Self {
         Self {
-            marker_font_size: 14,
-            marker_color: Color::BLACK,
-
-            name_font_size: 14,
-            name_color: Color::BLACK,
-
-            path_color: Color::BLACK,
-
-            hint_line_color: Color {
-                red: 0xCC,
-                green: 0xCC,
-                blue: 0xCC,
-            },
-
             signal_height: 24,
             cycle_width: 48,
             transition_offset: 4,
-
-            undefined_color: Color::BLACK,
-            undefined_background: None,
-
-            backgrounds: [
-                Color {
-                    red: 0xFF,
-                    green: 0xFF,
-                    blue: 0xFF,
-                },
-                Color {
-                    red: 0xF7,
-                    green: 0xF7,
-                    blue: 0xA1,
-                },
-                Color {
-                    red: 0xF9,
-                    green: 0xD4,
-                    blue: 0x9F,
-                },
-                Color {
-                    red: 0xAD,
-                    green: 0xDE,
-                    blue: 0xFF,
-                },
-                Color {
-                    red: 0xAC,
-                    green: 0xD5,
-                    blue: 0xB6,
-                },
-                Color {
-                    red: 0xA4,
-                    green: 0xAB,
-                    blue: 0xE1,
-                },
-                Color {
-                    red: 0xE8,
-                    green: 0xA8,
-                    blue: 0xF0,
-                },
-                Color {
-                    red: 0xFB,
-                    green: 0xDA,
-                    blue: 0xDA,
-                },
-            ],
         }
     }
 }
@@ -187,6 +111,7 @@ impl Default for SignalOptions {
 #[derive(Debug, Clone)]
 pub struct AssembledSignalPath {
     end_offset: CycleOffset,
+    options: PathAssembleOptions,
     segments: Vec<SignalPathSegment>,
 }
 
@@ -197,6 +122,10 @@ impl AssembledSignalPath {
 
     pub fn num_cycles(&self) -> u32 {
         self.end_offset.cycle_width()
+    }
+
+    pub fn options(&self) -> &PathAssembleOptions {
+        &self.options
     }
 }
 
@@ -256,7 +185,7 @@ pub struct SignalSegmentIter<'a> {
     clock_edge_markers: Vec<ClockEdgeMarker>,
     gaps: Vec<CycleOffset>,
 
-    options: &'a SignalOptions,
+    options: PathAssembleOptions,
 }
 
 #[derive(Debug)]
@@ -1081,7 +1010,7 @@ impl<'a> SignalPath<'a> {
         self.states.len()
     }
 
-    pub fn assemble_with_options(&self, options: &SignalOptions) -> AssembledSignalPath {
+    pub fn assemble_with_options(&self, options: PathAssembleOptions) -> AssembledSignalPath {
         let mut end_offset = CycleOffset::default();
         let segments = self
             .iter(options)
@@ -1093,16 +1022,17 @@ impl<'a> SignalPath<'a> {
 
         AssembledSignalPath {
             end_offset,
+            options,
             segments,
         }
     }
 
     #[inline]
     pub fn assemble(&self) -> AssembledSignalPath {
-        self.assemble_with_options(&SignalOptions::default())
+        self.assemble_with_options(PathAssembleOptions::default())
     }
 
-    pub fn iter(&'a self, options: &'a SignalOptions) -> SignalSegmentIter<'a> {
+    pub fn iter(&'a self, options: PathAssembleOptions) -> SignalSegmentIter<'a> {
         let mut iter = SignalSegmentIter {
             inner: self.states.iter(),
 
@@ -1318,13 +1248,13 @@ mod tests {
         macro_rules! assert_cycle_length {
             ([$($item:ident),* $(,)?], $period:literal, ($phase_index:literal, $phase_in_offset:ident) => $result:literal) => {
                 let period = NonZeroU16::new($period).unwrap();
-                let options = SignalOptions::default();
+                let options = PathAssembleOptions::default();
                 let num_cycles = SignalPath::new(
                     &[$(CycleState::$item),*],
                     &[],
                     period,
                     $crate::CycleOffset::new($phase_index, $crate::InCycleOffset::$phase_in_offset),
-                ).iter(&options).last().map_or(0, |i| i.end_cycle.cycle_width());
+                ).iter(options).last().map_or(0, |i| i.end_cycle.cycle_width());
                 assert_eq!(num_cycles, $result);
             };
         }

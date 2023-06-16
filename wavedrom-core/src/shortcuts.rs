@@ -10,6 +10,7 @@ mod json5 {
     use std::fmt::Display;
     use std::io;
 
+    use crate::PathAssembleOptions;
     use crate::svg::options::RenderOptions;
 
     #[derive(Debug)]
@@ -19,19 +20,20 @@ mod json5 {
     }
 
     pub fn render_json5(json: &str, writer: &mut impl io::Write) -> Result<(), RenderJson5Error> {
-        render_json5_with_options(json, writer, &RenderOptions::default())
+        render_json5_with_options(json, writer, PathAssembleOptions::default(), &RenderOptions::default())
     }
 
     pub fn render_json5_with_options(
         json: &str,
         writer: &mut impl io::Write,
-        options: &RenderOptions,
+        assemble_options: PathAssembleOptions,
+        render_options: &RenderOptions,
     ) -> Result<(), RenderJson5Error> {
         use crate::svg::ToSvg;
 
         let figure = crate::Figure::from_json5(json)?;
-        let assembled = figure.assemble_with_options(&options.wave_dimensions);
-        assembled.write_svg_with_options(writer, options)?;
+        let assembled = figure.assemble_with_options(assemble_options);
+        assembled.write_svg_with_options(writer, render_options)?;
 
         Ok(())
     }
@@ -68,22 +70,24 @@ mod serde_json {
     use std::fmt::Display;
     use std::io;
 
+    use crate::PathAssembleOptions;
     use crate::svg::options::RenderOptions;
 
     pub fn render_json(json: &str, writer: &mut impl io::Write) -> Result<(), RenderJsonError> {
-        render_json_with_options(json, writer, &RenderOptions::default())
+        render_json_with_options(json, writer, PathAssembleOptions::default(), &RenderOptions::default())
     }
 
     pub fn render_json_with_options(
         json: &str,
         writer: &mut impl io::Write,
-        options: &RenderOptions,
+        assemble_options: PathAssembleOptions,
+        render_options: &RenderOptions,
     ) -> Result<(), RenderJsonError> {
         use crate::svg::ToSvg;
 
         let figure = crate::Figure::from_json(json)?;
-        let assembled = figure.assemble_with_options(&options.wave_dimensions);
-        assembled.write_svg_with_options(writer, options)?;
+        let assembled = figure.assemble_with_options(PathAssembleOptions);
+        assembled.write_svg_with_options(writer, render_options)?;
 
         Ok(())
     }

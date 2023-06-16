@@ -31,6 +31,10 @@ function deserialize_opt_color(value) {
 }
 
 const PARAMETERS = [
+    "signal-height",
+    "cycle-width",
+    "transition-offset",
+    
     [
         [
             "background-enabled",
@@ -57,10 +61,6 @@ const PARAMETERS = [
     ["signal-path-color", serialize_color, deserialize_color],
 
     ["signal-hint-line-color", serialize_color, deserialize_color],
-
-    "signal-height",
-    "cycle-width",
-    "transition-offset",
 
     ["signal-undefined-color", serialize_color, deserialize_color],
     [

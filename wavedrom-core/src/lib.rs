@@ -28,7 +28,7 @@ pub use edges::{
     EdgeArrowType, EdgeDefinition, EdgeVariant, LineEdgeMarkers, SharpEdgeVariant,
     SplineEdgeVariant,
 };
-pub use path::{AssembledSignalPath, CycleState, SignalOptions, SignalPath, SignalPathSegment};
+pub use path::{AssembledSignalPath, CycleState, PathAssembleOptions, SignalPath, SignalPathSegment};
 
 use markers::{ClockEdge, CycleEnumerationMarker, GroupMarker};
 
@@ -227,6 +227,8 @@ pub struct AssembledFigure<'a> {
     top_cycle_marker: Option<CycleEnumerationMarker>,
     bottom_cycle_marker: Option<CycleEnumerationMarker>,
 
+    path_assemble_options: PathAssembleOptions,
+
     lines: Vec<AssembledLine<'a>>,
     group_markers: Vec<GroupMarker<'a>>,
 
@@ -368,7 +370,7 @@ impl Figure {
         }
     }
 
-    pub fn assemble_with_options(&self, options: &SignalOptions) -> AssembledFigure {
+    pub fn assemble_with_options(&self, options: PathAssembleOptions) -> AssembledFigure {
         let top_cycle_marker = self.top_cycle_marker;
         let bottom_cycle_marker = self.bottom_cycle_marker;
         let hscale = self.hscale;
@@ -428,7 +430,7 @@ impl Figure {
                             signal.period,
                             signal.phase,
                         )
-                        .assemble_with_options(&options),
+                        .assemble_with_options(options),
                     });
                 }
                 SectionItem::GroupStart(depth, group) => {
@@ -479,6 +481,8 @@ impl Figure {
             top_cycle_marker,
             bottom_cycle_marker,
 
+            path_assemble_options: options,
+
             lines,
             group_markers,
 
@@ -488,7 +492,7 @@ impl Figure {
 
     #[inline]
     pub fn assemble(&self) -> AssembledFigure {
-        self.assemble_with_options(&SignalOptions::default())
+        self.assemble_with_options(PathAssembleOptions::default())
     }
 }
 

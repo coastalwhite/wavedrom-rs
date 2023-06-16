@@ -1,7 +1,7 @@
 use std::sync::{Mutex, MutexGuard};
 
 use wavedrom::svg::options::RenderOptions;
-use wavedrom::Color;
+use wavedrom::{Color, PathAssembleOptions};
 
 macro_rules! prefix_fn {
     ($property:expr) => {
@@ -21,7 +21,7 @@ macro_rules! surround_fn {
 }
 
 macro_rules! parameters {
-    ($($name:ident [$($property:ident$([$prop_idx:literal])?).+] $([$as:ty])? $({$deserialize_fn:ident, $serialize_fn:ident})?),+ $(,)?) => {
+    ([$assemble:ident, $render:ident], $($name:ident [$($property:ident$([$prop_idx:literal])?).+] $([$as:ty])? $({$deserialize_fn:ident, $serialize_fn:ident})?),+ $(,)?) => {
         #[repr(u32)]
         enum RenderParameter {
         $(
@@ -42,8 +42,12 @@ macro_rules! parameters {
 
         #[no_mangle]
         pub extern "C" fn modify_parameter(parameter: u32, value: u32) {
-            let mut options =
+            let mut $render =
                 unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
+                    .lock()
+                    .unwrap();
+            let mut $assemble =
+                unsafe { ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default())) }
                     .lock()
                     .unwrap();
             let Some(parameter) = RenderParameter::from_u32(parameter) else {
@@ -52,14 +56,15 @@ macro_rules! parameters {
 
             match parameter {
                 $(
-                    RenderParameter::$name => options.$($property$([$prop_idx])?).+ = surround_fn!(value $(, $deserialize_fn)?) $(as $as)?,
+                    RenderParameter::$name => $($property$([$prop_idx])?).+ = surround_fn!(value $(, $deserialize_fn)?) $(as $as)?,
                 )+
             }
         }
 
         #[no_mangle]
         pub extern "C" fn get_parameter_default(parameter: u32) -> u32 {
-            let options = RenderOptions::default();
+            let $assemble = PathAssembleOptions::default();
+            let $render = RenderOptions::default();
             let Some(parameter) = RenderParameter::from_u32(parameter) else {
                 return 0;
             };
@@ -67,7 +72,7 @@ macro_rules! parameters {
             match parameter {
                 $(
                     RenderParameter::$name => {
-                        let value = prefix_fn!(options.$($property$([$prop_idx])?).+$(, $serialize_fn)?);
+                        let value = prefix_fn!($($property$([$prop_idx])?).+$(, $serialize_fn)?);
                         surround_fn!(value $(, $serialize_fn)?) $(as $as as u32)?
                     },
                 )+
@@ -77,80 +82,82 @@ macro_rules! parameters {
 }
 
 parameters![
-    Background[background]{parse_opt_color, serialize_opt_color},
+    [assemble, render],
 
-    SignalMarkerFontSize[wave_dimensions.marker_font_size],
-    SignalMarkerColor[wave_dimensions.marker_color]{parse_color, serialize_color},
+    SignalHeight[assemble.signal_height][u16],
+    CycleWidth[assemble.cycle_width][u16],
+    TransitionOffset[assemble.transition_offset][u16],
 
-    SignalNameFontSize[wave_dimensions.name_font_size],
-    SignalNameColor[wave_dimensions.name_color]{parse_color, serialize_color},
+    Background[render.background]{parse_opt_color, serialize_opt_color},
 
-    SignalPathColor[wave_dimensions.path_color]{parse_color, serialize_color},
+    SignalMarkerFontSize[render.signal.marker_font_size],
+    SignalMarkerColor[render.signal.marker_color]{parse_color, serialize_color},
 
-    SignalHintLineColor[wave_dimensions.hint_line_color]{parse_color, serialize_color},
+    SignalNameFontSize[render.signal.name_font_size],
+    SignalNameColor[render.signal.name_color]{parse_color, serialize_color},
 
-    SignalHeight[wave_dimensions.signal_height][u16],
-    CycleWidth[wave_dimensions.cycle_width][u16],
-    TransitionOffset[wave_dimensions.transition_offset][u16],
+    SignalPathColor[render.signal.path_color]{parse_color, serialize_color},
+
+    SignalHintLineColor[render.signal.hint_line_color]{parse_color, serialize_color},
     
-    SignalUndefinedColor[wave_dimensions.undefined_color]{parse_color, serialize_color},
-    SignalUndefinedBackgroundColor[wave_dimensions.undefined_background]{parse_opt_color, serialize_opt_color},
+    SignalUndefinedColor[render.signal.undefined_color]{parse_color, serialize_color},
+    SignalUndefinedBackgroundColor[render.signal.undefined_background]{parse_opt_color, serialize_opt_color},
 
-    BackgroundBox2[wave_dimensions.backgrounds[0]]{parse_color, serialize_color},
-    BackgroundBox3[wave_dimensions.backgrounds[1]]{parse_color, serialize_color},
-    BackgroundBox4[wave_dimensions.backgrounds[2]]{parse_color, serialize_color},
-    BackgroundBox5[wave_dimensions.backgrounds[3]]{parse_color, serialize_color},
-    BackgroundBox6[wave_dimensions.backgrounds[4]]{parse_color, serialize_color},
-    BackgroundBox7[wave_dimensions.backgrounds[5]]{parse_color, serialize_color},
-    BackgroundBox8[wave_dimensions.backgrounds[6]]{parse_color, serialize_color},
-    BackgroundBox9[wave_dimensions.backgrounds[7]]{parse_color, serialize_color},
+    BackgroundBox2[render.signal.backgrounds[0]]{parse_color, serialize_color},
+    BackgroundBox3[render.signal.backgrounds[1]]{parse_color, serialize_color},
+    BackgroundBox4[render.signal.backgrounds[2]]{parse_color, serialize_color},
+    BackgroundBox5[render.signal.backgrounds[3]]{parse_color, serialize_color},
+    BackgroundBox6[render.signal.backgrounds[4]]{parse_color, serialize_color},
+    BackgroundBox7[render.signal.backgrounds[5]]{parse_color, serialize_color},
+    BackgroundBox8[render.signal.backgrounds[6]]{parse_color, serialize_color},
+    BackgroundBox9[render.signal.backgrounds[7]]{parse_color, serialize_color},
 
-    PaddingFigureTop[paddings.figure_top],
-    PaddingFigureBottom[paddings.figure_bottom],
-    PaddingFigureLeft[paddings.figure_left],
-    PaddingFigureRight[paddings.figure_right],
-    PaddingSchemaTop[paddings.schema_top],
-    PaddingSchemaBottom[paddings.schema_bottom],
+    PaddingFigureTop[render.padding.figure_top],
+    PaddingFigureBottom[render.padding.figure_bottom],
+    PaddingFigureLeft[render.padding.figure_left],
+    PaddingFigureRight[render.padding.figure_right],
+    PaddingSchemaTop[render.padding.schema_top],
+    PaddingSchemaBottom[render.padding.schema_bottom],
 
-    SpacingTextboxToSchema[spacings.textbox_to_schema],
-    SpacingGroupboxToTextbox[spacings.groupbox_to_textbox],
-    SpacingLineToLine[spacings.line_to_line],
+    SpacingTextboxToSchema[render.spacing.textbox_to_schema],
+    SpacingGroupboxToTextbox[render.spacing.groupbox_to_textbox],
+    SpacingLineToLine[render.spacing.line_to_line],
 
-    GroupIndicatorWidth[group_indicator_dimensions.width],
-    GroupIndicatorSpacing[group_indicator_dimensions.spacing],
-    GroupIndicatorColor[group_indicator_dimensions.color]{parse_color, serialize_color},
+    GroupIndicatorWidth[render.group_indicator.width],
+    GroupIndicatorSpacing[render.group_indicator.spacing],
+    GroupIndicatorColor[render.group_indicator.color]{parse_color, serialize_color},
 
-    GroupIndicatorLabelSpacing[group_indicator_dimensions.label_spacing],
-    GroupIndicatorLabelFontSize[group_indicator_dimensions.label_fontsize],
-    GroupIndicatorLabelColor[group_indicator_dimensions.label_color]{parse_color, serialize_color},
+    GroupIndicatorLabelSpacing[render.group_indicator.label_spacing],
+    GroupIndicatorLabelFontSize[render.group_indicator.label_fontsize],
+    GroupIndicatorLabelColor[render.group_indicator.label_color]{parse_color, serialize_color},
 
-    HeaderFontSize[header.font_size],
-    HeaderHeight[header.height],
-    HeaderColor[header.color]{parse_color, serialize_color},
+    HeaderFontSize[render.header.font_size],
+    HeaderHeight[render.header.height],
+    HeaderColor[render.header.color]{parse_color, serialize_color},
 
-    TopCycleMarkerHeight[header.cycle_marker_height],
-    TopCycleMarkerFontSize[header.cycle_marker_fontsize],
-    TopCycleMarkerColor[header.cycle_marker_color]{parse_color, serialize_color},
+    TopCycleMarkerHeight[render.header.cycle_marker_height],
+    TopCycleMarkerFontSize[render.header.cycle_marker_fontsize],
+    TopCycleMarkerColor[render.header.cycle_marker_color]{parse_color, serialize_color},
 
-    FooterFontSize[footer.font_size],
-    FooterHeight[footer.height],
-    FooterColor[footer.color]{parse_color, serialize_color},
+    FooterFontSize[render.footer.font_size],
+    FooterHeight[render.footer.height],
+    FooterColor[render.footer.color]{parse_color, serialize_color},
 
-    BottomCycleMarkerHeight[footer.cycle_marker_height],
-    BottomCycleMarkerFontSize[footer.cycle_marker_fontsize],
-    BottomCycleMarkerColor[footer.cycle_marker_color]{parse_color, serialize_color},
+    BottomCycleMarkerHeight[render.footer.cycle_marker_height],
+    BottomCycleMarkerFontSize[render.footer.cycle_marker_fontsize],
+    BottomCycleMarkerColor[render.footer.cycle_marker_color]{parse_color, serialize_color},
 
-    EdgeNodeFontSize[edges.node_font_size],
-    EdgeNodeTextColor[edges.node_text_color]{ parse_color, serialize_color },
-    EdgeNodeBackgroundColor[edges.node_background_color]{ parse_color, serialize_color },
+    EdgeNodeFontSize[render.edge.node_font_size],
+    EdgeNodeTextColor[render.edge.node_text_color]{ parse_color, serialize_color },
+    EdgeNodeBackgroundColor[render.edge.node_background_color]{ parse_color, serialize_color },
 
-    EdgeTextFontSize[edges.edge_text_font_size],
-    EdgeTextColor[edges.edge_text_color]{ parse_color, serialize_color },
-    EdgeTextBackgroundColor[edges.edge_text_background_color]{ parse_color, serialize_color },
+    EdgeTextFontSize[render.edge.edge_text_font_size],
+    EdgeTextColor[render.edge.edge_text_color]{ parse_color, serialize_color },
+    EdgeTextBackgroundColor[render.edge.edge_text_background_color]{ parse_color, serialize_color },
 
-    EdgeColor[edges.edge_color]{ parse_color, serialize_color },
-    EdgeArrowColor[edges.edge_arrow_color]{ parse_color, serialize_color },
-    EdgeArrowSize[edges.edge_arrow_size],
+    EdgeColor[render.edge.edge_color]{ parse_color, serialize_color },
+    EdgeArrowColor[render.edge.edge_arrow_color]{ parse_color, serialize_color },
+    EdgeArrowSize[render.edge.edge_arrow_size],
 ];
 
 fn parse_color(value: u32) -> Color {
@@ -183,9 +190,16 @@ fn serialize_opt_color(color: &Option<Color>) -> u32 {
     serialize_color(color)
 }
 
+static mut ASSEMBLE_OPTIONS: Option<Mutex<PathAssembleOptions>> = None;
 static mut RENDER_OPTIONS: Option<Mutex<RenderOptions>> = None;
 
-pub fn get_options() -> MutexGuard<'static, RenderOptions> {
+pub fn get_assemble_options() -> MutexGuard<'static, PathAssembleOptions> {
+    unsafe { ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default())) }
+        .lock()
+        .unwrap()
+}
+
+pub fn get_render_options() -> MutexGuard<'static, RenderOptions> {
     unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
         .lock()
         .unwrap()

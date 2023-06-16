@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::io;
 
 use crate::edges::LineEdge;
-use crate::{Color, EdgeArrowType, EdgeVariant, SharpEdgeVariant, SplineEdgeVariant};
+use crate::{Color, EdgeArrowType, EdgeVariant, SharpEdgeVariant, SplineEdgeVariant, PathAssembleOptions};
 
 use super::dimensions::SvgDimensions;
 use super::options::RenderOptions;
@@ -34,24 +34,24 @@ pub fn write_line_edge(
     writer: &mut impl io::Write,
     edge: LineEdge,
     dims: &SvgDimensions,
-    options: &RenderOptions,
+    assemble_options: PathAssembleOptions,
+    render_options: &RenderOptions,
     font: &Font,
 ) -> io::Result<(f64, f64)> {
-    let wave_dimensions = &options.wave_dimensions;
-    let edge_options = &options.edges;
+    let edge_options = &render_options.edge;
 
     let from = edge.from();
     let to = edge.to();
 
-    let from_x = dims.schema_x() + from.x().width_offset(wave_dimensions.cycle_width.into());
-    let from_y = dims.signal_top(from.y()) + u32::from(wave_dimensions.signal_height / 2);
+    let from_x = dims.schema_x() + from.x().width_offset(assemble_options.cycle_width.into());
+    let from_y = dims.signal_top(from.y()) + u32::from(assemble_options.signal_height / 2);
 
     if from == to {
         return Ok((f64::from(from_x), f64::from(from_y)));
     }
 
-    let to_x = dims.schema_x() + to.x().width_offset(wave_dimensions.cycle_width.into());
-    let to_y = dims.signal_top(to.y()) + u32::from(wave_dimensions.signal_height / 2);
+    let to_x = dims.schema_x() + to.x().width_offset(assemble_options.cycle_width.into());
+    let to_y = dims.signal_top(to.y()) + u32::from(assemble_options.signal_height / 2);
 
     let from_bbox = edge
         .from_marker()
@@ -414,11 +414,12 @@ pub fn write_line_edge_markers(
     edge: LineEdge,
     middle: (f64, f64),
     dims: &SvgDimensions,
-    options: &RenderOptions,
+    assemble_options: PathAssembleOptions,
+    render_options: &RenderOptions,
     font: &Font,
 ) -> io::Result<()> {
-    let wave_dimensions = &options.wave_dimensions;
-    let edge_options = &options.edges;
+    let assemble_options = assemble_options;
+    let edge_options = &render_options.edge;
 
     let from = edge.from();
     let to = edge.to();
@@ -427,11 +428,11 @@ pub fn write_line_edge_markers(
         return Ok(());
     }
 
-    let from_x = dims.schema_x() + from.x().width_offset(wave_dimensions.cycle_width.into());
-    let from_y = dims.signal_top(from.y()) + u32::from(wave_dimensions.signal_height / 2);
+    let from_x = dims.schema_x() + from.x().width_offset(assemble_options.cycle_width.into());
+    let from_y = dims.signal_top(from.y()) + u32::from(assemble_options.signal_height / 2);
 
-    let to_x = dims.schema_x() + to.x().width_offset(wave_dimensions.cycle_width.into());
-    let to_y = dims.signal_top(to.y()) + u32::from(wave_dimensions.signal_height / 2);
+    let to_x = dims.schema_x() + to.x().width_offset(assemble_options.cycle_width.into());
+    let to_y = dims.signal_top(to.y()) + u32::from(assemble_options.signal_height / 2);
 
     let middle_x = middle.0;
     let middle_y = middle.1;

@@ -1,187 +1,179 @@
 use crate::color::Color;
-use crate::path::SignalOptions;
 
-#[derive(Debug, Clone)]
-pub struct RenderOptions {
-    pub background: Option<Color>,
-    pub paddings: FigurePadding,
-    pub spacings: FigureSpacing,
-    pub header: HeaderOptions,
-    pub footer: FooterOptions,
-    pub wave_dimensions: SignalOptions,
-    pub group_indicator_dimensions: GroupIndicatorDimension,
-    pub edges: EdgeOptions,
+macro_rules! replace_default {
+    ($property_type:ty) => {
+        <$property_type>::default()
+    };
+    ($_:ty, $default_value:expr) => {
+        $default_value
+    };
 }
 
-#[derive(Debug, Clone)]
-pub struct FigurePadding {
-    pub figure_top: u32,
-    pub figure_bottom: u32,
-    pub figure_left: u32,
-    pub figure_right: u32,
-
-    pub schema_top: u32,
-    pub schema_bottom: u32,
+macro_rules! replace_ty {
+    ($x:ty) => {
+        $x
+    };
+    ($_:ty, $x:ty) => {
+        $x
+    };
 }
 
-#[derive(Debug, Clone)]
-pub struct FigureSpacing {
-    pub textbox_to_schema: u32,
-    pub groupbox_to_textbox: u32,
-    pub line_to_line: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct GroupIndicatorDimension {
-    pub width: u32,
-    pub spacing: u32,
-    pub color: Color,
-
-    pub label_spacing: u32,
-    pub label_fontsize: u32,
-    pub label_color: Color,
-}
-
-#[derive(Debug, Clone)]
-pub struct HeaderOptions {
-    pub font_size: u32,
-    pub height: u32,
-    pub color: Color,
-
-    pub cycle_marker_height: u32,
-    pub cycle_marker_fontsize: u32,
-    pub cycle_marker_color: Color,
-}
-
-#[derive(Debug, Clone)]
-pub struct FooterOptions {
-    pub font_size: u32,
-    pub height: u32,
-    pub color: Color,
-
-    pub cycle_marker_height: u32,
-    pub cycle_marker_fontsize: u32,
-    pub cycle_marker_color: Color,
-}
-
-#[derive(Debug, Clone)]
-pub struct EdgeOptions {
-    pub node_font_size: u32,
-    pub node_text_color: Color,
-    pub node_background_color: Color,
-
-    pub edge_text_font_size: u32,
-    pub edge_text_color: Color,
-    pub edge_text_background_color: Color,
-
-    pub edge_color: Color,
-    pub edge_arrow_color: Color,
-    pub edge_arrow_size: u32,
-}
-
-impl Default for HeaderOptions {
-    fn default() -> Self {
-        Self {
-            font_size: 24,
-            height: 32,
-            color: Color::BLACK,
-
-            cycle_marker_height: 12,
-            cycle_marker_fontsize: 12,
-            cycle_marker_color: Color::BLACK,
+macro_rules! define_options {
+    ( $struct_name:ident, $opt_struct_name:ident { $( $property_name:ident: $property_type:ty$([$opt_property_type:ty])? $(=> $property_default_value:expr)?),+ $(,)? } ) => (
+        #[derive(Debug, Clone)]
+        pub struct $struct_name {
+            $(
+            pub $property_name: $property_type,
+            )+
         }
+
+        impl Default for $struct_name {
+            fn default() -> Self {
+                Self {
+                    $(
+                    $property_name: replace_default!($property_type$(, $property_default_value)?),
+                    )+
+                }
+            }
+        }
+
+        #[derive(Debug, Clone)]
+        pub struct $opt_struct_name {
+            $(
+            pub $property_name: Option<replace_ty!($property_type$(, $opt_property_type)?)>,
+            )+
+        }
+
+        impl From<$opt_struct_name> for $struct_name {
+            fn from(opt: $opt_struct_name) -> Self {
+                Self {
+                $(
+                    $property_name: opt.$property_name.map_or_else(
+                        ||replace_default!($property_type$(, $property_default_value)?),
+                        |v| v.into(),
+                    ),
+                )+
+                }
+            }
+        }
+    )
+}
+
+define_options! {
+    RenderOptions, PartialRenderOptions {
+        background: Option<Color> => None,
+        padding: FigurePadding[PartialFigurePadding],
+        spacing: FigureSpacing[PartialFigureSpacing],
+        header: HeaderOptions[PartialHeaderOptions],
+        footer: FooterOptions[PartialFooterOptions],
+        signal: SignalOptions[PartialSignalOptions],
+        group_indicator: GroupIndicatorOptions[PartialGroupIndicatorOptions],
+        edge: EdgeOptions[PartialEdgeOptions],
     }
 }
 
-impl Default for FooterOptions {
-    fn default() -> Self {
-        Self {
-            font_size: 24,
-            height: 32,
-            color: Color::BLACK,
+define_options! {
+    FigurePadding, PartialFigurePadding {
+        figure_top: u32 => 8,
+        figure_bottom: u32 => 8,
+        figure_left: u32 => 8,
+        figure_right: u32 => 8,
 
-            cycle_marker_height: 12,
-            cycle_marker_fontsize: 12,
-            cycle_marker_color: Color::BLACK,
-        }
+        schema_top: u32 => 8,
+        schema_bottom: u32 => 8,
     }
 }
 
-impl Default for GroupIndicatorDimension {
-    fn default() -> Self {
-        Self {
-            width: 4,
-            spacing: 4,
-
-            color: Color::BLACK,
-
-            label_spacing: 4,
-            label_fontsize: 14,
-            label_color: Color::BLACK,
-        }
+define_options! {
+    FigureSpacing, PartialFigureSpacing {
+        textbox_to_schema: u32 => 8,
+        groupbox_to_textbox: u32 => 8,
+        line_to_line: u32 => 8,
     }
 }
 
-impl Default for EdgeOptions {
-    fn default() -> Self {
-        Self {
-            node_font_size: 14,
-            node_text_color: Color::BLACK,
-            node_background_color: Color::WHITE,
+define_options! {
+    HeaderOptions, PartialHeaderOptions {
+        font_size: u32 => 24,
+        height: u32 => 32,
+        color: Color => Color::BLACK,
 
-            edge_text_font_size: 14,
-            edge_text_color: Color::BLACK,
-            edge_text_background_color: Color::WHITE,
-
-            edge_color: Color { red: 0, green: 0, blue: 255 },
-            edge_arrow_color: Color { red: 0, green: 0, blue: 255 },
-            edge_arrow_size: 8,
-        }
+        cycle_marker_height: u32 => 12,
+        cycle_marker_fontsize: u32 => 12,
+        cycle_marker_color: Color => Color::BLACK,
     }
 }
 
-impl Default for RenderOptions {
-    fn default() -> Self {
-        Self {
-            background: None,
-            paddings: FigurePadding::default(),
-            spacings: FigureSpacing::default(),
-            header: HeaderOptions::default(),
-            footer: FooterOptions::default(),
-            wave_dimensions: SignalOptions::default(),
-            group_indicator_dimensions: GroupIndicatorDimension::default(),
-            edges: EdgeOptions::default(),
-        }
+define_options! {
+    FooterOptions, PartialFooterOptions {
+        font_size: u32 => 24,
+        height: u32 => 32,
+        color: Color => Color::BLACK,
+
+        cycle_marker_height: u32 => 12,
+        cycle_marker_fontsize: u32 => 12,
+        cycle_marker_color: Color => Color::BLACK,
     }
 }
 
-impl Default for FigurePadding {
-    fn default() -> Self {
-        Self {
-            figure_top: 8,
-            figure_bottom: 8,
-            figure_left: 8,
-            figure_right: 8,
+define_options! {
+    SignalOptions, PartialSignalOptions {
+        marker_font_size: u32 => 14,
+        marker_color: Color => Color::BLACK,
 
-            schema_top: 8,
-            schema_bottom: 8,
-        }
+        name_font_size: u32 => 14,
+        name_color: Color => Color::BLACK,
+
+        path_color: Color => Color::BLACK,
+
+        hint_line_color: Color => Color { red: 0xCC, green: 0xCC, blue: 0xCC },
+
+        undefined_color: Color => Color::BLACK,
+        undefined_background: Option<Color> => None,
+
+        backgrounds: [Color; 8] => [
+                Color { red: 0xFF, green: 0xFF, blue: 0xFF },
+                Color { red: 0xF7, green: 0xF7, blue: 0xA1 },
+                Color { red: 0xF9, green: 0xD4, blue: 0x9F },
+                Color { red: 0xAD, green: 0xDE, blue: 0xFF },
+                Color { red: 0xAC, green: 0xD5, blue: 0xB6 },
+                Color { red: 0xA4, green: 0xAB, blue: 0xE1 },
+                Color { red: 0xE8, green: 0xA8, blue: 0xF0 },
+                Color { red: 0xFB, green: 0xDA, blue: 0xDA },
+        ],
     }
 }
 
-impl Default for FigureSpacing {
-    fn default() -> Self {
-        Self {
-            groupbox_to_textbox: 8,
-            textbox_to_schema: 8,
-            line_to_line: 8,
-        }
+define_options! {
+    GroupIndicatorOptions, PartialGroupIndicatorOptions {
+        width: u32 => 4,
+        spacing: u32 => 4,
+        color: Color => Color::BLACK,
+
+        label_spacing: u32 => 4,
+        label_fontsize: u32 => 14,
+        label_color: Color => Color::BLACK,
     }
 }
 
-impl GroupIndicatorDimension {
+define_options! {
+    EdgeOptions, PartialEdgeOptions {
+        node_font_size: u32 => 14,
+        node_text_color: Color => Color::BLACK,
+        node_background_color: Color => Color::WHITE,
+
+        edge_text_font_size: u32 => 14,
+        edge_text_color: Color => Color::BLACK,
+        edge_text_background_color: Color => Color::WHITE,
+
+        edge_color: Color => Color { red: 0, green: 0, blue: 255 },
+        edge_arrow_color: Color => Color { red: 0, green: 0, blue: 255 },
+        edge_arrow_size: u32 => 8,
+    }
+}
+
+impl GroupIndicatorOptions {
     pub fn label_height(&self) -> u32 {
         self.label_spacing + self.label_fontsize
     }
 }
-

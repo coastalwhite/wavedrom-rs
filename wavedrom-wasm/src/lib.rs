@@ -4,7 +4,7 @@ use wavedrom::Figure;
 mod render_options;
 pub use render_options::{get_parameter_default, modify_parameter};
 
-use crate::render_options::get_options;
+use crate::render_options::{get_assemble_options, get_render_options};
 
 #[no_mangle]
 pub extern "C" fn malloc(size: usize) -> *const u8 {
@@ -35,8 +35,9 @@ fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
     let mut buffer = vec![0; 5];
 
     {
-        let options = get_options();
-        let Ok(()) = figure.assemble_with_options(&options.wave_dimensions).write_svg_with_options(&mut buffer, &options) else {
+        let assemble_options = get_assemble_options();
+        let render_options = get_render_options();
+        let Ok(()) = figure.assemble_with_options(*assemble_options).write_svg_with_options(&mut buffer, &render_options) else {
             return Err(RenderError::WriteError);
         };
     }
