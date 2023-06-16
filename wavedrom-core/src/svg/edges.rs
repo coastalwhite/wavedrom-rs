@@ -7,7 +7,7 @@ use crate::{EdgeArrowType, EdgeVariant, SharpEdgeVariant, SplineEdgeVariant};
 
 use super::dimensions::SvgDimensions;
 use super::options::RenderOptions;
-use super::Font;
+use super::{Font, escape_str};
 
 /// A f64 type that automatically rounds when formatting
 struct SVGF64(pub f64);
@@ -586,6 +586,7 @@ pub fn write_edge_text(
         r##"<g><rect x="{rect_x}" y="{rect_y}" width="{width}" height="{font_size}" stroke="none" fill="#fff"/><text x="{text_x}" y="{text_y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="14" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
         text_x = at.0,
         text_y = at.1,
+        text = escape_str(text),
     )?;
 
     Ok(())
