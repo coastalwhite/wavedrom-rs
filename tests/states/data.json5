@@ -2,21 +2,22 @@
 	signal: [
 		{ "name": "2", "wave": "2" },
         { "name": "2.|", "wave": "2.|" },
-   		{ "name": "2021222z2x2p2P2n2N2.2", "wave": "2021222z2x2p2P2n2N2.2d2u2" },
+        { "name": "202", "wave": "202" },
+        { "name": "212", "wave": "212" },
+        { "name": "222", "wave": "222" },
+        { "name": "2z2", "wave": "2z2" },
+        { "name": "2x2", "wave": "2x2" },
+        { "name": "2p2", "wave": "2p2" },
+        { "name": "2P2", "wave": "2P2" },
+        { "name": "2n2", "wave": "2n2" },
+        { "name": "2N2", "wave": "2N2" },
+        { "name": "2.2", "wave": "2.2" },
+        { "name": "2d2", "wave": "2d2" },
+        { "name": "2u2", "wave": "2u2" },
+        { "name": "2l2", "wave": "2l2" },
+        { "name": "2L2", "wave": "2L2" },
+        { "name": "2h2", "wave": "2h2" },
+        { "name": "2H2", "wave": "2H2" },
         { "name": "period 2, phase 0.5", "wave": "2", "period": 2, "phase": 0.5 },
-		{ "name": "023456789=x", "wave": "0123456789=x" },
-		{
-			"name": "02....3...0",
-			"wave": "02....3...0",
-			"data": [
-				"0xDEAD",
-				"0xBEEF"
-			]
-		},
-		{
-			"name": "2.2.2.2.",
-			"wave": "2.2.2.2.",
-			"data": "A B C D",
-		}
-	]
+    ]
 }

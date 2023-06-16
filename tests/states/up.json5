@@ -2,7 +2,22 @@
 	signal: [
 		{ "name": "u", "wave": "u" },
         { "name": "u.|", "wave": "u.|" },
-        { "name": "u0u1u2uzuxupuPunuNu.u", "wave": "u0u1u2uzuxupuPunuNu.uduuu" },
+        { "name": "u0u", "wave": "u0u" },
+        { "name": "u1u", "wave": "u1u" },
+        { "name": "u2u", "wave": "u2u" },
+        { "name": "uzu", "wave": "uzu" },
+        { "name": "uxu", "wave": "uxu" },
+        { "name": "upu", "wave": "upu" },
+        { "name": "uPu", "wave": "uPu" },
+        { "name": "unu", "wave": "unu" },
+        { "name": "uNu", "wave": "uNu" },
+        { "name": "u.u", "wave": "u.u" },
+        { "name": "udu", "wave": "udu" },
+        { "name": "uuu", "wave": "uuu" },
+        { "name": "ulu", "wave": "ulu" },
+        { "name": "uLu", "wave": "uLu" },
+        { "name": "uhu", "wave": "uhu" },
+        { "name": "uHu", "wave": "uHu" },
         { "name": "period 2, phase 0.5", "wave": "u", "period": 2, "phase": 0.5 }
 	]
 }

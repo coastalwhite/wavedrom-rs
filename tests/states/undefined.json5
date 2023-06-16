@@ -2,7 +2,22 @@
 	signal: [
 		{ "name": "x", "wave": "x" },
         { "name": "x.|", "wave": "x.|" },
-        { "name": "x0x1x2xzxxxpxPxnxNx.x", "wave": "x0x1x2xzxxxpxPxnxNx.xdxux" },
+        { "name": "x0x", "wave": "x0x" },
+        { "name": "x1x", "wave": "x1x" },
+        { "name": "x2x", "wave": "x2x" },
+        { "name": "xzx", "wave": "xzx" },
+        { "name": "xxx", "wave": "xxx" },
+        { "name": "xpx", "wave": "xpx" },
+        { "name": "xPx", "wave": "xPx" },
+        { "name": "xnx", "wave": "xnx" },
+        { "name": "xNx", "wave": "xNx" },
+        { "name": "x.x", "wave": "x.x" },
+        { "name": "xdx", "wave": "xdx" },
+        { "name": "xux", "wave": "xux" },
+        { "name": "xlx", "wave": "xlx" },
+        { "name": "xLx", "wave": "xLx" },
+        { "name": "xhx", "wave": "xhx" },
+        { "name": "xHx", "wave": "xHx" },
         { "name": "period 2, phase 0.5", "wave": "x", "period": 2, "phase": 0.5 }
 	]
 }

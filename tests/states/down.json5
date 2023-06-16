@@ -2,7 +2,22 @@
 	signal: [
 		{ "name": "d", "wave": "d" },
         { "name": "d.|", "wave": "d.|" },
-        { "name": "d0d1d2dzdxdpdPdndNd.d", "wave": "d0d1d2dzdxdpdPdndNd.dddud" },
-        { "name": "period 2, phase 0.5", "wave": "d", "period": 2, "phase": 0.5 }
+        { "name": "d0d", "wave": "d0d" },
+        { "name": "d1d", "wave": "d1d" },
+        { "name": "d2d", "wave": "d2d" },
+        { "name": "dzd", "wave": "dzd" },
+        { "name": "dxd", "wave": "dxd" },
+        { "name": "dpd", "wave": "dpd" },
+        { "name": "dPd", "wave": "dPd" },
+        { "name": "dnd", "wave": "dnd" },
+        { "name": "dNd", "wave": "dNd" },
+        { "name": "d.d", "wave": "d.d" },
+        { "name": "ddd", "wave": "ddd" },
+        { "name": "dud", "wave": "dud" },
+        { "name": "dld", "wave": "dld" },
+        { "name": "dLd", "wave": "dLd" },
+        { "name": "dhd", "wave": "dhd" },
+        { "name": "dHd", "wave": "dHd" },
+        { "name": "period 2, phase 0.5", "wave": "d", "period": 2, "phase": 0.5 },
 	]
 }
