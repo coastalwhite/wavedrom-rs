@@ -18,6 +18,15 @@ macro_rules! replace_ty {
     };
 }
 
+macro_rules! replace_merge {
+    ($name:expr, $value:expr) => {
+        $name = $value
+    };
+    ($name:expr, $value:expr, $__:ty) => {
+        $name.merge_in($value)
+    };
+}
+
 macro_rules! define_options {
     ( $struct_name:ident, $opt_struct_name:ident { $( $property_name:ident: $property_type:ty$([$opt_property_type:ty])? $(=> $property_default_value:expr)?),+ $(,)? } ) => (
         #[derive(Debug, Clone)]
@@ -37,13 +46,15 @@ macro_rules! define_options {
             }
         }
 
-        #[derive(Debug, Clone)]
+        #[cfg(feature = "skins")]
+        #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
         pub struct $opt_struct_name {
             $(
             pub $property_name: Option<replace_ty!($property_type$(, $opt_property_type)?)>,
             )+
         }
 
+        #[cfg(feature = "skins")]
         impl From<$opt_struct_name> for $struct_name {
             fn from(opt: $opt_struct_name) -> Self {
                 Self {
@@ -54,6 +65,17 @@ macro_rules! define_options {
                     ),
                 )+
                 }
+            }
+        }
+
+        #[cfg(feature = "skins")]
+        impl $struct_name {
+            pub fn merge_in(&mut self, opt: $opt_struct_name) {
+                $(
+                if let Some(value) = opt.$property_name {
+                    replace_merge!(self.$property_name, value$(, $opt_property_type)?);
+                }
+                )+
             }
         }
     )

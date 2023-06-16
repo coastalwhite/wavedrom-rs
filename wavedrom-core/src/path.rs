@@ -92,6 +92,7 @@ pub struct PathData {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "skins", derive(serde::Deserialize, serde::Serialize))]
 pub struct PathAssembleOptions {
     pub signal_height: u16,
     pub cycle_width: u16,

@@ -98,7 +98,7 @@ impl FromStr for Color {
             return Err(7);
         }
 
-        if s.chars().count() != 3 {
+        if s.chars().count() != 6 {
             return Err(1);
         };
 

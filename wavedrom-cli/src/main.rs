@@ -2,7 +2,9 @@ use std::io::{stdin, stdout, Read, BufWriter};
 use std::path::PathBuf;
 
 use clap::{value_parser, Arg, Command};
-use wavedrom::Figure;
+use wavedrom::skin::Skin;
+use wavedrom::{Figure, PathAssembleOptions};
+use wavedrom::svg::options::RenderOptions;
 
 static ABOUT: &str = r#"
 A Signal Diagram Generator from WaveJson.
@@ -25,6 +27,13 @@ pub fn make_app() -> Command {
                 .short('o')
                 .long("output")
                 .value_name("OUTPUT FILE")
+                .value_parser(value_parser!(PathBuf)),
+        )
+        .arg(
+            Arg::new("skin")
+                .short('s')
+                .long("skin")
+                .value_name("SKIN FILE")
                 .value_parser(value_parser!(PathBuf)),
         )
 }
@@ -61,6 +70,27 @@ fn main() {
         },
     };
 
+    let (assemble_options, render_options) = match app.get_one::<PathBuf>("skin") {
+        None => (PathAssembleOptions::default(), RenderOptions::default()),
+        Some(skin_path) => {
+            let skin = match std::fs::read_to_string(skin_path) {
+                Ok(content) => content,
+                Err(err) => {
+                    eprintln!("[ERROR]: Failed to read content from skin file. Reason: {err}");
+                    std::process::exit(1);
+                }
+            };
+
+            match Skin::from_json5(&skin) {
+                Ok(skin) => skin.options(),
+                Err(err) => {
+                    eprintln!("[ERROR]: Failed to parse skin content. Reason: {err}");
+                    std::process::exit(1);
+                }
+            }
+        },
+    };
+
     let figure = match Figure::from_json5(&content) {
         Ok(figure) => figure,
         Err(err) => {
@@ -70,7 +100,7 @@ fn main() {
         }
     };
 
-    let assembled = figure.assemble();
+    let assembled = figure.assemble_with_options(assemble_options);
 
     use wavedrom::svg::ToSvg;
     let result = match app.get_one::<PathBuf>("output") {
@@ -93,7 +123,7 @@ fn main() {
             };
 
             let mut writer = BufWriter::new(output_file);
-            assembled.write_svg(&mut writer)
+            assembled.write_svg_with_options(&mut writer, &render_options)
         }
     };
 

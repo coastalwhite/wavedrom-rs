@@ -9,6 +9,9 @@ pub use json5;
 #[cfg(feature = "serde_json")]
 pub use serde_json;
 
+#[cfg(feature = "skins")]
+pub mod skin;
+
 mod cycle_offset;
 mod edges;
 mod path;

@@ -70,6 +70,9 @@ fn handle_supports(pre: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
 mod nop_lib {
     use mdbook::BookItem;
     use mdbook_wavedrom::insert_wavedrom;
+    use wavedrom::skin::Skin;
+    use wavedrom::svg::options::RenderOptions;
+    use wavedrom::{Color, PathAssembleOptions};
 
     use super::*;
 
@@ -83,23 +86,57 @@ mod nop_lib {
 
     impl Preprocessor for WavedromPreProcessor {
         fn name(&self) -> &str {
-            "WaveDrom"
+            "wavedrom"
         }
 
         fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book, Error> {
+            let mut assemble_options = PathAssembleOptions::default();
+            let mut render_options = RenderOptions::default();
+
+            render_options.background = Some(Color::WHITE);
+
             if let Some(config) = ctx.config.get_preprocessor(self.name()) {
-                anyhow::bail!("Hi!");
+                if let Some(skin_path) = config.get("skin") {
+                    let Some(skin_path) = skin_path.as_str() else {
+                        eprintln!("[ERROR]: WaveDrom skin has invalid value type");
+                        std::process::exit(1);
+                    };
+
+                    let skin = match std::fs::read_to_string(skin_path) {
+                        Ok(content) => content,
+                        Err(err) => {
+                            eprintln!("[ERROR]: Failed to read content from WaveDrom skin file. Reason: {err}");
+                            std::process::exit(1);
+                        }
+                    };
+
+                    match Skin::from_json5(&skin) {
+                        Ok(skin) => {
+                            if let Some(assemble) = skin.assemble {
+                                assemble_options = assemble;
+                            }
+
+                            if let Some(render) = skin.render {
+                                render_options.merge_in(render);
+                            }
+                        }
+                        Err(err) => {
+                            eprintln!(
+                                "[ERROR]: Failed to parse WaveDrom skin content. Reason: {err}"
+                            );
+                            std::process::exit(1);
+                        }
+                    }
+                }
             }
 
-            book.for_each_mut(|item| {
-                match item {
-                    BookItem::Separator | BookItem::PartTitle(_) => {},
-                    BookItem::Chapter(chapter) => {
-                        match insert_wavedrom(&chapter.content) {
-                            Ok(new_content) => chapter.content = new_content,
-                            Err(..) => {},
-                        }
-                    },
+            book.for_each_mut(|item| match item {
+                BookItem::Separator | BookItem::PartTitle(_) => {}
+                BookItem::Chapter(chapter) => {
+                    match insert_wavedrom(&chapter.content, assemble_options, &render_options) {
+                        Ok(new_content) => chapter.content = new_content,
+                        Err(..) => {}
+                    }
                 }
             });
 

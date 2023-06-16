@@ -1,5 +1,6 @@
 use std::sync::{Mutex, MutexGuard};
 
+use wavedrom::skin::Skin;
 use wavedrom::svg::options::RenderOptions;
 use wavedrom::{Color, PathAssembleOptions};
 
@@ -62,9 +63,13 @@ macro_rules! parameters {
         }
 
         #[no_mangle]
-        pub extern "C" fn get_parameter_default(parameter: u32) -> u32 {
-            let $assemble = PathAssembleOptions::default();
-            let $render = RenderOptions::default();
+        pub extern "C" fn get_parameter(parameter: u32) -> u32 {
+            let $assemble = unsafe { ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default())) }
+                    .lock()
+                    .unwrap();
+            let $render = unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
+                    .lock()
+                    .unwrap();
             let Some(parameter) = RenderParameter::from_u32(parameter) else {
                 return 0;
             };
@@ -99,7 +104,7 @@ parameters![
     SignalPathColor[render.signal.path_color]{parse_color, serialize_color},
 
     SignalHintLineColor[render.signal.hint_line_color]{parse_color, serialize_color},
-    
+
     SignalUndefinedColor[render.signal.undefined_color]{parse_color, serialize_color},
     SignalUndefinedBackgroundColor[render.signal.undefined_background]{parse_opt_color, serialize_opt_color},
 
@@ -203,4 +208,41 @@ pub fn get_render_options() -> MutexGuard<'static, RenderOptions> {
     unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
         .lock()
         .unwrap()
+}
+
+#[inline]
+pub fn merge_in_skin_internal(json: &str) -> Result<(), ()> {
+    let Ok(skin) = Skin::from_json5(json) else {
+        return Err(());
+    };
+
+    if let Some(assemble) = skin.assemble {
+        *unsafe {
+            ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default()))
+        }
+        .lock()
+        .unwrap() = assemble;
+    }
+
+    if let Some(render) = skin.render {
+        unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
+            .lock()
+            .unwrap()
+            .merge_in(render);
+    }
+
+    Ok(())
+}
+
+#[inline]
+pub fn reset() {
+    *unsafe {
+        ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default()))
+    }
+    .lock()
+    .unwrap() = PathAssembleOptions::default();
+
+    *unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
+        .lock()
+        .unwrap() = RenderOptions::default();
 }

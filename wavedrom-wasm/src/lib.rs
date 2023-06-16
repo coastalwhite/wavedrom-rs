@@ -2,9 +2,11 @@ use wavedrom::wavejson::WaveJson;
 use wavedrom::Figure;
 
 mod render_options;
-pub use render_options::{get_parameter_default, modify_parameter};
+pub use render_options::{get_parameter, modify_parameter};
 
 use crate::render_options::{get_assemble_options, get_render_options};
+
+use self::render_options::merge_in_skin_internal;
 
 #[no_mangle]
 pub extern "C" fn malloc(size: usize) -> *const u8 {
@@ -63,4 +65,22 @@ pub extern "C" fn render(ptr: *mut u8, size: usize) -> *const u8 {
         Ok(svg) => svg.leak().as_ptr(),
         Err(err) => Box::leak(Box::new(err as u8)) as *const u8,
     }
+}
+
+#[no_mangle]
+pub extern "C" fn merge_in_skin(ptr: *mut u8, size: usize) -> u8 {
+    let bytes = unsafe { Vec::from_raw_parts(ptr, size, size) };
+    let Ok(json) = String::from_utf8(bytes) else {
+        return 1;
+    };
+
+    match merge_in_skin_internal(&json[..]) {
+        Ok(_) => 0,
+        Err(_) => 2,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn reset_parameters() {
+    render_options::reset()
 }

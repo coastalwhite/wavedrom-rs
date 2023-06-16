@@ -18,7 +18,7 @@ workspace = true
 
 [dependencies.mdbook]
 version = "0.4.30"
-no-default-features = []
+default-features = false
 
 [dependencies.wavedrom]
 path = "../wavedrom-core"

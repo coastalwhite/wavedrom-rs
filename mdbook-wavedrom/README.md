@@ -10,7 +10,8 @@ First, install the preprocessor utilizing the [Rust Toolchain].
 cargo install mdbook-wavedrom
 ```
 
-Then, add the preprocessor to the list of preprocessors in your [mdbook] configuration file `book.toml`.
+Then, add the preprocessor to the list of preprocessors in your [mdbook]
+configuration file `book.toml`.
 
 ```toml
 # book.toml
@@ -18,7 +19,9 @@ Then, add the preprocessor to the list of preprocessors in your [mdbook] configu
 [preprocessor.wavedrom]
 ```
 
-Afterwards, you should be able to add a `wavedrom` codeblock, which should automatically get replaced by a [wavedrom-rs] diagram when building the [mdbook].
+Afterwards, you should be able to add a `wavedrom` codeblock, which should
+automatically get replaced by a [wavedrom-rs] diagram when building the
+[mdbook].
 
 `````markdown
 # Chapter 1
@@ -32,6 +35,18 @@ Afterwards, you should be able to add a `wavedrom` codeblock, which should autom
 }
 ```
 `````
+
+## Add a skin
+
+A WaveDrom skin can be added by adding a path to a skin file in the `skin`
+property.
+
+```toml
+# book.toml
+
+[preprocessor.wavedrom]
+skin = "path/to/skin.json5"
+```
 
 [Rust Toolchain]: https://www.rust-lang.org/tools/install
 [wavedrom-rs]: https://github.com/coastalwhite/wavedrom-rs

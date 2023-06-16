@@ -34,7 +34,7 @@ const PARAMETERS = [
     "signal-height",
     "cycle-width",
     "transition-offset",
-    
+
     [
         [
             "background-enabled",
@@ -68,7 +68,9 @@ const PARAMETERS = [
             "signal-undefined-background-color-enabled",
             (_, elem) => {
                 if (elem.checked) {
-                    const color_selector = document.getElementById("param:signal-undefined-background-color");
+                    const color_selector = document.getElementById(
+                        "param:signal-undefined-background-color"
+                    );
                     return serialize_color(color_selector.value);
                 } else {
                     return 0;
@@ -234,7 +236,6 @@ fetch("./wavedrom.wasm")
     .then((response) => response.arrayBuffer())
     .then((bytes) => WebAssembly.instantiate(bytes, { env: {} }))
     .then((results) => {
-        let module = {};
         let mod = results.instance;
         let {
             malloc,
@@ -242,7 +243,9 @@ fetch("./wavedrom.wasm")
             render,
             memory,
             modify_parameter,
-            get_parameter_default,
+            get_parameter,
+            merge_in_skin,
+			reset_parameters,
         } = mod.exports;
 
         const input = document.getElementById("input");
@@ -267,18 +270,29 @@ fetch("./wavedrom.wasm")
             rerender();
         };
 
-        function define_setting_field(idx, item) {
-            const value = get_parameter_default(idx);
+        function refresh_parameter_values() {
+            for (let idx = 0; idx < PARAMETERS.length; idx += 1) {
+                const item = PARAMETERS[idx];
 
-            let id, serializer, deserializer;
+                if (Array.isArray(item) && Array.isArray(item[0])) {
+                    for (let i = 0; i < item.length; i += 1) {
+                        refresh_parameter_value(idx, item[i])  
+                    }
+                } else {
+                    refresh_parameter_value(idx, item);
+                }
+            }
+        }
+
+        function refresh_parameter_value(idx, item) {
+            const value = get_parameter(idx);
+            let id, deserializer;
             if (Array.isArray(item)) {
                 console.assert(item.length > 2);
                 id = item[0];
-                serializer = item[1];
                 deserializer = item[2];
             } else {
                 id = item;
-                serializer = (value) => parseInt(value);
                 deserializer = (value) => value.toString();
             }
 
@@ -287,13 +301,31 @@ fetch("./wavedrom.wasm")
                 console.error("Did not find: " + id);
             }
 
-            console.log(value);
             elem.value = deserializer(value, elem);
+        }
+
+        function define_setting_field(idx, item) {
+            let id, serializer;
+            if (Array.isArray(item)) {
+                console.assert(item.length > 2);
+                id = item[0];
+                serializer = item[1];
+            } else {
+                id = item;
+                serializer = (value) => parseInt(value);
+            }
+
+            const elem = document.getElementById("param:" + id);
+            if (elem == undefined || elem == null) {
+                console.error("Did not find: " + id);
+            }
 
             const handler = () => option_handler(elem, idx, serializer);
             elem.onchange = handler;
             elem.onkeyup = handler;
         }
+
+        refresh_parameter_values();
 
         for (let idx = 0; idx < PARAMETERS.length; idx += 1) {
             const item = PARAMETERS[idx];
@@ -306,6 +338,48 @@ fetch("./wavedrom.wasm")
                 define_setting_field(idx, item);
             }
         }
+
+        document
+            .getElementById("reset-button")
+            .addEventListener("click", () => {
+				reset_parameters();
+				refresh_parameter_values();
+				rerender();
+		});
+
+        document
+            .getElementById("skin-file-button")
+            .addEventListener("click", (_) => {
+                const skin_file = document.getElementById("skin-file");
+
+                if (skin_file.files.length == 0) {
+                    return;
+                }
+
+                let file = skin_file.files[0];
+
+                let reader = new FileReader();
+
+                reader.readAsText(file);
+
+                reader.onload = function() {
+                    const [ptr, length] = encode_string(reader.result, memory, malloc);
+                    const result = merge_in_skin(ptr, length);
+
+                    if (result != 0) {
+                        error.innerHTML = "Invalid skin file";
+                    }
+
+                    refresh_parameter_values();
+                    rerender();
+                };
+
+                reader.onerror = function() {
+                    makeInvisible("success-icon");
+                    makeVisible("failure-icon");
+                    error.innerHTML = "Failed to upload file";
+                };
+            });
     });
 
 function makeVisible(id) {

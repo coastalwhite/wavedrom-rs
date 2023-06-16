@@ -2,8 +2,8 @@ use std::fmt::Display;
 
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
 use wavedrom::json5::Error as JsonError;
-use wavedrom::Color;
 use wavedrom::svg::options::RenderOptions;
+use wavedrom::PathAssembleOptions;
 use wavedrom::{svg::ToSvg, wavejson::WaveJson, Figure};
 
 #[derive(Debug)]
@@ -34,7 +34,11 @@ impl Display for InsertionError {
 
 impl std::error::Error for InsertionError {}
 
-pub fn insert_wavedrom(content: &str) -> Result<String, InsertionError> {
+pub fn insert_wavedrom(
+    content: &str,
+    assemble_options: PathAssembleOptions,
+    render_options: &RenderOptions,
+) -> Result<String, InsertionError> {
     let mut opts = Options::empty();
     opts.insert(Options::ENABLE_TABLES);
     opts.insert(Options::ENABLE_FOOTNOTES);
@@ -109,12 +113,9 @@ pub fn insert_wavedrom(content: &str) -> Result<String, InsertionError> {
             let wavedrom_figure =
                 Figure::try_from(wavejson).map_err(|_| InsertionError::InvalidFigure)?;
 
-            let mut options = RenderOptions::default();
-            options.background = Some(Color::WHITE);
-
             wavedrom_figure
-                .assemble()
-                .write_svg_with_options(&mut wavedrom_code, &options)
+                .assemble_with_options(assemble_options)
+                .write_svg_with_options(&mut wavedrom_code, &render_options)
                 .map_err(|_| InsertionError::WriteSvg)?;
 
             let wavedrom_code =
@@ -167,7 +168,12 @@ mod tests {
 ```
         "#;
 
-        let replaced_content = insert_wavedrom(content).unwrap();
+        let replaced_content = insert_wavedrom(
+            content,
+            PathAssembleOptions::default(),
+            &RenderOptions::default(),
+        )
+        .unwrap();
         assert_ne!(content, &replaced_content);
         assert!(replaced_content.contains(r#"<pre class="wavedrom">"#));
         assert!(replaced_content.contains("</svg>"));

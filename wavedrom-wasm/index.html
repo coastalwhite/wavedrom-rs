@@ -42,10 +42,24 @@ onclick="toggleVisibility('render-settings')" href="#">
 			<div class="lg:w-1/2 flex-1 grow flex flex-col bg-gray-100 border-r
 h-screen">
 				<textarea class="w-full outline-none resize-none flex-1 bg-transparent p-4" id="input" spellcheck="false"></textarea>
-				<div id="render-settings" class="bg-gray-700 overflow-y-auto flex-1 w-full p-4 text-md hidden text-white">
-                    <div class="w-full">
+				<div id="render-settings" class="bg-gray-700 lg:overflow-y-auto flex-1 w-full p-4 text-md hidden text-white">
+                    <div class="max-w-full">
+                        <button class="hover:bg-gray-400 bg-gray-200 px-2 py-1 rounded text-black text-lg font-bold" type="button" id="reset-button">
+                            Reset
+                        </button>
+                    </div>
+                    <div class="max-w-full my-12">
+                        <h2 class="text-lg font-bold">Upload Skin</h2>
+                        <div>
+                            <input type="file" id="skin-file" accept=".json, .json5" />
+                            <button class="hover:bg-gray-400 bg-gray-200 px-2 py-1 rounded text-black text-lg font-bold" type="button" id="skin-file-button">
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                    <div class="max-w-full">
                         <h2 class="text-lg font-bold">Render Settings</h2>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Background:</td>
                                 <td>
@@ -55,9 +69,9 @@ h-screen">
                             </tr>
                         </table>
                     </div>
-                    <div class="w-full">
+                    <div class="max-w-full">
                         <h3 class="font-bold mt-4">Signal Assemble Options</h3>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Signal Height (px):</td>
                                 <td><input class="text-black" id="param:signal-height" type="number" /></td>
@@ -72,9 +86,9 @@ h-screen">
                             </tr>
                         </table>
                     </div>
-                    <div class="w-full">
+                    <div class="max-w-full">
                         <h3 class="font-bold mt-4">Signal Options</h3>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Marker Font Size (px):</td>
                                 <td><input class="text-black" id="param:signal-marker-fontsize" type="number" /></td>
@@ -144,9 +158,9 @@ h-screen">
                             </tr>
                         </table>
                     </div>
-                    <div class="w-full">
+                    <div class="max-w-full">
                         <h3 class="font-bold mt-4">Figure Padding</h3>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Top (px):</td>
                                 <td><input class="text-black" id="param:padding-figure-top" type="number" /></td>
@@ -165,9 +179,9 @@ h-screen">
                             </tr>
                         </table>
                     </div>
-                    <div class="w-full">
+                    <div class="max-w-full">
                         <h3 class="font-bold mt-4">Schema Padding</h3>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Top (px):</td>
                                 <td><input class="text-black" id="param:padding-schema-top" type="number" /></td>
@@ -178,9 +192,9 @@ h-screen">
                             </tr>
                         </table>
                     </div>
-                    <div class="w-full">
+                    <div class="max-w-full">
                         <h3 class="font-bold mt-4">Spacing</h3>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Signal Names to Schema</td>
                                 <td><input class="text-black" id="param:spacing-textbox-to-schema" type="number" /></td>
@@ -195,9 +209,9 @@ h-screen">
                             </tr>
                         </table>
                     </div>
-                    <div class="w-full">
+                    <div class="max-w-full">
                         <h3 class="font-bold mt-4">Group Indicator Options</h3>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Indicator Width</td>
                                 <td><input class="text-black" id="param:group-indicator-width" type="number" /></td>
@@ -224,9 +238,9 @@ h-screen">
                             </tr>
                         </table>
                     </div>
-                    <div class="w-full">
+                    <div class="max-w-full">
                         <h3 class="font-bold mt-4">Header Options</h3>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Font Size</td>
                                 <td><input class="text-black" id="param:header-fontsize" type="number" /></td>
@@ -253,9 +267,9 @@ h-screen">
                             </tr>
                         </table>
                     </div>
-                    <div class="w-full">
+                    <div class="max-w-full">
                         <h3 class="font-bold mt-4">Footer Options</h3>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Font Size</td>
                                 <td><input class="text-black" id="param:footer-fontsize" type="number" /></td>
@@ -282,9 +296,9 @@ h-screen">
                             </tr>
                         </table>
                     </div>
-                    <div class="w-full">
+                    <div class="max-w-full">
                         <h3 class="font-bold mt-4">Edge Options</h3>
-                        <table class="w-full table-fixed">
+                        <table class="max-w-full table-fixed">
                             <tr>
                                 <td>Node Font Size</td>
                                 <td><input class="text-black" id="param:edge-node-fontsize" type="number" /></td>
