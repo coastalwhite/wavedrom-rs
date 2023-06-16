@@ -37,7 +37,7 @@ pub fn write_line_edge(
     dims: &SvgDimensions,
     options: &RenderOptions,
     font: &Font,
-) -> io::Result<()> {
+) -> io::Result<(f64, f64)> {
     // 1. Calculate Start and End places
     // 2. Draw Text Markers
     // 3. Draw Line Edge
@@ -48,12 +48,12 @@ pub fn write_line_edge(
     let from = edge.from();
     let to = edge.to();
 
-    if from == to {
-        return Ok(());
-    }
-
     let from_x = dims.schema_x() + from.x().width_offset(wave_dimensions.cycle_width.into());
     let from_y = dims.signal_top(from.y()) + u32::from(wave_dimensions.signal_height / 2);
+
+    if from == to {
+        return Ok((f64::from(from_x), f64::from(from_y)));
+    }
 
     let to_x = dims.schema_x() + to.x().width_offset(wave_dimensions.cycle_width.into());
     let to_y = dims.signal_top(to.y()) + u32::from(wave_dimensions.signal_height / 2);
@@ -334,18 +334,12 @@ pub fn write_line_edge(
                 SharpEdgeVariant::StartHorizontal(_) => {
                     write!(writer, "H{end_x}V{end_y}")?;
 
-                    (
-                        f64::from(to_x),
-                        f64::from(from_y),
-                    )
+                    (f64::from(to_x), f64::from(from_y))
                 }
                 SharpEdgeVariant::EndHorizontal(_) => {
                     write!(writer, "V{end_y}H{end_x}")?;
 
-                    (
-                        f64::from(from_x),
-                        f64::from(to_y),
-                    )
+                    (f64::from(from_x), f64::from(to_y))
                 }
             },
         }
@@ -403,63 +397,6 @@ pub fn write_line_edge(
         r##"" fill="none" stroke="#000" stroke-width="1"/>"##
     )?;
 
-    if let Some(c) = edge.from_marker() {
-        let width = from_bbox.width;
-        let height = from_bbox.height;
-
-        let font_family = font
-            .get_font_family_name()
-            .unwrap_or_else(|| "Helvetica".to_string());
-
-        let rect_x = from_bbox.x_min();
-        let rect_y = from_bbox.y_min();
-
-        write!(
-            writer,
-            r##"<g><rect x="{rect_x}" y="{rect_y}" width="{width}" height="{height}" stroke="none" fill="#fff"/><text x="{text_x}" y="{text_y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="14" letter-spacing="0"><tspan>{c}</tspan></text></g>"##,
-            text_x = from_bbox.middle_x,
-            text_y = from_bbox.middle_y,
-        )?;
-    }
-
-    if let Some(c) = edge.to_marker() {
-        let width = to_bbox.width;
-        let height = to_bbox.height;
-
-        let font_family = font
-            .get_font_family_name()
-            .unwrap_or_else(|| "Helvetica".to_string());
-
-        let rect_x = to_bbox.x_min();
-        let rect_y = to_bbox.y_min();
-
-        write!(
-            writer,
-            r##"<g><rect x="{rect_x}" y="{rect_y}" width="{width}" height="{height}" stroke="none" fill="#fff"/><text x="{text_x}" y="{text_y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="14" letter-spacing="0"><tspan>{c}</tspan></text></g>"##,
-            text_x = to_bbox.middle_x,
-            text_y = to_bbox.middle_y,
-        )?;
-    }
-
-    if let Some(text) = edge.text() {
-        let width = font.get_text_width(text, 14);
-        let height = 14;
-
-        let font_family = font
-            .get_font_family_name()
-            .unwrap_or_else(|| "Helvetica".to_string());
-
-        let rect_x = f64::from(middle_x) - f64::from(width) / 2.;
-        let rect_y = f64::from(middle_y) - f64::from(height) / 2.;
-
-        write!(
-            writer,
-            r##"<g><rect x="{rect_x}" y="{rect_y}" width="{width}" height="{height}" stroke="none" fill="#fff"/><text x="{text_x}" y="{text_y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="14" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
-            text_x = middle_x,
-            text_y = middle_y,
-        )?;
-    }
-
     write_edge_arrow_heads(
         writer,
         arrow_type,
@@ -470,6 +407,60 @@ pub fn write_line_edge(
     )?;
 
     write!(writer, "</g>")?;
+
+    Ok((middle_x, middle_y))
+}
+
+pub fn write_line_edge_markers(
+    writer: &mut impl io::Write,
+    edge: LineEdge,
+    middle: (f64, f64),
+    dims: &SvgDimensions,
+    options: &RenderOptions,
+    font: &Font,
+) -> io::Result<()> {
+    let wave_dimensions = &options.wave_dimensions;
+
+    let from = edge.from();
+    let to = edge.to();
+
+    if from == to {
+        return Ok(());
+    }
+
+    let from_x = dims.schema_x() + from.x().width_offset(wave_dimensions.cycle_width.into());
+    let from_y = dims.signal_top(from.y()) + u32::from(wave_dimensions.signal_height / 2);
+
+    let to_x = dims.schema_x() + to.x().width_offset(wave_dimensions.cycle_width.into());
+    let to_y = dims.signal_top(to.y()) + u32::from(wave_dimensions.signal_height / 2);
+
+    let middle_x = middle.0;
+    let middle_y = middle.1;
+
+    if let Some(c) = edge.from_marker() {
+        write_edge_text(
+            writer,
+            (f64::from(from_x), f64::from(from_y)),
+            &c.to_string(),
+            14,
+            font,
+        )?;
+    }
+
+    if let Some(c) = edge.to_marker() {
+        write_edge_text(
+            writer,
+            (f64::from(to_x), f64::from(to_y)),
+            &c.to_string(),
+            14,
+            font,
+        )?;
+    }
+
+    if let Some(text) = edge.text() {
+        write_edge_text(writer, (middle_x, middle_y), text, 14, font)?;
+    }
+
     Ok(())
 }
 
@@ -575,23 +566,24 @@ fn get_text_bbox(text: &str, middle_x: u32, middle_y: u32, font: &Font, font_siz
     }
 }
 
-fn write_edge_arrow_text(
+pub fn write_edge_text(
     writer: &mut impl io::Write,
     at: (f64, f64),
     text: &str,
+    font_size: u32,
     font: &Font,
 ) -> io::Result<()> {
-    let width = font.get_text_width(text, 14);
+    let width = font.get_text_width(text, font_size);
     let font_family = font
         .get_font_family_name()
         .unwrap_or_else(|| "Helvetica".to_string());
 
     let rect_x = at.0 - f64::from(width) / 2.;
-    let rect_y = at.1 - 14. / 2.;
+    let rect_y = at.1 - f64::from(font_size) / 2.;
 
     write!(
         writer,
-        r##"<g><rect x="{rect_x}" y="{rect_y}" width="{width}" height="14" stroke="none" fill="#fff"/><text x="{text_x}" y="{text_y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="14" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
+        r##"<g><rect x="{rect_x}" y="{rect_y}" width="{width}" height="{font_size}" stroke="none" fill="#fff"/><text x="{text_x}" y="{text_y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="14" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
         text_x = at.0,
         text_y = at.1,
     )?;

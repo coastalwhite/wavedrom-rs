@@ -1,0 +1,6 @@
+{
+	signal: [
+		{ wave: "=....", node: "a.b.c" },
+	],
+	edge: [ "a<->b", "a<->c" ],
+}

@@ -1,11 +1,10 @@
 use std::borrow::Cow;
-use std::fmt::Display;
 use std::io;
 
 use crate::path::{PathCommand, PathSegmentBackground};
-use crate::{ClockEdge, EdgeArrowType, SignalOptions};
+use crate::{ClockEdge, SignalOptions};
 
-use self::edges::write_line_edge;
+use self::edges::{write_edge_text, write_line_edge, write_line_edge_markers};
 
 use super::path::AssembledSignalPath;
 use super::AssembledFigure;
@@ -392,25 +391,42 @@ impl<'a> ToSvg for AssembledFigure<'a> {
         }
 
         if !self.line_edge_markers.lines().is_empty() {
+            let mut middles = Vec::with_capacity(self.line_edge_markers.lines().len());
+
             write!(writer, "<g>")?;
             for line_edge in self.line_edge_markers.lines() {
-                write_line_edge(writer, line_edge.clone(), &dims, options, &font)?;
+                middles.push(write_line_edge(
+                    writer,
+                    line_edge.clone(),
+                    &dims,
+                    options,
+                    &font,
+                )?);
             }
             write!(writer, "</g>")?;
+
+            for (line_edge, middle) in self
+                .line_edge_markers
+                .lines()
+                .iter()
+                .zip(middles.into_iter())
+            {
+                write_line_edge_markers(writer, line_edge.clone(), middle, &dims, options, &font)?;
+            }
         }
 
-        // for text_node in self.line_edge_markers.text_nodes() {
-        //     let text = text_node.text().to_string();
-        //     let x = dims.schema_x()
-        //         + text_node
-        //             .at()
-        //             .x()
-        //             .width_offset(wave_dimensions.cycle_width.into());
-        //     let y =
-        //         dims.signal_top(text_node.at().y()) + u32::from(wave_dimensions.signal_height / 2);
-        //
-        //     write_edge_arrow_text(writer, (x.into(), y.into()), &text, &font)?;
-        // }
+        for text_node in self.line_edge_markers.text_nodes() {
+            let text = text_node.text().to_string();
+            let x = dims.schema_x()
+                + text_node
+                    .at()
+                    .x()
+                    .width_offset(wave_dimensions.cycle_width.into());
+            let y =
+                dims.signal_top(text_node.at().y()) + u32::from(wave_dimensions.signal_height / 2);
+
+            write_edge_text(writer, (x.into(), y.into()), &text, 14, &font)?;
+        }
 
         write!(writer, "</svg>")?;
 
