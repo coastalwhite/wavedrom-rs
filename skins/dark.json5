@@ -1,0 +1,47 @@
+{
+    render: {
+        background: "#222",
+        header: {
+            color: "#F5F5F5",
+            cycle_marker_color: "#F5F5F5",
+        },
+        footer: {
+            color: "#F5F5F5",
+            cycle_marker_color: "#F5F5F5",
+        },
+        signal: {
+            marker_color: "#F5F5F5",
+            name_color: "#F5F5F5",
+            path_color: "#F5F5F5",
+            gap_color: "#F5F5F5",
+            gap_background_color: "#222",
+            hint_line_color: "#555",
+			backgrounds: [
+				"#222",
+				"#0C759D",
+				"#328640",
+				"#9D2D0C",
+				"#3C4D9F",
+                "#13600B",
+				"#9F3C60",
+				"#903C9F",
+			],
+            undefined_color: "#F5F5F5",
+            undefined_background_color: "#222",
+        },
+        group_indicator: {
+            color: "#F5F5F5",
+            label_color: "#F5F5F5",
+        },
+        edge: {
+            node_text_color: "#F5F5F5",
+            node_background_color: "#222",
+
+            edge_text_color: "#F5F5F5",
+            edge_text_background_color: "#222",
+
+            edge_color: "#C4E7F7",
+            edge_arrow_color: "#C4E7F7",
+        },
+    }
+}
