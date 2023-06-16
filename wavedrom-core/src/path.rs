@@ -35,6 +35,10 @@ pub enum CycleState {
     Gap,
     Up,
     Down,
+    HighUnmarked,
+    HighMarked,
+    LowUnmarked,
+    LowMarked,
 }
 
 #[derive(Debug, Clone)]
@@ -312,8 +316,10 @@ impl<'a> SignalSegmentIter<'a> {
                 self.forward.restart_move_to(0, h);
                 self.forward.horizontal_line(t);
             }
-            PosedgeClockMarked | PosedgeClockUnmarked => self.forward.restart_move_to(0, h),
-            NegedgeClockMarked | NegedgeClockUnmarked => {}
+            PosedgeClockMarked | PosedgeClockUnmarked | LowUnmarked | LowMarked => {
+                self.forward.restart_move_to(0, h)
+            }
+            NegedgeClockMarked | NegedgeClockUnmarked | HighUnmarked | HighMarked => {}
             Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X | Continue | Gap => {
                 self.forward.horizontal_line(t);
                 self.backward.vertical_line_no_stroke(-h);
@@ -368,6 +374,9 @@ impl<'a> SignalSegmentIter<'a> {
                 self.forward.horizontal_line(w * p / 2);
                 self.forward.vertical_line(-h);
                 self.forward.horizontal_line(w * p / 2);
+            }
+            HighUnmarked | HighMarked | LowUnmarked | LowMarked => {
+                self.forward.horizontal_line(w - t);
             }
             Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | Data | X => {
                 self.forward.horizontal_line(w - t * 2);
@@ -657,6 +666,240 @@ impl<'a> SignalSegmentIter<'a> {
 
                 return Some(segment);
             }
+            (HighUnmarked | HighMarked | LowUnmarked | LowMarked, Continue | Gap)
+            | (Top | HighUnmarked | HighMarked, HighUnmarked | HighMarked)
+            | (HighUnmarked | HighMarked, Top)
+            | (Bottom | LowUnmarked | LowMarked, LowUnmarked | LowMarked)
+            | (LowUnmarked | LowMarked, Bottom) => {
+                self.forward.horizontal_line(t);
+            }
+            (HighUnmarked | HighMarked, LowUnmarked | LowMarked) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(h);
+            }
+            (LowUnmarked | LowMarked, HighUnmarked | HighMarked) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(-h);
+            }
+            (
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data,
+                HighUnmarked | HighMarked,
+            ) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.backward.horizontal_line(-t);
+                self.backward.vertical_line(h);
+
+                return Some(self.commit_with_back_line(state.background()));
+            }
+            (
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data,
+                LowUnmarked | LowMarked,
+            ) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(h);
+                self.backward.horizontal_line(-t);
+
+                return Some(self.commit_with_back_line(state.background()));
+            }
+            (
+                HighUnmarked | HighMarked,
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data,
+            ) => {
+                self.forward.horizontal_line(t);
+
+                let segment = self.commit_without_back_line();
+
+                self.forward.horizontal_line(t);
+                self.backward.line(-t, -h);
+
+                return Some(segment);
+            }
+            (
+                LowUnmarked | LowMarked,
+                Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9 | X | Data,
+            ) => {
+                self.forward.horizontal_line(t);
+
+                let segment = self.commit_without_back_line();
+
+                self.forward.line(t, -h);
+                self.backward.horizontal_line(-t);
+
+                return Some(segment);
+            }
+            (Middle, LowUnmarked | LowMarked) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(-h / 2);
+                self.forward.vertical_line(h);
+            }
+            (Middle, HighUnmarked | HighMarked) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(h / 2);
+                self.forward.vertical_line(-h);
+            }
+            (Down, LowUnmarked | LowMarked) | (Up, HighUnmarked | HighMarked) => {
+                self.forward.dashed_horizontal_line(t);
+            }
+            (Up, LowUnmarked | LowMarked) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.dashed_horizontal_line(t);
+                self.forward.vertical_line(h);
+            }
+            (Down, HighUnmarked | HighMarked) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.dashed_horizontal_line(t);
+                self.forward.vertical_line(-h);
+            }
+            (Bottom, HighUnmarked | HighMarked) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(-h);
+            }
+            (Top, LowUnmarked | LowMarked) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(h);
+            }
+            (PosedgeClockUnmarked | PosedgeClockMarked, HighUnmarked | HighMarked) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.vertical_line(-h);
+            }
+            (NegedgeClockUnmarked | NegedgeClockMarked, HighUnmarked | HighMarked) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.vertical_line(h);
+                self.forward.vertical_line(-h);
+            }
+            (PosedgeClockUnmarked | PosedgeClockMarked, LowUnmarked | LowMarked) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.vertical_line(-h);
+                self.forward.vertical_line(h);
+            }
+            (NegedgeClockUnmarked | NegedgeClockMarked, LowUnmarked | LowMarked) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.vertical_line(h);
+            }
+            (HighUnmarked | HighMarked, PosedgeClockMarked | PosedgeClockUnmarked) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(h);
+            }
+            (LowUnmarked | LowMarked, NegedgeClockMarked | NegedgeClockUnmarked) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(-h);
+            }
+            (HighUnmarked | HighMarked, NegedgeClockMarked | NegedgeClockUnmarked)
+            | (LowUnmarked | LowMarked, PosedgeClockMarked | PosedgeClockUnmarked) => {
+                self.forward.horizontal_line(t);
+            }
+            (HighUnmarked | HighMarked, Up) => {
+                self.forward.horizontal_line(t);
+                self.forward.dashed_horizontal_line(t);
+            }
+            (LowUnmarked | LowMarked, Down) => {
+                self.forward.horizontal_line(t);
+                self.forward.dashed_horizontal_line(t);
+            }
+            (LowUnmarked | LowMarked, Top) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(-h);
+                self.forward.horizontal_line(t);
+            }
+            (LowUnmarked | LowMarked, Up) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.curve(t, 0, t, -h, 2*t, -h);
+            }
+            (HighUnmarked | HighMarked, Bottom) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.horizontal_line(t);
+                self.forward.vertical_line(h);
+                self.forward.horizontal_line(t);
+            }
+            (HighUnmarked | HighMarked, Down) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.curve(t, 0, t, h, 2*t, h);
+            }
+            (HighUnmarked | HighMarked, Middle) => {
+                if matches!(next, HighMarked) {
+                    self.posedge_marker();
+                }
+
+                self.forward.curve(0, t, t, h / 2, 2*t, h / 2);
+            }
+            (LowUnmarked | LowMarked, Middle) => {
+                if matches!(next, LowMarked) {
+                    self.negedge_marker();
+                }
+
+                self.forward.curve(0, -t, t, -h / 2, 2*t, -h / 2);
+            }
         }
 
         None
@@ -669,7 +912,7 @@ impl<'a> SignalSegmentIter<'a> {
         use CycleState::*;
 
         match state {
-            Top | Bottom | Middle => {
+            Top | Bottom | Middle | HighUnmarked | HighMarked | LowUnmarked | LowMarked => {
                 self.forward.horizontal_line(t);
                 self.commit_without_back_line()
             }
@@ -776,7 +1019,7 @@ impl<'a> SignalSegmentIter<'a> {
 
         CycleOffset::new_rounded(match state {
             Top | Bottom | Middle | Box2 | Box3 | Box4 | Box5 | Box6 | Box7 | Box8 | Box9
-            | Data | X | Down | Up => 1,
+            | Data | X | Down | Up | HighUnmarked | HighMarked | LowUnmarked | LowMarked => 1,
             PosedgeClockUnmarked | PosedgeClockMarked | NegedgeClockUnmarked
             | NegedgeClockMarked => self.period.get().into(),
             Continue | Gap => unreachable!(),
@@ -1015,7 +1258,8 @@ impl CycleState {
 
         match self {
             Top | Bottom | Middle | NegedgeClockMarked | NegedgeClockUnmarked
-            | PosedgeClockMarked | PosedgeClockUnmarked | Up | Down => None,
+            | PosedgeClockMarked | PosedgeClockUnmarked | Up | Down | HighUnmarked | HighMarked
+            | LowUnmarked | LowMarked => None,
             X => Some(PathSegmentBackground::Undefined),
             Box2 | Data => Some(PathSegmentBackground::B2),
             Box3 => Some(PathSegmentBackground::B3),

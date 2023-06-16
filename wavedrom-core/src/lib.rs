@@ -192,6 +192,10 @@ impl Cycles {
                 '=' => CycleState::Data,
                 'u' => CycleState::Up,
                 'd' => CycleState::Down,
+                'h' => CycleState::HighUnmarked,
+                'H' => CycleState::HighMarked,
+                'l' => CycleState::LowUnmarked,
+                'L' => CycleState::LowMarked,
                 _ => CycleState::X,
             };
 
