@@ -101,6 +101,9 @@ parameters![
     SignalNameFontSize[render.signal.name_font_size],
     SignalNameColor[render.signal.name_color]{parse_color, serialize_color},
 
+    SignalGapColor[render.signal.gap_color]{parse_color, serialize_color},
+    SignalGapBackgroundColor[render.signal.gap_background_color]{parse_color, serialize_color},
+
     SignalPathColor[render.signal.path_color]{parse_color, serialize_color},
 
     SignalHintLineColor[render.signal.hint_line_color]{parse_color, serialize_color},

@@ -58,6 +58,9 @@ const PARAMETERS = [
     "signal-name-fontsize",
     ["signal-name-color", serialize_color, deserialize_color],
 
+    ["signal-gap-color", serialize_color, deserialize_color],
+    ["signal-gap-background-color", serialize_color, deserialize_color],
+
     ["signal-path-color", serialize_color, deserialize_color],
 
     ["signal-hint-line-color", serialize_color, deserialize_color],

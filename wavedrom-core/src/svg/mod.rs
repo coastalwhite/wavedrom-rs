@@ -53,7 +53,7 @@ fn escape_str(s: &str) -> Cow<str> {
     Cow::Owned(output)
 }
 
-fn gap(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
+fn gap(writer: &mut impl io::Write, wave_height: u16, color: Color, background: Color) -> io::Result<()> {
     let wave_height = f32::from(wave_height);
 
     let a: f32 = 8.0;
@@ -73,7 +73,7 @@ fn gap(writer: &mut impl io::Write, wave_height: u16) -> io::Result<()> {
 
     write!(
         writer,
-        r##"<path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}H{rp1x}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}H{lp1x}z" fill="#fff" stroke="none"/><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}" fill="none" stroke="#000" stroke-width="1"/><path d="M{rp1x},{rp1y}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}" fill="none" stroke="#000" stroke-width="1"/>"##,
+        r##"<path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}H{rp1x}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}H{lp1x}z" fill="{background}" stroke="none"/><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}" fill="none" stroke="{color}" stroke-width="1"/><path d="M{rp1x},{rp1y}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}" fill="none" stroke="{color}" stroke-width="1"/>"##,
         lp1x = start.0 - DISTANCE / 2.0,
         lp1y = start.1,
         lp2x = control_1.0 - DISTANCE / 2.0,
@@ -211,7 +211,7 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
         if self.definitions.has_gaps {
             write!(writer, r##"<g id="gap">"##)?;
-            gap(writer, self.path_assemble_options.signal_height)?;
+            gap(writer, self.path_assemble_options.signal_height, signal.gap_color, signal.gap_background_color)?;
             write!(writer, r##"</g>"##)?;
         }
 

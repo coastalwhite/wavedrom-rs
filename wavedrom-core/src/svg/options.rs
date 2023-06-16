@@ -146,6 +146,9 @@ define_options! {
         name_font_size: u32 => 14,
         name_color: Color => Color::BLACK,
 
+        gap_color: Color => Color::BLACK,
+        gap_background_color: Color => Color::WHITE,
+
         path_color: Color => Color::BLACK,
 
         hint_line_color: Color => Color { red: 0xCC, green: 0xCC, blue: 0xCC },
