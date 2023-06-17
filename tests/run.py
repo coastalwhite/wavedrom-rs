@@ -1,6 +1,15 @@
 #! /usr/bin/env python
+# Test Runner that generates Digital Timing Diagrams using wavedrom-rs for all
+# `./tests/**/*.json5` files. The resulting SVGs get placed alongside the
+# `json5` files. It will also generate a `./tests/result.html` that indexes and
+# shows all the tests.
+#
+# Usage: ./run.py [path/to/skin.json5] 
+# 
+# The skin is optional
 
 import os
+import sys
 
 HTML_TEMPLATE = """
 <html>
@@ -14,8 +23,11 @@ HTML_TEMPLATE = """
 """
 TEST_FILE_EXTENSION = ".json5"
 
-def build_svg(path, out):
-    os.system(f"../target/debug/wavedrom -i '{path}' -o '{out}'")
+def build_svg(path, out, skin):
+    if skin == None:
+        os.system(f"../target/debug/wavedrom -i '{path}' -o '{out}'")
+    else:
+        os.system(f"../target/debug/wavedrom -i '{path}' -o '{out}' -s '{skin}'")
 
 class TestFile:
     def __init__(self, path: str) -> None:
@@ -36,6 +48,11 @@ class TestFile:
 
 def main():
     test_files = []
+
+    if len(sys.argv) >= 2:
+        skin = sys.argv[1]
+    else:
+        skin = None
 
     for root, dirs, files in os.walk(r"."):
         for file in files:
@@ -75,7 +92,7 @@ def main():
         <div>
         """)
         for test_file in test_files:
-            build_svg(test_file.path, test_file.svg)
+            build_svg(test_file.path, test_file.svg, skin)
 
             result.write(f"""
                 <div style="padding-top: 40px;" id="{test_file.id()}">
