@@ -2,9 +2,9 @@ use std::fmt::Display;
 
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
 use wavedrom::json5::Error as JsonError;
-use wavedrom::svg::options::RenderOptions;
+use wavedrom::options::RenderOptions;
+use wavedrom::Figure;
 use wavedrom::PathAssembleOptions;
-use wavedrom::{svg::ToSvg, wavejson::WaveJson, Figure};
 
 #[derive(Debug)]
 pub enum InsertionError {
@@ -109,9 +109,8 @@ pub fn insert_wavedrom(
 
             let mut wavedrom_code = Vec::new();
 
-            let wavejson = WaveJson::from_json5(&diagram_content)?;
             let wavedrom_figure =
-                Figure::try_from(wavejson).map_err(|_| InsertionError::InvalidFigure)?;
+                Figure::from_json5(&diagram_content).map_err(|_| InsertionError::InvalidFigure)?;
 
             wavedrom_figure
                 .assemble_with_options(assemble_options)

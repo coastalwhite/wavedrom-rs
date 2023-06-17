@@ -1,36 +1,46 @@
-#[cfg(all(feature = "serde", feature = "json5"))]
+#[cfg(feature = "json5")]
 pub use self::json5::*;
 
-#[cfg(all(feature = "serde", feature = "serde_json"))]
+#[cfg(feature = "serde_json")]
 pub use self::serde_json::*;
 
-#[cfg(all(feature = "serde", feature = "json5"))]
+#[cfg(feature = "json5")]
 mod json5 {
     use std::error::Error;
     use std::fmt::Display;
     use std::io;
 
-    use crate::PathAssembleOptions;
     use crate::svg::options::RenderOptions;
+    use crate::PathAssembleOptions;
 
+    /// An error with the [`render_json5`][crate::render_json5] or
+    /// [`render_json5_with_options`][crate::render_json5_with_options] functions.
     #[derive(Debug)]
     pub enum RenderJson5Error {
+        /// An error parsing the JSON
         Json(json5::Error),
+        /// An error with the IO
         Io(io::Error),
     }
 
+    /// Render the contents of a json5 file to a `writer`.
+    #[inline]
     pub fn render_json5(json: &str, writer: &mut impl io::Write) -> Result<(), RenderJson5Error> {
-        render_json5_with_options(json, writer, PathAssembleOptions::default(), &RenderOptions::default())
+        render_json5_with_options(
+            json,
+            writer,
+            PathAssembleOptions::default(),
+            &RenderOptions::default(),
+        )
     }
 
+    /// Render the contents of a json5 file to a `writer` with a specific set of options.
     pub fn render_json5_with_options(
         json: &str,
         writer: &mut impl io::Write,
         assemble_options: PathAssembleOptions,
         render_options: &RenderOptions,
     ) -> Result<(), RenderJson5Error> {
-        use crate::svg::ToSvg;
-
         let figure = crate::Figure::from_json5(json)?;
         let assembled = figure.assemble_with_options(assemble_options);
         assembled.write_svg_with_options(writer, render_options)?;
@@ -70,32 +80,42 @@ mod serde_json {
     use std::fmt::Display;
     use std::io;
 
-    use crate::PathAssembleOptions;
     use crate::svg::options::RenderOptions;
+    use crate::PathAssembleOptions;
 
-    pub fn render_json(json: &str, writer: &mut impl io::Write) -> Result<(), RenderJsonError> {
-        render_json_with_options(json, writer, PathAssembleOptions::default(), &RenderOptions::default())
+    /// An error with the [`render_json`][crate::render_json] or
+    /// [`render_json_with_options`][crate::render_json_with_options] functions.
+    #[derive(Debug)]
+    pub enum RenderJsonError {
+        /// An error parsing the JSON
+        Json(serde_json::error::Error),
+        /// An error with the IO
+        Io(io::Error),
     }
 
+    /// Render the contents of a json file to a `writer`.
+    #[inline]
+    pub fn render_json(json: &str, writer: &mut impl io::Write) -> Result<(), RenderJsonError> {
+        render_json_with_options(
+            json,
+            writer,
+            PathAssembleOptions::default(),
+            &RenderOptions::default(),
+        )
+    }
+
+    /// Render the contents of a json file to a `writer` with a specific set of options.
     pub fn render_json_with_options(
         json: &str,
         writer: &mut impl io::Write,
         assemble_options: PathAssembleOptions,
         render_options: &RenderOptions,
     ) -> Result<(), RenderJsonError> {
-        use crate::svg::ToSvg;
-
         let figure = crate::Figure::from_json(json)?;
         let assembled = figure.assemble_with_options(PathAssembleOptions);
         assembled.write_svg_with_options(writer, render_options)?;
 
         Ok(())
-    }
-
-    #[derive(Debug)]
-    pub enum RenderJsonError {
-        Json(serde_json::error::Error),
-        Io(io::Error),
     }
 
     impl From<serde_json::error::Error> for RenderJsonError {

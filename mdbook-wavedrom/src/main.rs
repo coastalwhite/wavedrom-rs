@@ -70,9 +70,9 @@ fn handle_supports(pre: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
 mod nop_lib {
     use mdbook::BookItem;
     use mdbook_wavedrom::insert_wavedrom;
+    use wavedrom::options::RenderOptions;
     use wavedrom::skin::Skin;
-    use wavedrom::svg::options::RenderOptions;
-    use wavedrom::{Color, PathAssembleOptions};
+    use wavedrom::PathAssembleOptions;
 
     use super::*;
 
@@ -92,8 +92,6 @@ mod nop_lib {
         fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book, Error> {
             let mut assemble_options = PathAssembleOptions::default();
             let mut render_options = RenderOptions::default();
-
-            render_options.background = Some(Color::WHITE);
 
             if let Some(config) = ctx.config.get_preprocessor(self.name()) {
                 if let Some(skin_path) = config.get("skin") {

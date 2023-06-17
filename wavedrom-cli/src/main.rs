@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use clap::{value_parser, Arg, Command};
 use wavedrom::skin::Skin;
 use wavedrom::{Figure, PathAssembleOptions};
-use wavedrom::svg::options::RenderOptions;
+use wavedrom::options::RenderOptions;
 
 static ABOUT: &str = r#"
 A Signal Diagram Generator from WaveJson.
@@ -102,7 +102,6 @@ fn main() {
 
     let assembled = figure.assemble_with_options(assemble_options);
 
-    use wavedrom::svg::ToSvg;
     let result = match app.get_one::<PathBuf>("output") {
         None => {
             let mut writer = BufWriter::new(stdout().lock());

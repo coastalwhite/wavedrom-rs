@@ -1,15 +1,32 @@
+//! Edges or Arrows define a set of markers and edge lines that can be put over a diagram to
+//! indicate properties.
+//!
+//! An edge line is between 2 nodes which are identified by a character. If the character is and
+//! uppercase ASCII character then is is not displayed on the diagram otherwise it is also shown on
+//! the diagram.
+//!
+//! There are several types of edges, a full overview can be seen in the wavedrom-rs book. Here
+//! they are represented with the [`EdgeVariant`] structure.
+//!
+//! In [WaveJson][crate::wavejson] an edge is given by a string that defined under the `edge`
+//! property array at the root JSON level. The edge there given in the following order: `<start
+//! node><edge identifier><end node> [label]`. The label is text that is put on the middle of the
+//! edge.
+
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use crate::{CycleOffset, Signal};
 
+/// A set of edge markers. Both the edge lines and the text_nodes.
 #[derive(Debug, Clone)]
 pub struct LineEdgeMarkers<'a> {
     lines: Vec<LineEdge<'a>>,
     text_nodes: Vec<LineEdgeText>,
 }
 
+/// A edge from a start node to an end node
 #[derive(Debug, Clone)]
 pub struct LineEdge<'a> {
     from: InSignalPosition,
@@ -20,54 +37,83 @@ pub struct LineEdge<'a> {
     variant: EdgeVariant,
 }
 
+/// The text belowing to a node
 #[derive(Debug, Clone)]
 pub struct LineEdgeText {
     at: InSignalPosition,
     text: char,
 }
 
+/// A position in the signal schema. Containing both a `x` (cycle offset) value and a `y` (signal
+/// index) value.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InSignalPosition {
     x: CycleOffset,
     y: u32,
 }
 
+/// The definition for an edge
 #[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct EdgeDefinition {
     variant: EdgeVariant,
     from: char,
     to: char,
-    text: Option<String>,
+    label: Option<String>,
 }
 
+/// A variant of an edge
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeVariant {
+    /// A smooth / curved edge variant
     Spline(SplineEdgeVariant),
+    /// A sharp edge variant
     Sharp(SharpEdgeVariant),
 }
 
+/// A variant of a smooth / curved edge
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SplineEdgeVariant {
+    /// Spline edge that is points to the start and end node horizontally. Edge identifier is `~`.
     BothHorizontal(EdgeArrowType),
+    /// Spline edge that is points to the start horizontally. The end node is pointed to slightly
+    /// vertical. Edge identifier is `-~`.
     StartHorizontal(EdgeArrowType),
+    /// Spline edge that is points to the end horizontally. The start node is pointed to slightly
+    /// vertical. Edge identifier is `~-`.
     EndHorizontal(EdgeArrowType),
 }
 
+/// A variant of a sharp edge
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SharpEdgeVariant {
+    /// Sharp edge that always takes the shortest path from the start to the end node. Edge
+    /// identifier is `-`.
     Straight(EdgeArrowType),
+    /// Sharp edge that points to the start and the end node horizontally. Edge identifier is
+    /// `-|-`.
     BothHorizontal(EdgeArrowType),
+    /// Sharp edge that points to the start node horizontally and the end node mostly vertically.
+    /// Edge identifier is `-|`.
     StartHorizontal(EdgeArrowType),
+    /// Sharp edge that points to the end node horizontally and the start node mostly vertically.
+    /// Edge identifier is `|-`.
     EndHorizontal(EdgeArrowType),
+    /// Sharp edge that takes the shortest path from the start node to the end node and contains
+    /// small bars at the start and end. Edge identifier is `+`.
     Cross,
 }
 
+/// Structure that defines at which sides of an [`EdgeVariant`] there are arrows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeArrowType {
+    /// No arrows at either start or end.
     None,
+    /// Arrows at start.
     Start,
+    /// Arrow at end.
     End,
+    /// Both arrows at start or end.
     Both,
 }
 
@@ -78,6 +124,7 @@ pub(crate) struct LineEdgeMarkersBuilder {
 }
 
 impl EdgeArrowType {
+    /// Create a new [`EdgeArrowType`].
     #[inline]
     fn new(has_arrow_left: bool, has_arrow_right: bool) -> Self {
         match (has_arrow_left, has_arrow_right) {
@@ -106,11 +153,13 @@ fn take(s: &str) -> Option<(&str, char)> {
 }
 
 impl EdgeArrowType {
+    /// Does the variant have an arrow at the start
     #[inline]
     pub fn has_start_arrow(self) -> bool {
         matches!(self, Self::Both | Self::Start)
     }
 
+    /// Does the variant have an arrow at the end
     #[inline]
     pub fn has_end_arrow(self) -> bool {
         matches!(self, Self::Both | Self::End)
@@ -118,6 +167,7 @@ impl EdgeArrowType {
 }
 
 impl SplineEdgeVariant {
+    /// Fetch the arrow type that the [`SplineEdgeVariant`] has.
     #[inline]
     pub fn arrow_type(self) -> EdgeArrowType {
         match self {
@@ -129,6 +179,8 @@ impl SplineEdgeVariant {
 }
 
 impl SharpEdgeVariant {
+    /// Fetch the arrow type that the [`SharpEdgeVariant`] has. The [`SharpEdgeVariant::Cross`]
+    /// always has [`EdgeArrowType::None`].
     #[inline]
     pub fn arrow_type(self) -> EdgeArrowType {
         match self {
@@ -142,6 +194,8 @@ impl SharpEdgeVariant {
 }
 
 impl EdgeVariant {
+    /// Fetch the arrow type that the [`EdgeVariant`] has. The [`SharpEdgeVariant::Cross`]
+    /// always has [`EdgeArrowType::None`].
     #[inline]
     pub fn arrow_type(self) -> EdgeArrowType {
         match self {
@@ -232,13 +286,13 @@ impl LineEdgeMarkersBuilder {
     pub fn add_signal(&mut self, signal: &Signal) {
         let line_number = self.line_number;
 
-        for (i, c) in signal.node.chars().enumerate() {
+        for (i, c) in signal.get_nodes().chars().enumerate() {
             if c == '.' {
                 continue;
             }
 
             let at = InSignalPosition {
-                x: signal.phase + CycleOffset::new_rounded(i as u32),
+                x: signal.get_phase() + CycleOffset::new_rounded(i as u32),
                 y: line_number,
             };
 
@@ -271,7 +325,7 @@ impl LineEdgeMarkersBuilder {
             let from = from.clone();
             let to = to.clone();
 
-            let text = if let Some(text) = &edge.text {
+            let text = if let Some(text) = &edge.label {
                 Some(Cow::Borrowed(&text[..]))
             } else {
                 None
@@ -302,58 +356,85 @@ impl LineEdgeMarkersBuilder {
 }
 
 impl LineEdgeMarkers<'_> {
+    /// The edge lines for a [`LineEdgeMarkers`]
     pub fn lines(&self) -> &[LineEdge] {
         &self.lines
     }
 
+    /// The lone standing text nodes for a [`LineEdgeMarkers`]
     pub fn text_nodes(&self) -> &[LineEdgeText] {
         &self.text_nodes
     }
 }
 
 impl LineEdge<'_> {
+    /// The starting position
+    #[inline]
     pub fn from(&self) -> &InSignalPosition {
         &self.from
     }
 
+    /// The ending position
+    #[inline]
     pub fn to(&self) -> &InSignalPosition {
         &self.to
     }
 
+    /// The marker at the start of the edge line
+    #[inline]
     pub fn from_marker(&self) -> Option<char> {
         self.from_marker
     }
 
+    /// The marker at the end of the edge line
+    #[inline]
     pub fn to_marker(&self) -> Option<char> {
         self.to_marker
     }
 
+    /// The variant of the edge line
+    #[inline]
     pub fn variant(&self) -> &EdgeVariant {
         &self.variant
     }
 
-    pub fn text(&self) -> Option<&str> {
+    /// The label text of the edge line
+    #[inline]
+    pub fn label(&self) -> Option<&str> {
         self.text.as_ref().map(|s| &s[..])
     }
 }
 
 impl LineEdgeText {
+    /// The location of the node
+    #[inline]
     pub fn at(&self) -> &InSignalPosition {
         &self.at
     }
 
+    /// The text content of the node
+    #[inline]
     pub fn text(&self) -> char {
         self.text
     }
 }
 
 impl InSignalPosition {
+    /// The `x` value of the position
     pub fn x(&self) -> CycleOffset {
         self.x
     }
 
+    /// The `y` value of the position
     pub fn y(&self) -> u32 {
         self.y
+    }
+}
+
+impl EdgeDefinition {
+    /// Create a new [`EdgeDefinition`] from a set of parameters
+    pub fn new(variant: EdgeVariant, from: char, to: char, label: Option<String>) -> Self {
+        Self { variant, from, to, label }
     }
 }
 
@@ -385,7 +466,7 @@ impl FromStr for EdgeDefinition {
             variant,
             from,
             to,
-            text,
+            label: text,
         })
     }
 }
@@ -443,7 +524,7 @@ mod tests {
                 assert_eq!(out.from, $from);
                 assert_eq!(out.to, $to);
                 assert_eq!(out.variant, $edge_variant);
-                assert_eq!(out.text, Some($text).map(Into::into));
+                assert_eq!(out.label, Some($text).map(Into::into));
             };
             ($input:literal => $from:literal, $to:literal, $edge_variant:expr) => {
                 #[allow(unused)]
@@ -458,7 +539,7 @@ mod tests {
                 assert_eq!(out.from, $from);
                 assert_eq!(out.to, $to);
                 assert_eq!(out.variant, $edge_variant);
-                assert!(out.text.is_none());
+                assert!(out.label.is_none());
             };
             ($input:literal) => {
                 assert!(EdgeDefinition::from_str($input).is_err());

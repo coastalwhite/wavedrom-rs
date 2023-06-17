@@ -30,3 +30,7 @@ embed_font = ["dep:ttf-parser"]
 skins = ["serde"]
 json5 = ["dep:json5", "serde"]
 serde_json = ["dep:serde_json", "serde"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

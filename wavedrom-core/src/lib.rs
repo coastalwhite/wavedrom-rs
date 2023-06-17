@@ -1,7 +1,124 @@
-#![deny(rustdoc::broken_intra_doc_links)]
-// #![deny(missing_docs)]
+//! WaveDrom allows for the programmatic creation of beautiful [Diagram Timing Diagrams][dtd] in
+//! Rust. This is the crate that powers all the wavedrom tools including the [editor], the
+//! [command-line interface][cli], and the [mdbook preprocessor][mdbook-wavedrom].
+//!
+//! This crate is be used in two ways. It can be given [WaveJson][wavejson] which is a JSON format
+//! to describe [Diagram Timing Diagrams][dtd]. Alternatively, you can programmatically define a
+//! figure by building it using the [`Figure`] struct.
+//!
+//! # Getting Started
+//!
+//! Getting started with this crate is quite easy. Here, we have two examples. First, how to use
+//! [WaveJson][wavejson] as an input to your figures and second how to programmically define
+//! figures.
+//!
+//! ## WaveJson
+//!
+//! ```
+//! use std::fs::File;
+//!
+//! let path = "path/to/file.svg";
+//! # let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/doc-root-wavejson.svg");
+//! let mut file = File::create(path)?;
+//!
+//! wavedrom::render_json5(r##"
+//!     { signal: [
+//!         { name: "clk",  wave: "P......" },
+//!         { name: "bus",  wave: "x.==.=x", data: ["head", "body", "tail", "data"] },
+//!         { name: "wire", wave: "0.1..0." }
+//!     ]}
+//! "##, &mut file)?;
+//! # <Result<(), wavedrom::RenderJson5Error>>::Ok(())
+//! ```
+//!
+//! **Result:**
+//!
+#![doc=include_str!("../assets/doc-root-wavejson.svg")]
+//!
+//! ## Programmically defining a Figure
+//!
+//! ```
+//! use std::fs::File;
+//! use wavedrom::{Figure, Signal};
+//!
+//! let figure = Figure::new()
+//!                  .header_text("Timing Schema")
+//!                  .add_signals([
+//!                      Signal::with_cycle_str("p........").name("clk"),
+//!                      Signal::with_cycle_str("010......").name("req"),
+//!                      Signal::with_cycle_str("0......10").name("done"),
+//!                      Signal::with_cycle_str("0......10").name("done"),
+//!                      Signal::with_cycle_str("==.=.=.=.").name("state")
+//!                         .add_data_fields([
+//!                             "Idle", "Fetch", "Calculate", "Return", "Idle",
+//!                         ]),
+//!                  ]);
+//! let assembled_figure = figure.assemble();
+//!
+//! let path = "path/to/file.svg";
+//! # let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/doc-root-programatically.svg");
+//! let mut file = File::create(path)?;
+//!
+//! assembled_figure.write_svg(&mut file)?;
+//! # <Result<(), std::io::Error>>::Ok(())
+//! ```
+//!
+//! **Result:**
+//!
+#![doc=include_str!("../assets/doc-root-programatically.svg")]
+//!
+//! # Cargo Features
+//!
+//! There are a set of cargo features, most of which are enabled by default.
+//!
+//! * `serde`. Enabled by default. Adds the [`wavejson`] module, which defines the serialize and
+//! deserialize formats for a wave format for a wave.
+//! * `embed_font`. Enabled by default. Adds an embedded [Helvetica][helvetica] into the library
+//! which is used to find the dimensions of certain texts. When this is disabled, it is replaced by
+//! a width look-up table that is only accurate for ASCII and over-estimates the width for other
+//! UTF-8 characters.
+//! * `json5`. Enabled by default. The human friendly variant of JSON that can be used with the
+//! `serde` feature to deserialize a WaveJson file.
+//! * `serde_json`. Disabled by default. Formal version of JSON that can be used with the `serde`
+//! feature to deserialize a WaveJson file.
+//! * `skins`. Enabled by default. Adds the [`skin`] module, which defines the serialize and
+//! deserialize formats for WaveDrom skins. Also adds logic to merge a skin into an existing set of
+//! options.
+//!
+//! # Rendering Process
+//!
+//! The rendering process of this crate is done in 3 steps.
+//!
+//! **1. Create [`Figure`]**
+//!
+//! A [`Figure`] can be created in two ways. First, a [`Figure`] can be built programmatically with
+//! the [`Figure::new`] method and the builder pattern methods. Second, a [`Figure`] can be built
+//! by loading a [WaveJson][wavejson] file. This can be done with the [`Figure::from_json5`] or
+//! [`Figure::from_json`] methods.
+//!
+//! **2. Assemble [`Figure`] to [`AssembledFigure`]**
+//!
+//! A [`Figure`] needs to be assembled. This shapes the signal waves removes any invalid groups and
+//! edges. Assembling is done with the [`Figure::assemble`] and [`Figure::assemble_with_options`]
+//! methods.
+//!
+//! **3. Render [`AssembledFigure`] to SVG**
+//!
+//! An [`AssembledFigure`] can be rendered by calling the [`AssembledFigure::write_svg`] or
+//! [`AssembledFigure::write_svg_with_options`] methods. This will write an SVG into an
+//! [`io::Write`][std::io::Write] buffer. If a write to the [`io::Write`][std::io::Write] is
+//! expensive, it is recommended to wrap the [`io::Write`][std::io::Write] in a
+//! [`std::io::BufWriter`].
+//!
+//! [helvetica]: https://en.wikipedia.org/wiki/Helvetica
+//! [dtd]: https://en.wikipedia.org/wiki/Digital_timing_diagram
+//! [editor]: https://gburghoorn.com/wavedrom
+//! [cli]: https://github.com/coastalwhite/wavedrom-rs/tree/main/wavedrom-cli
+//! [mdbook-wavedrom]: https://github.com/coastalwhite/wavedrom-rs/tree/main/mdbook-wavedrom
 
-use std::num::NonZeroU16;
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(missing_docs)]
 
 #[cfg(feature = "json5")]
 pub use json5;
@@ -12,49 +129,46 @@ pub use serde_json;
 #[cfg(feature = "skins")]
 pub mod skin;
 
+mod color;
 mod cycle_offset;
-mod edges;
+pub mod edges;
+mod figure;
 mod path;
 mod shortcuts;
-mod color;
-pub mod svg;
+mod signal;
+mod svg;
 
+pub use figure::Figure;
 pub use color::Color;
 pub use cycle_offset::{CycleOffset, InCycleOffset};
 pub use shortcuts::*;
+pub use signal::Signal;
+pub use svg::*;
+pub use path::*;
 
 pub mod markers;
 #[cfg(feature = "serde")]
 pub mod wavejson;
 
-pub use edges::{
+use edges::{
     EdgeArrowType, EdgeDefinition, EdgeVariant, LineEdgeMarkers, SharpEdgeVariant,
     SplineEdgeVariant,
 };
-pub use path::{AssembledSignalPath, CycleState, PathAssembleOptions, SignalPath, SignalPathSegment};
 
 use markers::{ClockEdge, CycleEnumerationMarker, GroupMarker};
 
-use self::edges::LineEdgeMarkersBuilder;
-
+/// A section of the figure's signals
 #[derive(Debug, Clone)]
 pub enum FigureSection {
+    /// A [`Signal`]
     Signal(Signal),
+    /// A group of [`Signal`]s
     Group(FigureSectionGroup),
 }
 
+/// A section of the figure's group
 #[derive(Debug, Clone)]
 pub struct FigureSectionGroup(Option<String>, Vec<FigureSection>);
-
-#[derive(Debug, Clone)]
-pub struct Signal {
-    name: String,
-    cycles: Cycles,
-    data: Vec<String>,
-    node: String,
-    period: NonZeroU16,
-    phase: CycleOffset,
-}
 
 /// A line of the [`AssembledFigure`].
 ///
@@ -62,38 +176,7 @@ pub struct Signal {
 #[derive(Debug, Clone)]
 pub struct AssembledLine<'a> {
     text: &'a str,
-    depth: u32,
     path: AssembledSignalPath,
-}
-
-#[derive(Debug, Clone)]
-pub struct Figure {
-    header_text: Option<String>,
-    footer_text: Option<String>,
-
-    top_cycle_marker: Option<CycleEnumerationMarker>,
-    bottom_cycle_marker: Option<CycleEnumerationMarker>,
-
-    hscale: u16,
-
-    edges: Vec<EdgeDefinition>,
-
-    sections: Vec<FigureSection>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Cycles(Vec<CycleState>);
-
-impl Cycles {
-    pub fn new(cycles: Vec<CycleState>) -> Self {
-        Self(cycles)
-    }
-}
-
-impl FromIterator<CycleState> for Cycles {
-    fn from_iter<T: IntoIterator<Item = CycleState>>(iter: T) -> Self {
-        Self(iter.into_iter().collect())
-    }
 }
 
 impl From<Signal> for FigureSection {
@@ -110,104 +193,6 @@ struct DefinitionTracker {
     has_negedge_marker: bool,
 }
 
-enum SectionItem<'a> {
-    GroupStart(u32, &'a FigureSectionGroup),
-    GroupEnd(u32),
-    Signal(u32, &'a Signal),
-}
-
-struct SectionIterator<'a> {
-    top_level: std::slice::Iter<'a, FigureSection>,
-    sections: Vec<std::slice::Iter<'a, FigureSection>>,
-}
-
-impl<'a> SectionIterator<'a> {
-    fn new(sections: &'a [FigureSection]) -> Self {
-        Self {
-            top_level: sections.into_iter(),
-            sections: Vec::new(),
-        }
-    }
-}
-
-impl<'a> Iterator for SectionIterator<'a> {
-    type Item = SectionItem<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let depth = self.sections.len() as u32;
-        let iter = self.sections.last_mut().unwrap_or(&mut self.top_level);
-
-        Some(match iter.next() {
-            None => {
-                let _ = self.sections.pop()?;
-                SectionItem::GroupEnd(depth)
-            }
-            Some(FigureSection::Group(group)) => {
-                self.sections.push(group.1.iter());
-                SectionItem::GroupStart(depth + 1, group)
-            }
-            Some(FigureSection::Signal(signal)) => SectionItem::Signal(depth, signal),
-        })
-    }
-}
-
-impl Figure {
-    pub fn from_lines<T: Into<FigureSection>>(lines: impl IntoIterator<Item = T>) -> Self {
-        Self {
-            header_text: None,
-            footer_text: None,
-
-            top_cycle_marker: None,
-            bottom_cycle_marker: None,
-
-            edges: Vec::new(),
-
-            hscale: 1,
-            sections: lines.into_iter().map(T::into).collect(),
-        }
-    }
-}
-
-impl Cycles {
-    fn from_str(s: &str) -> Self {
-        let mut cycles = Vec::with_capacity(s.len());
-
-        for c in s.chars() {
-            let state = match c {
-                '1' => CycleState::Top,
-                '0' => CycleState::Bottom,
-                'z' => CycleState::Middle,
-                'x' => CycleState::X,
-                'p' => CycleState::PosedgeClockUnmarked,
-                'P' => CycleState::PosedgeClockMarked,
-                'n' => CycleState::NegedgeClockUnmarked,
-                'N' => CycleState::NegedgeClockMarked,
-                '2' => CycleState::Box2,
-                '3' => CycleState::Box3,
-                '4' => CycleState::Box4,
-                '5' => CycleState::Box5,
-                '6' => CycleState::Box6,
-                '7' => CycleState::Box7,
-                '8' => CycleState::Box8,
-                '9' => CycleState::Box9,
-                '.' => CycleState::Continue,
-                '|' => CycleState::Gap,
-                '=' => CycleState::Data,
-                'u' => CycleState::Up,
-                'd' => CycleState::Down,
-                'h' => CycleState::HighUnmarked,
-                'H' => CycleState::HighMarked,
-                'l' => CycleState::LowUnmarked,
-                'L' => CycleState::LowMarked,
-                _ => CycleState::X,
-            };
-
-            cycles.push(state)
-        }
-
-        Self(cycles)
-    }
-}
 
 /// A [`Figure`] that has been assembled with the [`Figure::assemble`] or
 /// [`Figure::assemble_with_options`] methods.
@@ -343,190 +328,5 @@ impl<'a> AssembledFigure<'a> {
 impl AssembledLine<'_> {
     fn is_empty(&self) -> bool {
         self.path.is_empty() && self.text.is_empty()
-    }
-}
-
-impl Figure {
-    pub fn new(
-        title: Option<String>,
-        footer: Option<String>,
-
-        top_cycle_marker: Option<CycleEnumerationMarker>,
-        bottom_cycle_marker: Option<CycleEnumerationMarker>,
-
-        hscale: u16,
-        sections: Vec<FigureSection>,
-
-        edges: Vec<EdgeDefinition>,
-    ) -> Self {
-        Self {
-            header_text: title,
-            footer_text: footer,
-
-            top_cycle_marker,
-            bottom_cycle_marker,
-
-            edges,
-
-            hscale,
-            sections,
-        }
-    }
-
-    pub fn assemble_with_options(&self, options: PathAssembleOptions) -> AssembledFigure {
-        let top_cycle_marker = self.top_cycle_marker;
-        let bottom_cycle_marker = self.bottom_cycle_marker;
-        let hscale = self.hscale;
-
-        let header_text = self.header_text.as_ref().map(|s| &s[..]);
-        let footer_text = self.footer_text.as_ref().map(|s| &s[..]);
-
-        let mut options = options.clone();
-
-        options.cycle_width *= hscale;
-
-        let mut lines = Vec::with_capacity(self.sections.len());
-        let mut group_markers = Vec::new();
-        let mut group_label_at_depth = Vec::new();
-
-        let mut definitions = DefinitionTracker::default();
-        let mut max_group_depth = 0;
-
-        let mut line_edge_markers = LineEdgeMarkersBuilder::new();
-
-        let mut idx = 0;
-
-        let section_iter = SectionIterator::new(&self.sections);
-        let mut groups = Vec::new();
-        for section_item in section_iter {
-            match section_item {
-                SectionItem::Signal(depth, signal) => {
-                    max_group_depth = u32::max(max_group_depth, depth);
-
-                    line_edge_markers.add_signal(signal);
-
-                    idx += 1;
-
-                    // If the first state is a Gap or Continue this is also an undefined state.
-                    if signal.cycles().first().map_or(false, |state| {
-                        matches!(state, CycleState::Continue | CycleState::Gap)
-                    }) {
-                        definitions.has_undefined = true;
-                    }
-
-                    for state in signal.cycles() {
-                        match state {
-                            CycleState::X => definitions.has_undefined = true,
-                            CycleState::Gap => definitions.has_gaps = true,
-                            CycleState::PosedgeClockMarked => definitions.has_posedge_marker = true,
-                            CycleState::NegedgeClockMarked => definitions.has_negedge_marker = true,
-                            _ => {}
-                        }
-                    }
-
-                    lines.push(AssembledLine {
-                        text: &signal.name,
-                        depth,
-                        path: SignalPath::new(
-                            signal.cycles(),
-                            &signal.data,
-                            signal.period,
-                            signal.phase,
-                        )
-                        .assemble_with_options(options),
-                    });
-                }
-                SectionItem::GroupStart(depth, group) => {
-                    match group_label_at_depth.get_mut(depth as usize) {
-                        None => group_label_at_depth.push(group.0.is_some()),
-                        Some(label_at_level) => *label_at_level |= group.0.is_some(),
-                    }
-
-                    groups.push((idx, group));
-                },
-                SectionItem::GroupEnd(depth) => {
-                    let (start_idx, FigureSectionGroup(label, _)) = groups
-                        .pop()
-                        .expect("A group should be been pushe for this end");
-
-                    group_markers.push(GroupMarker::new(
-                        start_idx,
-                        idx,
-                        label.as_ref().map(|s| &s[..]),
-                        depth,
-                    ));
-                }
-            }
-        }
-
-        let line_edge_markers = line_edge_markers.build(&self.edges);
-
-        let num_cycles = lines
-            .iter()
-            .map(|line| line.path.num_cycles())
-            .max()
-            .unwrap_or(0);
-        let num_cycles = num_cycles as u32;
-
-        AssembledFigure {
-            num_cycles,
-
-            hscale,
-
-            definitions,
-
-            group_label_at_depth,
-            max_group_depth,
-
-            header_text,
-            footer_text,
-
-            top_cycle_marker,
-            bottom_cycle_marker,
-
-            path_assemble_options: options,
-
-            lines,
-            group_markers,
-
-            line_edge_markers,
-        }
-    }
-
-    #[inline]
-    pub fn assemble(&self) -> AssembledFigure {
-        self.assemble_with_options(PathAssembleOptions::default())
-    }
-}
-
-impl Signal {
-    pub fn new(
-        name: String,
-        cycles: Cycles,
-        data: Vec<String>,
-        node: String,
-        period: u16,
-        phase: CycleOffset,
-    ) -> Self {
-        let period = NonZeroU16::new(period).unwrap_or(NonZeroU16::MIN);
-
-        Self {
-            name,
-            cycles,
-            data,
-            node,
-            period,
-            phase,
-        }
-    }
-
-    fn cycles(&self) -> &[CycleState] {
-        &self.cycles.0
-    }
-}
-
-impl<'a> AssembledLine<'a> {
-    pub fn depth(&self) -> u32 {
-        self.depth
     }
 }

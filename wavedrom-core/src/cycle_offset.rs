@@ -1,15 +1,23 @@
 use std::cmp::Ordering;
 use std::ops::{Add, AddAssign};
 
+/// The cycle offset within a single-clock cycle.
+///
+/// At the moment a cycle in divided into 4 quarters and you 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum InCycleOffset {
+    /// 0/4
     #[default]
     Begin,
+    /// 1/4
     Quarter,
+    /// 2/4
     Half,
+    /// 3/4
     ThreeQuarter,
 }
 
+/// The cycle offset within multiple clock cycles. This is precise up until a quarter of a cycle.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct CycleOffset {
     index: u32,
@@ -34,12 +42,10 @@ impl Ord for CycleOffset {
     }
 }
 
-impl TryFrom<f32> for CycleOffset {
-    type Error = ();
-
-    fn try_from(value: f32) -> Result<Self, Self::Error> {
+impl From<f32> for CycleOffset {
+    fn from(value: f32) -> Self {
         if value.is_subnormal() {
-            return Err(());
+            return Self::default();
         }
 
         let in_offset = match (value.fract() * 4.).round() as u32 {
@@ -54,16 +60,14 @@ impl TryFrom<f32> for CycleOffset {
             value.floor()
         } as u32;
 
-        Ok(Self { index, in_offset })
+        Self { index, in_offset }
     }
 }
 
-impl TryFrom<f64> for CycleOffset {
-    type Error = ();
-
-    fn try_from(value: f64) -> Result<Self, Self::Error> {
+impl From<f64> for CycleOffset {
+    fn from(value: f64) -> Self {
         if value.is_subnormal() {
-            return Err(());
+            return Self::default();
         }
 
         let in_offset = match ((value * 4.).round() % 4.) as u32 {
@@ -78,7 +82,7 @@ impl TryFrom<f64> for CycleOffset {
             value.floor()
         } as u32;
 
-        Ok(Self { index, in_offset })
+        Self { index, in_offset }
     }
 }
 
@@ -112,11 +116,14 @@ impl AddAssign for CycleOffset {
 }
 
 impl CycleOffset {
+    /// Create a new [`CycleOffset`] with a specific cycle cycle `index` and an in cycle cycle
+    /// offset `in_offset`
     #[inline]
     pub fn new(index: u32, in_offset: InCycleOffset) -> Self {
         Self { index, in_offset }
     }
 
+    /// Create a new [`CycleOffset`] that is rounded to an specific cycle cycle `index`
     #[inline]
     pub fn new_rounded(index: u32) -> Self {
         Self {
@@ -125,7 +132,8 @@ impl CycleOffset {
         }
     }
 
-    pub fn cycle_width(self) -> u32 {
+    /// Get the a ceiled value of the number of cycles that the [`CycleOffset`] incorperates.
+    pub fn ceil_num_cycles(self) -> u32 {
         self.index
             + match self.in_offset {
                 InCycleOffset::Begin => 0,
@@ -133,21 +141,25 @@ impl CycleOffset {
             }
     }
 
+    /// Get the `index` of the [`CycleOffset`]
     #[inline]
     pub fn cycle_index(self) -> u32 {
         self.index
     }
 
+    /// Get the in cycle offset of the [`CycleOffset`]
     #[inline]
     pub fn in_cycle_offset(self) -> InCycleOffset {
         self.in_offset
     }
 
+    /// Get the width knowning that a cycle cycle is `width` units wide.
     #[inline]
     pub fn width_offset(self, width: u32) -> u32 {
         width * self.index + self.in_offset.width_offset(width)
     }
 
+    /// Half the [`CycleOffset`]
     pub fn half(&self) -> CycleOffset {
         use InCycleOffset::*;
 
@@ -166,6 +178,7 @@ impl CycleOffset {
 }
 
 impl InCycleOffset {
+    /// Get the width knowning that a cycle cycle is `width` units wide.
     pub fn width_offset(self, width: u32) -> u32 {
         let w = f64::from(width);
 

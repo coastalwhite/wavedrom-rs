@@ -19,21 +19,6 @@ use dimensions::SvgDimensions;
 pub use font::Font;
 use options::RenderOptions;
 
-pub trait ToSvg {
-    type Options: Default;
-
-    fn write_svg_with_options(
-        &self,
-        writer: &mut impl io::Write,
-        options: &Self::Options,
-    ) -> io::Result<()>;
-
-    #[inline]
-    fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
-        self.write_svg_with_options(writer, &Self::Options::default())
-    }
-}
-
 fn escape_str(s: &str) -> Cow<str> {
     if !s.contains(&['<', '>', '"', '&']) {
         return Cow::Borrowed(s);
@@ -53,7 +38,12 @@ fn escape_str(s: &str) -> Cow<str> {
     Cow::Owned(output)
 }
 
-fn gap(writer: &mut impl io::Write, wave_height: u16, color: Color, background: Color) -> io::Result<()> {
+fn gap(
+    writer: &mut impl io::Write,
+    wave_height: u16,
+    color: Color,
+    background: Color,
+) -> io::Result<()> {
     let wave_height = f32::from(wave_height);
 
     let a: f32 = 8.0;
@@ -133,13 +123,18 @@ fn negedge_arrow(writer: &mut impl io::Write, wave_height: u32, color: Color) ->
     )
 }
 
-impl<'a> ToSvg for AssembledFigure<'a> {
-    type Options = RenderOptions;
+impl<'a> AssembledFigure<'a> {
+    /// Render a [`AssembledFigure`] into a `writer`.
+    #[inline]
+    pub fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
+        self.write_svg_with_options(writer, &RenderOptions::default())
+    }
 
-    fn write_svg_with_options(
+    /// Render a [`AssembledFigure`] into a `writer` with a set of options.
+    pub fn write_svg_with_options(
         &self,
         writer: &mut impl io::Write,
-        options: &Self::Options,
+        options: &RenderOptions,
     ) -> io::Result<()> {
         let RenderOptions {
             background,
@@ -211,7 +206,12 @@ impl<'a> ToSvg for AssembledFigure<'a> {
 
         if self.definitions.has_gaps {
             write!(writer, r##"<g id="gap">"##)?;
-            gap(writer, self.path_assemble_options.signal_height, signal.gap_color, signal.gap_background_color)?;
+            gap(
+                writer,
+                self.path_assemble_options.signal_height,
+                signal.gap_color,
+                signal.gap_background_color,
+            )?;
             write!(writer, r##"</g>"##)?;
         }
 

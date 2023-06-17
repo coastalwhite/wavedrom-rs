@@ -3,6 +3,7 @@ use std::num::NonZeroU16;
 use crate::markers::ClockEdgeMarker;
 use crate::{ClockEdge, CycleOffset};
 
+/// The path given for a [`Signal`][crate::signal::Signal]
 #[derive(Debug, Clone)]
 pub struct SignalPath<'a> {
     states: Vec<CycleState>,
@@ -11,58 +12,135 @@ pub struct SignalPath<'a> {
     data: &'a [String],
 }
 
+/// A state that a signal can be at any cycle
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CycleState {
+    /// Logical `1`
     Top,
+    /// Logical `0`
     Bottom,
+    /// High-Impedance
     Middle,
+    /// Boxed State Type 2. Can contain marker text
     Box2,
+    /// Boxed State Type 3. Can contain marker text
     Box3,
+    /// Boxed State Type 4. Can contain marker text
     Box4,
+    /// Boxed State Type 5. Can contain marker text
     Box5,
+    /// Boxed State Type 6. Can contain marker text
     Box6,
+    /// Boxed State Type 7. Can contain marker text
     Box7,
+    /// Boxed State Type 8. Can contain marker text
     Box8,
+    /// Boxed State Type 9. Can contain marker text
     Box9,
+    /// Data State. Can contain marker text
     Data,
+    /// Undefined State
     X,
+    /// Positive Edge Clock without a clock edge marker
     PosedgeClockUnmarked,
+    /// Positive Edge Clock with a clock edge marker
     PosedgeClockMarked,
+    /// Negative Edge Clock without a clock edge marker
     NegedgeClockUnmarked,
+    /// Negative Edge Clock with a clock edge marker
     NegedgeClockMarked,
+    /// Continue the previous state
     Continue,
+    /// Continue the previous state and insert a gap.
     Gap,
+    /// Dashed up
     Up,
+    /// Dashed down
     Down,
+    /// Clock high signal without transition clock edge marker
     HighUnmarked,
+    /// Clock high signal with transition clock edge marker
     HighMarked,
+    /// Clock low signal without transition clock edge marker
     LowUnmarked,
+    /// Clock low signal with transition clock edge marker
     LowMarked,
 }
 
+impl From<char> for CycleState {
+    fn from(value: char) -> Self {
+        match value {
+            '1' => CycleState::Top,
+            '0' => CycleState::Bottom,
+            'z' => CycleState::Middle,
+            'x' => CycleState::X,
+            'p' => CycleState::PosedgeClockUnmarked,
+            'P' => CycleState::PosedgeClockMarked,
+            'n' => CycleState::NegedgeClockUnmarked,
+            'N' => CycleState::NegedgeClockMarked,
+            '2' => CycleState::Box2,
+            '3' => CycleState::Box3,
+            '4' => CycleState::Box4,
+            '5' => CycleState::Box5,
+            '6' => CycleState::Box6,
+            '7' => CycleState::Box7,
+            '8' => CycleState::Box8,
+            '9' => CycleState::Box9,
+            '.' => CycleState::Continue,
+            '|' => CycleState::Gap,
+            '=' => CycleState::Data,
+            'u' => CycleState::Up,
+            'd' => CycleState::Down,
+            'h' => CycleState::HighUnmarked,
+            'H' => CycleState::HighMarked,
+            'l' => CycleState::LowUnmarked,
+            'L' => CycleState::LowMarked,
+            _ => CycleState::X,
+        }
+    }
+}
+
+/// A command for a signal path to take with relative coordinates.
 #[derive(Debug, Clone)]
 pub enum PathCommand {
+    /// A vertical line
     LineVertical(i32),
+    /// A vertical line without a stroke
     LineVerticalNoStroke(i32),
+    /// A horizontal line
     LineHorizontal(i32),
+    /// A horizontal line to a dashed stroke.
     DashedLineHorizontal(i32),
+    /// A straight line
     Line(i32, i32),
+    /// A bezier curve
     Curve(i32, i32, i32, i32, i32, i32),
 }
 
+/// A background for a path segment
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PathSegmentBackground {
+    /// Background for Box2
     B2,
+    /// Background for Box3
     B3,
+    /// Background for Box4
     B4,
+    /// Background for Box5
     B5,
+    /// Background for Box6
     B6,
+    /// Background for Box7
     B7,
+    /// Background for Box8
     B8,
+    /// Background for Box9
     B9,
+    /// Background for Undefined
     Undefined,
 }
 
+/// A segment in an [`AssembledSignalPath`]
 #[derive(Debug, Clone)]
 pub struct SignalPathSegment {
     x: i32,
@@ -80,7 +158,7 @@ pub struct SignalPathSegment {
 }
 
 #[derive(Debug, Clone)]
-pub struct PathData {
+struct PathData {
     current_x: i32,
     current_y: i32,
 
@@ -91,11 +169,16 @@ pub struct PathData {
     actions: Vec<PathCommand>,
 }
 
+/// The options that are used during assembly of a [`Figure`][crate::figure::Figure] or
+/// [`SignalPath`].
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "skins", derive(serde::Deserialize, serde::Serialize))]
 pub struct PathAssembleOptions {
+    /// The height of a single signal bar
     pub signal_height: u16,
+    /// The width of a single cycle
     pub cycle_width: u16,
+    /// The offset from the cycle transition point where a state transition can start
     pub transition_offset: u16,
 }
 
@@ -109,6 +192,7 @@ impl Default for PathAssembleOptions {
     }
 }
 
+/// A [`SignalPath`] that is assembled and ready to be rendered.
 #[derive(Debug, Clone)]
 pub struct AssembledSignalPath {
     end_offset: CycleOffset,
@@ -117,57 +201,70 @@ pub struct AssembledSignalPath {
 }
 
 impl AssembledSignalPath {
+    /// Returns whether a [`AssembledSignalPath`] is empty.
     pub fn is_empty(&self) -> bool {
         self.segments.is_empty()
     }
 
+    /// Returns the number of cycles that are occupied by a [`AssembledSignalPath`].
     pub fn num_cycles(&self) -> u32 {
-        self.end_offset.cycle_width()
+        self.end_offset.ceil_num_cycles()
     }
 
+    /// Returns the options used by a [`AssembledSignalPath`].
     pub fn options(&self) -> &PathAssembleOptions {
         &self.options
     }
 }
 
 impl SignalPathSegment {
+    /// Returns the possible background for a segment.
     pub fn background(&self) -> Option<&PathSegmentBackground> {
         self.background.as_ref()
     }
 
+    /// Returns whether all the [`PathCommand`]s are stroked.
     pub fn is_fully_stroked(&self) -> bool {
         self.is_fully_stroked
     }
 
+    /// Returns the set of [`PathCommand`]s that this segment defines.
     pub fn actions(&self) -> &[PathCommand] {
         &self.actions
     }
 
+    /// Returns the clock edge markers that a segment might contain.
     pub fn clock_edge_markers(&self) -> &[ClockEdgeMarker] {
         &self.clock_edge_markers
     }
 
+    /// Returns the gaps that a segment might contain.
     pub fn gaps(&self) -> &[CycleOffset] {
         &self.gaps
     }
 
+    /// Returns the possible marker text that a segment contains.
     pub fn marker_text(&self) -> Option<&str> {
         self.text.as_ref().map(|s| &s[..])
     }
 
+    /// The starting `x` value
     pub fn x(&self) -> i32 {
         self.x
     }
 
+    /// The starting `y` value
     pub fn y(&self) -> i32 {
         self.y
     }
 
+    /// The width of the segment
     pub fn width(&self) -> i32 {
         self.width
     }
 }
 
+/// An iterator over assembled signal segments
 pub struct SignalSegmentIter<'a> {
     inner: std::slice::Iter<'a, CycleState>,
 
@@ -189,9 +286,12 @@ pub struct SignalSegmentIter<'a> {
     options: PathAssembleOptions,
 }
 
+/// A item given by the [`SignalSegmentIter`]
 #[derive(Debug)]
 pub struct SignalSegmentItem {
+    /// The cycle at which the segment ends
     pub end_cycle: CycleOffset,
+    /// The containing segment
     pub segment: SignalPathSegment,
 }
 
@@ -984,6 +1084,7 @@ impl<'a> SignalSegmentIter<'a> {
 }
 
 impl<'a> SignalPath<'a> {
+    /// Create a new [`SignalPath`] with a set of parameters.
     #[inline]
     pub fn new(
         states: &[CycleState],
@@ -1001,16 +1102,19 @@ impl<'a> SignalPath<'a> {
         }
     }
 
+    /// Returns whether the [`SignalPath`] contains no states.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.states.is_empty()
     }
 
+    /// Returns amount of states that the [`SignalPath`] contains.
     #[inline]
     pub fn len(&self) -> usize {
         self.states.len()
     }
 
+    /// Assemble the [`SignalPath`] into a [`AssembledSignalPath`] with a set of options.
     pub fn assemble_with_options(&self, options: PathAssembleOptions) -> AssembledSignalPath {
         let mut end_offset = CycleOffset::default();
         let segments = self
@@ -1028,11 +1132,13 @@ impl<'a> SignalPath<'a> {
         }
     }
 
+    /// Assemble the [`SignalPath`] into a [`AssembledSignalPath`] with the default options.
     #[inline]
     pub fn assemble(&self) -> AssembledSignalPath {
         self.assemble_with_options(PathAssembleOptions::default())
     }
 
+    /// Get a iterator over assembled signal segments
     pub fn iter(&'a self, options: PathAssembleOptions) -> SignalSegmentIter<'a> {
         let mut iter = SignalSegmentIter {
             inner: self.states.iter(),
@@ -1079,12 +1185,14 @@ impl<'a> SignalPath<'a> {
 }
 
 impl AssembledSignalPath {
+    /// Get the segments in a [`SignalPathSegment`]
     pub fn segments(&self) -> &[SignalPathSegment] {
         &self.segments
     }
 }
 
 impl PathCommand {
+    /// Returns whether the path command has a stroke
     pub fn has_no_stroke(&self) -> bool {
         match self {
             Self::LineHorizontal(..)

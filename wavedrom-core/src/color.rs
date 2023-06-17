@@ -4,8 +4,11 @@ use std::str::FromStr;
 /// An Red, Green, Blue color structure that can be parsed from and to a CSS compatible string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color {
+    /// Red component of the [`Color`] RGB value
     pub red: u8,
+    /// Green component of the [`Color`] RGB value
     pub green: u8,
+    /// Blue component of the [`Color`] RGB value
     pub blue: u8,
 }
 

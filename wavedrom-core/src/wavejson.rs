@@ -1,10 +1,13 @@
+//! The definitions for the WaveJson format.
+#![allow(missing_docs)]
+
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CycleEnumerationMarker, CycleOffset, EdgeDefinition, Figure, FigureSection, FigureSectionGroup,
-    Signal,
+    CycleEnumerationMarker, CycleOffset, CycleState, EdgeDefinition, Figure, FigureSection,
+    FigureSectionGroup, Signal,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,7 +139,7 @@ impl From<WaveJson> for Figure {
             }
         }
 
-        Figure::new(
+        Figure::with(
             title,
             footer,
             top_cycle_marker,
@@ -178,7 +181,12 @@ impl From<SignalItem> for FigureSection {
 impl From<SignalObject> for Signal {
     fn from(item: SignalObject) -> Self {
         let name = item.name.unwrap_or_default();
-        let cycles = crate::Cycles::from_str(&item.wave.unwrap_or_default());
+        let cycles = item
+            .wave
+            .unwrap_or_default()
+            .chars()
+            .map(|c| CycleState::from(c))
+            .collect();
         let data = item
             .data
             .map_or_else(Vec::new, |signal_data| match signal_data {
@@ -195,7 +203,7 @@ impl From<SignalObject> for Signal {
             CycleOffset::try_from(f).unwrap_or_default()
         });
 
-        Signal::new(name, cycles, data, node, period, phase)
+        Signal::with(name, cycles, data, node, period, phase)
     }
 }
 

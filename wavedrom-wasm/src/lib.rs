@@ -26,8 +26,6 @@ enum RenderError {
 }
 
 fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
-    use wavedrom::svg::ToSvg;
-
     let Ok(wavejson) = WaveJson::from_json5(json) else {
         return Err(RenderError::JsonDeserializeError);
     };

@@ -461,7 +461,7 @@ pub fn write_line_edge_markers(
         )?;
     }
 
-    if let Some(text) = edge.text() {
+    if let Some(text) = edge.label() {
         write_edge_text(
             writer,
             (middle_x, middle_y),

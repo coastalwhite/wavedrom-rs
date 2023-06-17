@@ -28,7 +28,7 @@ There are currently four ways to use `wavedrom-rs`:
 - [x] Cycle Enumeration Markers
 - [x] Editor Website through WASM
 - [x] MdBook Preprocessor
-- [ ] Full Customization via Skin
+- [x] Full Customization via Skins
 
 ## Documentation
 
@@ -44,6 +44,12 @@ using the [`./tests/run.py`](./tests/run.py) scripts. This will generate a
 `result.html` in the `tests` directory that contains all the rendered SVGs for
 each `json5` file in the `./tests` directory.
 
+```bash
+# Usage:
+cd ./tests
+./run [path/to/skin.json5]
+```
+
 ## License
 
 Licensed under a [MIT License](./LICENSE). The demo website utilizes icons from
@@ -55,4 +61,7 @@ Licensed under a [MIT License](./LICENSE). The demo website utilizes icons from
 [tutorial]: https://wavedrom.com/tutorial.html
 [lucide]: https://lucide.dev/
 [hitchhiker]: https://wavedrom.com/tutorial.html
+[cratesio]: https://crates.io/crates/wavedrom-rs
+[cli]: ./wavedrom-cli
+[mdbook-wavedrom]: ./mdbook-wavedrom
 [book]: https://coastalwhite.github.io/wavedrom-rs

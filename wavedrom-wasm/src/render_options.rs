@@ -1,7 +1,7 @@
 use std::sync::{Mutex, MutexGuard};
 
 use wavedrom::skin::Skin;
-use wavedrom::svg::options::RenderOptions;
+use wavedrom::options::RenderOptions;
 use wavedrom::{Color, PathAssembleOptions};
 
 macro_rules! prefix_fn {
