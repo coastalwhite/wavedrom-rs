@@ -19,6 +19,7 @@ In turn, wavedrom-rs improves on its JavaScript counterpart in several areas.
 - Minimization of SVG in several areas
 - More customization editor
 - More correct rendering of edges
+- JSON skins
 
 [wavedrom-js]: https://wavedrom.com/
 [dtd-wiki]: https://en.wikipedia.org/wiki/Digital_timing_diagram

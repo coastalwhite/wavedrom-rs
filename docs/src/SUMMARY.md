@@ -22,7 +22,7 @@
     - [Gaps](./signal-types/gap.md)
     - [Up & Down](./signal-types/up-down.md)
 - [Signal Groups](./signal-groups.md)
-- [Header + Footer](./header-footer.md)
+- [Header & Footer](./header-footer.md)
 - [Cycle Enumeration](./cycle-enumeration.md)
 - [Edges](./edges.md)
 - [Skins](./skins.md)
