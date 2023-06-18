@@ -27,6 +27,7 @@ jobs:
       - name: WASM Build
         run: |
              cd wavedrom-wasm
+             rustup target add wasm32-unknown-unknown
              cargo build --release
              mv ../target/wasm32-unknown-unknown/release/wavedrom_wasm.wasm wavedrom.wasm
 
