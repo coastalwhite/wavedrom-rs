@@ -126,11 +126,8 @@ fn main() {
         }
     };
 
-    match result {
-        Ok(_) => {}
-        Err(err) => {
-            eprintln!("[ERROR]: Failed to write out svg. Reason: {err}");
-            std::process::exit(1);
-        }
+    if let Err(err) = result {
+        eprintln!("[ERROR]: Failed to write out svg. Reason: {err}");
+        std::process::exit(1);
     }
 }

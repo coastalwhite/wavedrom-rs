@@ -131,9 +131,10 @@ mod nop_lib {
             book.for_each_mut(|item| match item {
                 BookItem::Separator | BookItem::PartTitle(_) => {}
                 BookItem::Chapter(chapter) => {
-                    match insert_wavedrom(&chapter.content, assemble_options, &render_options) {
-                        Ok(new_content) => chapter.content = new_content,
-                        Err(..) => {}
+                    if let Ok(new_content) =
+                        insert_wavedrom(&chapter.content, assemble_options, &render_options)
+                    {
+                        chapter.content = new_content
                     }
                 }
             });

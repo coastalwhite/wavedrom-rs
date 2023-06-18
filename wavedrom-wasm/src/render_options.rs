@@ -1,7 +1,7 @@
-use std::sync::{Mutex, MutexGuard};
+use std::sync::Mutex;
 
-use wavedrom::skin::Skin;
 use wavedrom::options::RenderOptions;
+use wavedrom::skin::Skin;
 use wavedrom::{Color, PathAssembleOptions};
 
 macro_rules! prefix_fn {
@@ -172,7 +172,7 @@ fn parse_color(value: u32) -> Color {
     Color {
         red: ((value & 0x00FF_0000) >> 16) as u8,
         green: ((value & 0x0000_FF00) >> 8) as u8,
-        blue: ((value & 0x0000_00FF) >> 0) as u8,
+        blue: (value & 0x0000_00FF) as u8,
     }
 }
 fn parse_opt_color(value: u32) -> Option<Color> {
@@ -184,10 +184,7 @@ fn parse_opt_color(value: u32) -> Option<Color> {
 }
 
 fn serialize_color(color: &Color) -> u32 {
-    return (0xFF << 24)
-        | ((color.red as u32) << 16)
-        | ((color.green as u32) << 8)
-        | (color.blue as u32);
+    (0xFF << 24) | ((color.red as u32) << 16) | ((color.green as u32) << 8) | (color.blue as u32)
 }
 
 fn serialize_opt_color(color: &Option<Color>) -> u32 {
@@ -201,15 +198,15 @@ fn serialize_opt_color(color: &Option<Color>) -> u32 {
 static mut ASSEMBLE_OPTIONS: Option<Mutex<PathAssembleOptions>> = None;
 static mut RENDER_OPTIONS: Option<Mutex<RenderOptions>> = None;
 
-pub fn get_assemble_options() -> MutexGuard<'static, PathAssembleOptions> {
+pub fn get_assemble_options() -> &'static PathAssembleOptions {
     unsafe { ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default())) }
-        .lock()
+        .get_mut()
         .unwrap()
 }
 
-pub fn get_render_options() -> MutexGuard<'static, RenderOptions> {
+pub fn get_render_options() -> &'static RenderOptions {
     unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
-        .lock()
+        .get_mut()
         .unwrap()
 }
 
@@ -223,13 +220,13 @@ pub fn merge_in_skin_internal(json: &str) -> Result<(), ()> {
         *unsafe {
             ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default()))
         }
-        .lock()
+        .get_mut()
         .unwrap() = assemble;
     }
 
     if let Some(render) = skin.render {
         unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
-            .lock()
+            .get_mut()
             .unwrap()
             .merge_in(render);
     }
@@ -242,21 +239,22 @@ pub fn reset() {
     *unsafe {
         ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default()))
     }
-    .lock()
+    .get_mut()
     .unwrap() = PathAssembleOptions::default();
 
     *unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
-        .lock()
+        .get_mut()
         .unwrap() = RenderOptions::default();
 }
 
 #[inline]
 pub fn export() -> wavedrom::json5::Result<String> {
-    let assemble = get_assemble_options().clone();
+    let assemble = *get_assemble_options();
     let render = get_render_options().clone();
 
     let skin = Skin {
-        assemble: Some(assemble), render: Some(render.into()),
+        assemble: Some(assemble),
+        render: Some(render.into()),
     };
 
     wavedrom::json5::to_string(&skin)

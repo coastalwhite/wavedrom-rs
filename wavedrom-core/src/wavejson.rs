@@ -183,7 +183,7 @@ impl From<SignalObject> for Signal {
             .wave
             .unwrap_or_default()
             .chars()
-            .map(|c| CycleState::from(c))
+            .map(CycleState::from)
             .collect();
         let data = item
             .data

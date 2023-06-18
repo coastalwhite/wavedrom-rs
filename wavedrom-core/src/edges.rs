@@ -303,7 +303,7 @@ impl LineEdgeMarkersBuilder {
         self.line_number += 1;
     }
 
-    pub fn build<'a>(mut self, edges: &'a [EdgeDefinition]) -> LineEdgeMarkers<'a> {
+    pub fn build(mut self, edges: &[EdgeDefinition]) -> LineEdgeMarkers {
         let mut lines = Vec::new();
         let mut used_text_nodes = HashSet::new();
 
@@ -325,11 +325,7 @@ impl LineEdgeMarkersBuilder {
             let from = from.clone();
             let to = to.clone();
 
-            let text = if let Some(text) = &edge.label {
-                Some(Cow::Borrowed(&text[..]))
-            } else {
-                None
-            };
+            let text = edge.label.as_ref().map(|text| Cow::Borrowed(&text[..]));
             let variant = edge.variant;
 
             let from_marker = (!edge.from.is_ascii_uppercase()).then_some(edge.from);

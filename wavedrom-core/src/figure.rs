@@ -180,7 +180,7 @@ impl Figure {
     /// Add a set of [`Signal`] lines to the [`Figure`].
     pub fn add_signals(mut self, signals: impl IntoIterator<Item = Signal>) -> Self {
         self.sections
-            .extend(signals.into_iter().map(|s| FigureSection::Signal(s)));
+            .extend(signals.into_iter().map(FigureSection::Signal));
         self
     }
 
@@ -205,7 +205,7 @@ impl Figure {
     /// Add a set of [`FigureSectionGroup`]s to the [`Figure`].
     pub fn add_groups(mut self, groups: impl IntoIterator<Item = FigureSectionGroup>) -> Self {
         self.sections
-            .extend(groups.into_iter().map(|g| FigureSection::Group(g)));
+            .extend(groups.into_iter().map(FigureSection::Group));
         self
     }
 
@@ -219,15 +219,13 @@ impl Figure {
     /// detailed description can be found in the [root level documentation][crate].
     ///
     /// [dtd]: https://en.wikipedia.org/wiki/Digital_timing_diagram
-    pub fn assemble_with_options(&self, options: PathAssembleOptions) -> AssembledFigure {
+    pub fn assemble_with_options(&self, mut options: PathAssembleOptions) -> AssembledFigure {
         let top_cycle_marker = self.top_cycle_marker;
         let bottom_cycle_marker = self.bottom_cycle_marker;
         let hscale = self.hscale;
 
         let header_text = self.header_text.as_ref().map(|s| &s[..]);
         let footer_text = self.footer_text.as_ref().map(|s| &s[..]);
-
-        let mut options = options.clone();
 
         options.cycle_width *= hscale;
 
@@ -271,7 +269,7 @@ impl Figure {
                     }
 
                     lines.push(AssembledLine {
-                        text: &signal.get_name(),
+                        text: signal.get_name(),
                         path: SignalPath::new(
                             signal.cycles(),
                             signal.get_data_fields(),
@@ -311,7 +309,6 @@ impl Figure {
             .map(|line| line.path.num_cycles())
             .max()
             .unwrap_or(0);
-        let num_cycles = num_cycles as u32;
 
         AssembledFigure {
             num_cycles,
@@ -367,7 +364,7 @@ struct SectionIterator<'a> {
 impl<'a> SectionIterator<'a> {
     fn new(sections: &'a [FigureSection]) -> Self {
         Self {
-            top_level: sections.into_iter(),
+            top_level: sections.iter(),
             sections: Vec::new(),
         }
     }

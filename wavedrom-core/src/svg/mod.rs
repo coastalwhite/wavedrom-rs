@@ -20,7 +20,7 @@ pub use font::Font;
 use options::RenderOptions;
 
 fn escape_str(s: &str) -> Cow<str> {
-    if !s.contains(&['<', '>', '"', '&']) {
+    if !s.contains(['<', '>', '"', '&']) {
         return Cow::Borrowed(s);
     }
 
@@ -348,10 +348,11 @@ impl<'a> AssembledFigure<'a> {
                 break;
             };
 
-            let x = dims
-                .has_textbox()
-                .then_some(dims.textbox_x())
-                .unwrap_or(dims.schema_x());
+            let x = if dims.has_textbox() {
+                dims.textbox_x()
+            } else {
+                dims.schema_x()
+            };
             let y = dims.signal_top(i);
 
             write!(writer, r##"<g transform="translate({x},{y})">"##)?;
@@ -374,10 +375,10 @@ impl<'a> AssembledFigure<'a> {
                     r##"<g transform="translate({schema_x})">"##,
                     schema_x = dims.schema_x() - dims.textbox_x()
                 )?;
-                write_signal(&line.path, writer, &signal, self.hscale)?;
+                write_signal(&line.path, writer, signal, self.hscale)?;
                 write!(writer, r##"</g>"##)?;
             } else {
-                write_signal(&line.path, writer, &signal, self.hscale)?;
+                write_signal(&line.path, writer, signal, self.hscale)?;
             }
 
             write!(writer, r##"</g>"##)?;
@@ -464,8 +465,8 @@ impl<'a> AssembledFigure<'a> {
             write!(writer, "<g>")?;
             for text_node in self.line_edge_markers.text_nodes() {
                 let text = text_node.text().to_string();
-                let x = dims.schema_x() + text_node.at().x().width_offset(cycle_width.into());
-                let y = dims.signal_top(text_node.at().y()) + u32::from(signal_height / 2);
+                let x = dims.schema_x() + text_node.at().x().width_offset(cycle_width);
+                let y = dims.signal_top(text_node.at().y()) + signal_height / 2;
 
                 write_edge_text(
                     writer,
@@ -591,7 +592,11 @@ fn write_signal(
             write!(
                 writer,
                 r##"<g transform="translate({x},{y})"><text text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{font_size}" fill="{color}" letter-spacing="0"><tspan>{text}</tspan></text></g>"##,
-                font_family = "Helvetica",
+                font_family = Font::default()
+                    .get_font_family_name()
+                    .as_ref()
+                    .map(|s| &s[..])
+                    .unwrap_or("Helvetica"),
                 font_size = options.marker_font_size,
                 text = marker_text,
                 color = options.marker_color,

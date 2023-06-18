@@ -1,6 +1,6 @@
 use std::num::NonZeroU16;
 
-use crate::{CycleState, CycleOffset};
+use crate::{CycleOffset, CycleState};
 
 /// A diagram signal line with a set of cycles.
 #[derive(Debug, Clone)]
@@ -57,9 +57,10 @@ impl Signal {
     /// Create a new [`Signal`] with the cycles formed from the `states` string.
     #[inline]
     pub fn with_cycle_str(states: impl AsRef<str>) -> Self {
-        let mut signal = Self::default();
-        signal.cycles = states.as_ref().chars().map(CycleState::from).collect();
-        signal
+        Signal {
+            cycles: states.as_ref().chars().map(CycleState::from).collect(),
+            ..Self::default()
+        }
     }
 
     /// Add a set of [`CycleState`]s to the [`Signal`].
@@ -99,7 +100,7 @@ impl Signal {
     /// look at the [`edges`][crate::edges] documentation.
     #[inline]
     pub fn add_nodes(mut self, nodes: impl AsRef<str>) -> Self {
-        self.node.extend(nodes.as_ref().chars());
+        self.node.push_str(nodes.as_ref());
         self
     }
 
@@ -136,9 +137,10 @@ impl Signal {
     /// Create a [`Signal`] that contains the `state` a number of times. Namely, `repeats` times.
     #[inline]
     pub fn repeated(state: CycleState, repeats: usize) -> Self {
-        let mut signal = Signal::default();
-        signal.cycles = vec![state; repeats];
-        signal
+        Signal {
+            cycles: vec![state; repeats],
+            ..Self::default()
+        }
     }
 
     /// Set the period for a signal. This is mostly important for clock signals.
@@ -175,7 +177,7 @@ impl Signal {
     pub fn get_nodes(&self) -> &str {
         &self.node
     }
-    
+
     /// Get the data of the [`Signal`].
     #[inline]
     pub fn get_data_fields(&self) -> &[String] {

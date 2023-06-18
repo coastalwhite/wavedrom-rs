@@ -62,17 +62,14 @@ pub fn insert_wavedrom(
                     if rest.starts_with('[') && rest.ends_with(']') {
                         let control_flags = rest[1..rest.len() - 1].trim();
                         for control_flag in control_flags.split(',') {
-                            match control_flag.trim() {
-                                "with_source" => {
-                                    keep_source_code_tag = Some(
-                                        span.start
-                                            ..span.start
-                                                + content[span.start..]
-                                                    .find('\n')
-                                                    .unwrap_or(span.end),
-                                    )
-                                }
-                                _ => {}
+                            if control_flag.trim() == "with_source" {
+                                keep_source_code_tag = Some(
+                                    span.start
+                                        ..span.start
+                                            + content[span.start..]
+                                                .find('\n')
+                                                .unwrap_or(span.end),
+                                )
                             }
                         }
 
@@ -114,7 +111,7 @@ pub fn insert_wavedrom(
 
             wavedrom_figure
                 .assemble_with_options(assemble_options)
-                .write_svg_with_options(&mut wavedrom_code, &render_options)
+                .write_svg_with_options(&mut wavedrom_code, render_options)
                 .map_err(|_| InsertionError::WriteSvg)?;
 
             let wavedrom_code =

@@ -246,7 +246,7 @@ impl<'a> SvgDimensions<'a> {
     }
 
     pub fn schema_height(&self) -> u32 {
-        if self.figure.lines.len() == 0 {
+        if self.figure.lines.is_empty() {
             return 0;
         }
 

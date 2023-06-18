@@ -1015,7 +1015,7 @@ impl<'a> SignalSegmentIter<'a> {
         let text = if background.map_or(false, PathSegmentBackground::is_data_box) {
             let s = self.box_content.get(self.box_index);
             self.box_index += 1;
-            s.map(|s| s.clone())
+            s.cloned()
         } else {
             None
         };
@@ -1341,10 +1341,7 @@ impl CycleState {
 
 impl PathSegmentBackground {
     fn is_data_box(self) -> bool {
-        match self {
-            Self::Undefined => false,
-            _ => true,
-        }
+        !matches!(self, Self::Undefined)
     }
 }
 

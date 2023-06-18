@@ -2,7 +2,9 @@ use std::fmt::Display;
 use std::io;
 
 use crate::edges::LineEdge;
-use crate::{Color, EdgeArrowType, EdgeVariant, SharpEdgeVariant, SplineEdgeVariant, PathAssembleOptions};
+use crate::{
+    Color, EdgeArrowType, EdgeVariant, PathAssembleOptions, SharpEdgeVariant, SplineEdgeVariant,
+};
 
 use super::dimensions::SvgDimensions;
 use super::options::RenderOptions;
@@ -21,6 +23,15 @@ impl Display for SVGF64 {
 struct PlacedVec2D {
     origin: (f64, f64),
     dir: (f64, f64),
+}
+
+impl PlacedVec2D {
+    fn invert(&self) -> Self {
+        Self {
+            origin: self.origin,
+            dir: (-self.dir.0, -self.dir.1),
+        }
+    }
 }
 
 struct BBox {
@@ -357,33 +368,31 @@ pub fn write_line_edge(
                 "M{start_x},{top_y}v{height}M{end_x},{top_y}v{height}",
                 height = 2 * MHEIGHT
             )?;
-        } else {
-            if let Some((xoffset, yoffset)) = offset_in_dir(
-                (0, 0),
-                (
-                    f64::from(from_y) - f64::from(to_y),
-                    f64::from(to_x) - f64::from(from_x),
-                ),
-                MHEIGHT,
-            ) {
-                write!(
-                    writer,
-                    "M{x1},{y1}L{x2},{y2}",
-                    x1 = offset_start.0 + xoffset,
-                    y1 = offset_start.1 + yoffset,
-                    x2 = offset_start.0 - xoffset,
-                    y2 = offset_start.1 - yoffset,
-                )?;
+        } else if let Some((xoffset, yoffset)) = offset_in_dir(
+            (0, 0),
+            (
+                f64::from(from_y) - f64::from(to_y),
+                f64::from(to_x) - f64::from(from_x),
+            ),
+            MHEIGHT,
+        ) {
+            write!(
+                writer,
+                "M{x1},{y1}L{x2},{y2}",
+                x1 = offset_start.0 + xoffset,
+                y1 = offset_start.1 + yoffset,
+                x2 = offset_start.0 - xoffset,
+                y2 = offset_start.1 - yoffset,
+            )?;
 
-                write!(
-                    writer,
-                    "M{x1},{y1}L{x2},{y2}",
-                    x1 = offset_end.0 + xoffset,
-                    y1 = offset_end.1 + yoffset,
-                    x2 = offset_end.0 - xoffset,
-                    y2 = offset_end.1 - yoffset,
-                )?;
-            }
+            write!(
+                writer,
+                "M{x1},{y1}L{x2},{y2}",
+                x1 = offset_end.0 + xoffset,
+                y1 = offset_end.1 + yoffset,
+                x2 = offset_end.0 - xoffset,
+                y2 = offset_end.1 - yoffset,
+            )?;
         }
     }
 
@@ -396,10 +405,8 @@ pub fn write_line_edge(
     write_edge_arrow_heads(
         writer,
         arrow_type,
-        start.origin,
-        start.dir,
-        end.origin,
-        end.dir,
+        start,
+        end,
         edge_options.edge_arrow_size,
         edge_options.edge_arrow_color,
     )?;
@@ -608,24 +615,23 @@ pub fn write_edge_text(
 
 fn write_edge_arrow_head_path(
     writer: &mut impl io::Write,
-    at: (f64, f64),
-    dir: (f64, f64),
+    v2d: PlacedVec2D,
     size: u32,
 ) -> io::Result<()> {
-    let Some(end) = offset_in_dir(at, dir, size) else {
+    let Some(end) = offset_in_dir(v2d.origin, v2d.dir, size) else {
         return Ok(());
     };
 
-    let Some(v1) = offset_in_dir(end, (-dir.1, dir.0), f64::from(size / 2)) else {
+    let Some(v1) = offset_in_dir(end, (-v2d.dir.1, v2d.dir.0), f64::from(size / 2)) else {
         return Ok(());
     };
 
-    let Some(v2) = offset_in_dir(end, (-dir.1, dir.0), -f64::from(size / 2)) else {
+    let Some(v2) = offset_in_dir(end, (-v2d.dir.1, v2d.dir.0), -f64::from(size / 2)) else {
         return Ok(());
     };
 
-    let at_x = SVGF64(at.0);
-    let at_y = SVGF64(at.1);
+    let at_x = SVGF64(v2d.origin.0);
+    let at_y = SVGF64(v2d.origin.1);
 
     let v1x = SVGF64(v1.0);
     let v1y = SVGF64(v1.1);
@@ -639,21 +645,19 @@ fn write_edge_arrow_head_path(
 fn write_edge_arrow_heads(
     writer: &mut impl io::Write,
     arrow_type: EdgeArrowType,
-    begin: (f64, f64),
-    begin_dir: (f64, f64),
-    end: (f64, f64),
-    end_dir: (f64, f64),
+    begin: PlacedVec2D,
+    end: PlacedVec2D,
     arrow_size: u32,
     arrow_color: Color,
 ) -> io::Result<()> {
     write!(writer, r#"<path d=""#)?;
 
     if matches!(arrow_type, EdgeArrowType::Start | EdgeArrowType::Both) {
-        write_edge_arrow_head_path(writer, begin, begin_dir, arrow_size)?;
+        write_edge_arrow_head_path(writer, begin, arrow_size)?;
     }
 
     if matches!(arrow_type, EdgeArrowType::End | EdgeArrowType::Both) {
-        write_edge_arrow_head_path(writer, end, (-end_dir.0, -end_dir.1), arrow_size)?;
+        write_edge_arrow_head_path(writer, end.invert(), arrow_size)?;
     }
 
     write!(writer, r##"" fill="{arrow_color}" stroke="none"/>"##)?;

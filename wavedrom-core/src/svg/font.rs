@@ -103,7 +103,7 @@ impl Font {
             .names()
             .into_iter()
             .find(|item| item.name_id == 1)
-            .map_or(None, |name| {
+            .and_then(|name| {
                 if !name.is_unicode() {
                     return None;
                 }

@@ -63,7 +63,7 @@ impl FromStr for Color {
     type Err = usize;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if !s.starts_with("#") {
+        if !s.starts_with('#') {
             return Err(0);
         }
 
