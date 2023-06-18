@@ -27,7 +27,7 @@ jobs:
       run: |
         cd mdbook-wavedrom-rs
         cargo build --release
-        mv ../target/release/mdbook-wavedrom-rs /usr/bin/mdbook-wavedrom-rs
+        mv ../target/release/mdbook-wavedrom-rs /usr/local/bin/mdbook-wavedrom-rs
 
     - name: Deploy GitHub Pages
       run: |
