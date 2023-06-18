@@ -69,7 +69,7 @@ fn handle_supports(pre: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
 
 mod nop_lib {
     use mdbook::BookItem;
-    use mdbook_wavedrom::insert_wavedrom;
+    use mdbook_wavedrom_rs::insert_wavedrom;
     use wavedrom::options::RenderOptions;
     use wavedrom::skin::Skin;
     use wavedrom::PathAssembleOptions;

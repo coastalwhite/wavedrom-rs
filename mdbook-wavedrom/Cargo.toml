@@ -1,11 +1,15 @@
 [package]
-name = "mdbook-wavedrom"
+name = "mdbook-wavedrom-rs"
 version.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 edition.workspace = true
 license = "MPL-2.0"
+
+keywords = ["diagram", "svg", "signal", "digital", "timing"]
+categories = ["graphics", "visualization", "wasm"]
+description = "A MdBook preprocessor for WaveDrom Digital Timing Diagrams"
 
 [dependencies]
 anyhow = "1.0.71"
@@ -23,3 +27,4 @@ default-features = false
 
 [dependencies.wavedrom]
 path = "../wavedrom-core"
+version = "0.1.0"

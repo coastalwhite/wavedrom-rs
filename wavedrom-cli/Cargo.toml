@@ -6,6 +6,7 @@ repository.workspace = true
 homepage.workspace = true
 edition.workspace = true
 license.workspace = true
+description.workspace = true
 
 [[bin]]
 name = "wavedrom"
@@ -16,3 +17,4 @@ workspace = true
 
 [dependencies.wavedrom]
 path = "../wavedrom-core"
+version = "0.1.0"

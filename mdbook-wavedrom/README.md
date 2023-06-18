@@ -7,7 +7,7 @@ Integration for [wavedrom-rs] with [mdbook].
 First, install the preprocessor utilizing the [Rust Toolchain].
 
 ```bash
-cargo install mdbook-wavedrom
+cargo install mdbook-wavedrom-rs
 ```
 
 Then, add the preprocessor to the list of preprocessors in your [mdbook]

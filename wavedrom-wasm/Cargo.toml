@@ -7,6 +7,10 @@ homepage.workspace = true
 edition.workspace = true
 license.workspace = true
 
+description = "A WASM interface for WaveDrom Digital Timing Diagrams"
+
+publish = false
+
 [lib]
 crate-type = ["cdylib"]
 
