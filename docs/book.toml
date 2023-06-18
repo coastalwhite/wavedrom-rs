@@ -14,4 +14,4 @@ mathjax-support = false
 git-repository-url = "https://github.com/coastalwhite/wavedrom-rs/tree/main/docs"
 edit-url-template = "https://github.com/coastalwhite/wavedrom-rs/edit/main/docs/{path}"
 
-[preprocessor.wavedrom]
+[preprocessor.wavedrom-rs]
