@@ -12,6 +12,7 @@ authors = ["Gijs Burghoorn <me@gburghoorn.com>"]
 repository = "https://github.com/coastalwhite/wavedrom-rs"
 homepage = "https://github.com/coastalwhite/wavedrom-rs"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 clap = "4.3.2"

@@ -1,0 +1,21 @@
+[licenses]
+unlicensed = "warn"
+allow-osi-fsf-free = "either"
+copyleft = "deny"
+
+[[licenses.exceptions]]
+allow = ["MPL-2.0"]
+name = "mdbook"
+
+[[licenses.exceptions]]
+allow = ["MPL-2.0"]
+name = "mdbook-wavedrom"
+
+[advisories]
+ignore = [
+  "RUSTSEC-2021-0145", # atty (dev-deps only, dependency of criterion)
+  "RUSTSEC-2022-0004", # rustc_serialize, cannot remove due to compatibility
+]
+unmaintained = "deny"
+unsound = "deny"
+yanked = "deny"

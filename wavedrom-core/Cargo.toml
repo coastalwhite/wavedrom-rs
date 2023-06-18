@@ -5,6 +5,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 edition.workspace = true
+license.workspace = true
 include = ["/src", "/helvetica.ttf"]
 
 [dependencies.json5]
