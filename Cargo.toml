@@ -3,7 +3,7 @@ members = [
 	"wavedrom-core",
 	"wavedrom-cli",
 	"wavedrom-wasm",
-    "mdbook-wavedrom",
+    "mdbook-wavedrom-rs",
 ]
 
 [workspace.package]
