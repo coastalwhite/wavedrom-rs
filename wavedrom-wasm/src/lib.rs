@@ -82,3 +82,22 @@ pub extern "C" fn merge_in_skin(ptr: *mut u8, size: usize) -> u8 {
 pub extern "C" fn reset_parameters() {
     render_options::reset()
 }
+
+#[no_mangle]
+pub extern "C" fn export_parameters() -> *const u8 {
+    match render_options::export() {
+        Ok(v) => {
+            let mut out = Vec::with_capacity(v.len() + 5);
+            out.push(0);
+            let bs = v.len().to_be_bytes();
+
+            for i in 0..4 {
+                out.push(bs[i]);
+            }
+
+            out.extend(v.into_bytes());
+            out.leak().as_ptr()
+        },
+        Err(_) => Box::leak(Box::new(1u8)) as *const u8,
+    }
+}

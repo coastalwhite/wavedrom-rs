@@ -249,6 +249,7 @@ fetch("./wavedrom.wasm")
             get_parameter,
             merge_in_skin,
 			reset_parameters,
+            export_parameters,
         } = mod.exports;
 
         const input = document.getElementById("input");
@@ -349,6 +350,33 @@ fetch("./wavedrom.wasm")
 				refresh_parameter_values();
 				rerender();
 		});
+
+        document
+            .getElementById("export-button")
+            .addEventListener("click", () => {
+                const rptr = export_parameters();
+                const array = new Uint8Array(memory.buffer, rptr, 5);
+                const return_code = array[0];
+
+                if (return_code != 0) {
+                    makeInvisible("success-icon");
+                    makeVisible("failure-icon");
+
+                    error.innerHTML = "Failed to get skin";
+
+                    free(rptr, 1);
+                }
+
+                const size = (array[1] << 24) | (array[2] << 16) | (array[3] << 8) | array[4];
+                const json = decode_string(memory, rptr + 5, size);
+                const bb = new Blob([json], { type: "application/json" });
+                const a = document.createElement("a");
+                a.download = "skin.json";
+                a.href = window.URL.createObjectURL(bb);
+                a.click();
+
+                free(rptr, size + 5);
+            });
 
         document
             .getElementById("skin-file-button")

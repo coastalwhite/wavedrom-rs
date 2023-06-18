@@ -249,3 +249,15 @@ pub fn reset() {
         .lock()
         .unwrap() = RenderOptions::default();
 }
+
+#[inline]
+pub fn export() -> wavedrom::json5::Result<String> {
+    let assemble = get_assemble_options().clone();
+    let render = get_render_options().clone();
+
+    let skin = Skin {
+        assemble: Some(assemble), render: Some(render.into()),
+    };
+
+    wavedrom::json5::to_string(&skin)
+}

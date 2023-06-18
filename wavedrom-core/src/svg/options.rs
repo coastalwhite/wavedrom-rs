@@ -83,6 +83,17 @@ macro_rules! define_options {
         }
 
         #[cfg(feature = "skins")]
+        impl From<$struct_name> for $opt_struct_name {
+            fn from(value: $struct_name) -> Self {
+                Self {
+                $(
+                    $property_name: Some(value.$property_name.into()),
+                )+
+                }
+            }
+        }
+
+        #[cfg(feature = "skins")]
         impl $struct_name {
             /// Merge a partial configuration into a full configuration
             pub fn merge_in(&mut self, opt: $opt_struct_name) {

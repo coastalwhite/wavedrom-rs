@@ -1,0 +1,80 @@
+{
+  "assemble": {
+    "signal_height": 24,
+    "cycle_width": 48,
+    "transition_offset": 4
+  },
+  "render": {
+    "background": "#FFF",
+    "padding": {
+      "figure_top": 8,
+      "figure_bottom": 8,
+      "figure_left": 8,
+      "figure_right": 8,
+      "schema_top": 8,
+      "schema_bottom": 8
+    },
+    "spacing": {
+      "textbox_to_schema": 8,
+      "groupbox_to_textbox": 8,
+      "line_to_line": 8
+    },
+    "header": {
+      "font_size": 24,
+      "height": 32,
+      "color": "#000",
+      "cycle_marker_height": 12,
+      "cycle_marker_fontsize": 12,
+      "cycle_marker_color": "#000"
+    },
+    "footer": {
+      "font_size": 24,
+      "height": 32,
+      "color": "#000",
+      "cycle_marker_height": 12,
+      "cycle_marker_fontsize": 12,
+      "cycle_marker_color": "#000"
+    },
+    "signal": {
+      "marker_font_size": 14,
+      "marker_color": "#000",
+      "name_font_size": 14,
+      "name_color": "#000",
+      "gap_color": "#000",
+      "gap_background_color": "#FFF",
+      "path_color": "#000",
+      "hint_line_color": "#CCC",
+      "undefined_color": "#000",
+      "undefined_background": null,
+      "backgrounds": [
+        { "red": 255, "green": 255, "blue": 255 },
+        { "red": 247, "green": 247, "blue": 161 },
+        { "red": 249, "green": 212, "blue": 159 },
+        { "red": 173, "green": 222, "blue": 255 },
+        { "red": 172, "green": 213, "blue": 182 },
+        { "red": 164, "green": 171, "blue": 225 },
+        { "red": 232, "green": 168, "blue": 240 },
+        { "red": 251, "green": 218, "blue": 218 }
+      ]
+    },
+    "group_indicator": {
+      "width": 4,
+      "spacing": 4,
+      "color": "#000",
+      "label_spacing": 4,
+      "label_fontsize": 14,
+      "label_color": "#000"
+    },
+    "edge": {
+      "node_font_size": 14,
+      "node_text_color": "#000",
+      "node_background_color": "#FFF",
+      "edge_text_font_size": 14,
+      "edge_text_color": "#000",
+      "edge_text_background_color": "#FFF",
+      "edge_color": "#00F",
+      "edge_arrow_color": "#000",
+      "edge_arrow_size": 8
+    }
+  }
+}
