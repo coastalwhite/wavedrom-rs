@@ -1,0 +1,8 @@
+{
+	signal: [
+		{ name: "clk", wave: "p.........." },
+		{ name: "req", wave: "0.10......." },
+		{ name: "data", wave: "x......2.x.", data: "0xBEEF" },
+		{ name: "done", wave: "0......1.0." },
+	]
+}

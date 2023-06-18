@@ -1,0 +1,17 @@
+{
+    signal: [
+        [
+            "group",
+            { name: "A", wave: "p...." },
+            [
+                "embed",
+                { name: "B", wave: "2...." },
+                { name: "C", wave: "3...." },
+            ],
+        ],
+        [
+            { name: "D", wave: "4...." },
+            { name: "E", wave: "5...." },
+        ]
+    ]
+}

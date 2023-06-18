@@ -1,0 +1,35 @@
+{
+  signal: [
+    {
+      name: 'clk',
+      wave: 'p.......',
+    },
+    {
+      name: 'req',
+      wave: '010.....',
+    },
+    {
+      name: 'done',
+      wave: '0.....10',
+    },
+    {
+      name: 'state',
+      wave: '32222.23',
+      data: [
+        'Idle',
+        'FS',
+        'FB',
+        'SB',
+        'ReadDelay',
+        'Done',
+        'Idle',
+      ],
+    },
+  ],
+  head: {
+    text: 'Read Cache Hit',
+  },
+  foot: {
+    tock: 0,
+  },
+}

@@ -1,0 +1,8 @@
+{
+	signal: [
+		{ name: "clk", wave: "P......." },
+	    { node: "..A...B."},
+		{ name: "state", wave: "234...62", data: ["", "Pre", "Target", "Post"] },
+	],
+	edge: [ "A+B 4 cycles"],
+}

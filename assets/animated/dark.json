@@ -1,0 +1,6 @@
+{
+	signal: [
+		{ name: "clk", wave: "p......." },
+		{ name: "state", wave: "x3.4.56x", data: "Calculation Process R1 R2" },
+	]
+}

@@ -3,3 +3,4 @@
 /tests/**/*.svg
 /tests/result.html
 /wavedrom-wasm/index.css
+/assets/animated/*.svg

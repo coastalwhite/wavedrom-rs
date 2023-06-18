@@ -1,16 +1,21 @@
 <center>
-    <h1>wavedrom-rs 🌊</h1>
-    <h3>A Rust 🦀 <b>Signal Diagram</b> generator based on <a href="https://wavedrom.com/">WaveDrom</a></h3>
+    <h1>wavedrom-rs <img style="width: 1em; height: 1em;" alt="signal" src="./assets/wave.svg" /></h1>
+    <h3>A Rust <b>Digital Timing Diagram</b> generator based on <a href="https://wavedrom.com/">WaveDrom</a></h3>
 </center>
 
 ---
 
-[Demo][demo] | [Tutorial][tutorial]
+[Demo][demo] | [Tutorial][book]
 
-The `wavedrom-rs` crate provides an interface to shape beautiful *Signal
-Diagrams* into an [SVG][svg]. It aims to be mostly compatible with the
-[WaveDrom][wavedrom-js] project. Namely, it allows all the signal types that
-WaveDrom allows and has support for [WaveJson][tutorial] shaping.
+The `wavedrom-rs` crate provides an interface to shape beautiful [Digital Timing
+Diagrams][dtd] into an [SVG][svg]. It is almost completely compatible with the
+[WaveDrom][wavedrom-js] project. It can be merged into document build tools,
+continuous integration or be used as a one off to generate beautiful
+diagrams.
+
+<p align="center">
+    <img src="./assets/banner.gif" alt="Banner Image" />
+</p>
 
 There are currently four ways to use `wavedrom-rs`:
 
@@ -21,10 +26,10 @@ There are currently four ways to use `wavedrom-rs`:
 
 ## Features
 
-- [x] All wavedrom-rs Signal Types
+- [x] All original WaveDrom Signal Types
 - [x] Signal Groups
-- [x] Marker Edges
-- [x] Header and Footer Text
+- [x] Arrows and Indicator Markers
+- [x] Headers and Footers
 - [x] Cycle Enumeration Markers
 - [x] Editor Website through WASM
 - [x] MdBook Preprocessor
@@ -32,10 +37,10 @@ There are currently four ways to use `wavedrom-rs`:
 
 ## Documentation
 
-This project uses the same syntax for wavejson as the original
+This project uses the same syntax for WaveJson as the original
 [WaveDrom][wavedrom-js] project. Therefore, the original [Hitchhiker's Guide to
 WaveDrom][hitchhiker] is still a good introduction into several concepts of
-of WaveJson. Additionally, this repository maintains a [book][book].
+of WaveJson. Additionally, this repository maintains a [reference book][book].
 
 ## Testing
 
@@ -49,6 +54,11 @@ each `json5` file in the `./tests` directory.
 cd ./tests
 ./run [path/to/skin.json5]
 ```
+
+## Contribution
+
+Please report any bugs and possible improvements as an issue within this
+repository. Pull requests are also welcome.
 
 ## License
 
@@ -64,4 +74,5 @@ Licensed under a [MIT License](./LICENSE). The demo website utilizes icons from
 [cratesio]: https://crates.io/crates/wavedrom-rs
 [cli]: ./wavedrom-cli
 [mdbook-wavedrom]: ./mdbook-wavedrom
+[dtd]: https://en.wikipedia.org/wiki/Digital_timing_diagram
 [book]: https://coastalwhite.github.io/wavedrom-rs
