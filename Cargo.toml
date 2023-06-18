@@ -1,7 +1,6 @@
 [workspace]
 members = [
-	"wavedrom-core",
-	"wavedrom-cli",
+	"wavedrom",
 	"wavedrom-wasm",
     "mdbook-wavedrom-rs",
 ]

@@ -30,6 +30,10 @@ optional = true
 version = "1.0"
 optional = true
 
+[dependencies.clap]
+workspace = true
+optional = true
+
 [features]
 default = ["json5", "embed_font", "skins"]
 embed_font = ["dep:ttf-parser"]
@@ -40,3 +44,9 @@ serde_json = ["dep:serde_json", "serde"]
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[[bin]]
+name = "wavedrom"
+test = false
+bench = false
+required-features = ["clap"]

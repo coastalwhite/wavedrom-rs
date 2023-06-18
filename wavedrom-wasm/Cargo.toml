@@ -15,4 +15,4 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies.wavedrom]
-path = "../wavedrom-core"
+path = "../wavedrom"
