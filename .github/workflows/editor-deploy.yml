@@ -64,7 +64,8 @@ jobs:
         with:
           host: ${{ secrets.SCP_HOST }}
           username: ${{ secrets.SCP_USERNAME }}
-          password: ${{ secrets.SCP_SSH_PW }}
+          key: ${{ secrets.SCP_SSH_KEY }}
+          passphrase: ${{ secrets.SCP_SSH_PW }}
           port: ${{ secrets.SCP_PORT }}
           target: ${{ secrets.SCP_PATH }}
           source: "public/*"
