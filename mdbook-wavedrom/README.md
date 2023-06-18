@@ -16,7 +16,7 @@ configuration file `book.toml`.
 ```toml
 # book.toml
 
-[preprocessor.wavedrom]
+[preprocessor.wavedrom-rs]
 ```
 
 Afterwards, you should be able to add a `wavedrom` codeblock, which should
@@ -44,7 +44,7 @@ property.
 ```toml
 # book.toml
 
-[preprocessor.wavedrom]
+[preprocessor.wavedrom-rs]
 skin = "path/to/skin.json5"
 ```
 
