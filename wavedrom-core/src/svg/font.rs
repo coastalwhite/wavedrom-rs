@@ -1,7 +1,7 @@
-use std::sync::OnceLock;
 use std::marker::PhantomData;
 
-static EMBEDDED_HELVETICA: OnceLock<ttf_parser::Face<'static>> = OnceLock::new(); 
+#[cfg(feature = "embed_font")]
+static EMBEDDED_HELVETICA: std::sync::OnceLock<ttf_parser::Face<'static>> = std::sync::OnceLock::new(); 
 
 /// The font that is used by the svg assembler to calculate text widths.
 ///
@@ -63,7 +63,9 @@ impl Font {
             .sum()
     }
 
-    fn get_font_family_name(&self) -> Option<String> {
+    /// Get a string representing the Font Family of the font.
+    #[inline]
+    pub fn get_font_family_name(&self) -> Option<String> {
         Some("Helvetica".to_string())
     }
 }
@@ -76,6 +78,7 @@ impl Font {
         })
     }
 
+    #[inline]
     fn units_per_em(&self) -> u16 {
         self.get_face().units_per_em()
     }

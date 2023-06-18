@@ -14,22 +14,23 @@
 //!
 //! ## WaveJson
 //!
-//! ```
-//! use std::fs::File;
-//!
-//! let path = "path/to/file.svg";
-//! # let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/doc-root-wavejson.svg");
-//! let mut file = File::create(path)?;
-//!
-//! wavedrom::render_json5(r##"
-//!     { signal: [
-//!         { name: "clk",  wave: "P......" },
-//!         { name: "bus",  wave: "x.==.=x", data: ["head", "body", "tail", "data"] },
-//!         { name: "wire", wave: "0.1..0." }
-//!     ]}
-//! "##, &mut file)?;
-//! # <Result<(), wavedrom::RenderJson5Error>>::Ok(())
-//! ```
+#![cfg_attr(feature = "json5", doc = r####"
+```
+use std::fs::File;
+
+let path = "path/to/file.svg";
+# let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/doc-root-wavejson.svg");
+let mut file = File::create(path)?;
+
+wavedrom::render_json5(r##"
+    { signal: [
+        { name: "clk",  wave: "P......" },
+        { name: "bus",  wave: "x.==.=x", data: ["head", "body", "tail", "data"] },
+        { name: "wire", wave: "0.1..0." }
+    ]}
+"##, &mut file)?;
+# <Result<(), wavedrom::RenderJson5Error>>::Ok(())
+```"####)]
 //!
 //! **Result:**
 //!
@@ -117,7 +118,7 @@
 //! [mdbook-wavedrom]: https://github.com/coastalwhite/wavedrom-rs/tree/main/mdbook-wavedrom
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#![deny(rustdoc::broken_intra_doc_links)]
+#![cfg_attr(all(feature = "serde_json", feature = "json5", feature = "serde", feature = "skins"), deny(rustdoc::broken_intra_doc_links))]
 #![deny(missing_docs)]
 
 #[cfg(feature = "json5")]
@@ -151,7 +152,7 @@ pub mod markers;
 pub mod wavejson;
 
 use edges::{
-    EdgeArrowType, EdgeDefinition, EdgeVariant, LineEdgeMarkers, SharpEdgeVariant,
+    EdgeArrowType, EdgeVariant, LineEdgeMarkers, SharpEdgeVariant,
     SplineEdgeVariant,
 };
 

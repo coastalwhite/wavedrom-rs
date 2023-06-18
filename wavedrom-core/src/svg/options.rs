@@ -11,6 +11,7 @@ macro_rules! replace_default {
     };
 }
 
+#[cfg(feature = "skins")]
 macro_rules! replace_ty {
     ($x:ty) => {
         $x
@@ -20,6 +21,7 @@ macro_rules! replace_ty {
     };
 }
 
+#[cfg(feature = "skins")]
 macro_rules! replace_merge {
     ($name:expr, $value:expr) => {
         $name = $value

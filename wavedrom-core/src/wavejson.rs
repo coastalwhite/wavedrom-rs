@@ -1,12 +1,10 @@
 //! The definitions for the WaveJson format.
 #![allow(missing_docs)]
 
-use std::str::FromStr;
-
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CycleEnumerationMarker, CycleOffset, CycleState, EdgeDefinition, Figure, FigureSection,
+    CycleEnumerationMarker, CycleOffset, CycleState, Figure, FigureSection,
     FigureSectionGroup, Signal,
 };
 
@@ -133,7 +131,7 @@ impl From<WaveJson> for Figure {
 
         if let Some(edge) = value.edge {
             for e in edge {
-                if let Ok(def) = EdgeDefinition::from_str(&e) {
+                if let Ok(def) = e.parse() {
                     edges.push(def);
                 }
             }
@@ -209,12 +207,10 @@ impl From<SignalObject> for Signal {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     #[cfg(feature = "serde_json")]
     fn groups() {
-        use crate::svg::ToSvg;
+        use super::*;
 
         let data = r#"
         {

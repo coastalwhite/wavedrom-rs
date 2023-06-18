@@ -112,7 +112,7 @@ mod serde_json {
         render_options: &RenderOptions,
     ) -> Result<(), RenderJsonError> {
         let figure = crate::Figure::from_json(json)?;
-        let assembled = figure.assemble_with_options(PathAssembleOptions);
+        let assembled = figure.assemble_with_options(assemble_options);
         assembled.write_svg_with_options(writer, render_options)?;
 
         Ok(())
