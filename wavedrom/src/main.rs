@@ -1,47 +1,131 @@
-use std::io::{stdin, stdout, Read, BufWriter};
+use std::fmt::Display;
+use std::io::{stdin, stdout, BufWriter, Read};
 use std::path::PathBuf;
 
-use clap::{value_parser, Arg, Command};
+use wavedrom::options::RenderOptions;
 use wavedrom::skin::Skin;
 use wavedrom::{Figure, PathAssembleOptions};
-use wavedrom::options::RenderOptions;
 
-static ABOUT: &str = r#"
+#[derive(Default)]
+struct Flags {
+    input: Option<PathBuf>,
+    output: Option<PathBuf>,
+    skin: Option<PathBuf>,
+}
+
+enum ParsingError {
+    MissingArgument(String),
+    UnexpectedArgument(String),
+    InvalidFlag(String),
+}
+
+impl Display for ParsingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParsingError::MissingArgument(arg) => {
+                write!(f, "An argument for flag '{arg}' is missing")
+            }
+            ParsingError::UnexpectedArgument(arg) => {
+                write!(f, "The argument '{arg}' is unexpected")
+            }
+            ParsingError::InvalidFlag(arg) => write!(f, "Flag '{arg}' is not valid"),
+        }
+    }
+}
+
+impl Flags {
+    fn print_metadata() {
+        let pkg_name = env!("CARGO_PKG_NAME");
+        let pkg_version = env!("CARGO_PKG_VERSION");
+        let pkg_authors = env!("CARGO_PKG_AUTHORS");
+
+        println!("{pkg_name} {pkg_version}");
+        println!("{pkg_authors}");
+    }
+
+    fn about() -> &'static str {
+        r#"
 A Signal Diagram Generator from WaveJson.
 
-By default, this application attempts to read a file from STDIN and output to STDOUT. An input file can be given with the -i/--input flag and a output file can be passed with the -o/--output file.
-"#;
+By default, this application attempts to read a file from STDIN and output to
+STDOUT. An input file can be given with the -i/--input flag and a output file
+can be passed with the -o/--output file.
+        "#
+        .trim()
+    }
 
-pub fn make_app() -> Command {
-    Command::new("wavedrom")
-        .about(ABOUT.trim())
-        .arg(
-            Arg::new("input")
-                .short('i')
-                .long("input")
-                .value_name("INPUT FILE")
-                .value_parser(value_parser!(PathBuf)),
-        )
-        .arg(
-            Arg::new("output")
-                .short('o')
-                .long("output")
-                .value_name("OUTPUT FILE")
-                .value_parser(value_parser!(PathBuf)),
-        )
-        .arg(
-            Arg::new("skin")
-                .short('s')
-                .long("skin")
-                .value_name("SKIN FILE")
-                .value_parser(value_parser!(PathBuf)),
-        )
+    fn usage() -> &'static str {
+        r"
+Usage: wavedrom [FLAGS]
+
+Takes a wavejson file from the STDIN and outputs a SVG to the STDOUT.
+
+Flags:
+-i/--input <path/to/input.json>: specify a path to a input wavejson file
+-o/--output <path/to/output.svg>: specify a path to a output svg file
+-s/--skin <path/to/skin.json>: specify a path to a skin file
+        "
+        .trim()
+    }
+
+    fn get() -> Result<Self, ParsingError> {
+        let mut args = std::env::args().skip(1);
+        let mut flags = Flags::default();
+
+        loop {
+            let Some(arg) = args.next() else {
+                break;
+            };
+
+            match &arg[..] {
+                "-i" | "--input" => {
+                    flags.input = Some(
+                        args.next()
+                            .ok_or(ParsingError::MissingArgument(arg))?
+                            .into(),
+                    );
+                }
+                "-o" | "--output" => {
+                    flags.output = Some(
+                        args.next()
+                            .ok_or(ParsingError::MissingArgument(arg))?
+                            .into(),
+                    );
+                }
+                "-s" | "--skin" => {
+                    flags.skin = Some(
+                        args.next()
+                            .ok_or(ParsingError::MissingArgument(arg))?
+                            .into(),
+                    );
+                }
+                "-h" | "--help" => {
+                    Self::print_metadata();
+                    println!();
+                    println!("{}", Self::about());
+                    println!();
+                    println!("{}", Self::usage());
+
+                    std::process::exit(0);
+                }
+                s if s.starts_with("-") => return Err(ParsingError::InvalidFlag(arg)),
+                _ => return Err(ParsingError::UnexpectedArgument(arg)),
+            }
+        }
+
+        Ok(flags)
+    }
 }
 
 fn main() {
-    let app = make_app().get_matches();
+    let flags = Flags::get().unwrap_or_else(|err| {
+        eprintln!("[ERROR]: {err}");
+        eprintln!();
+        eprintln!("{}", Flags::usage());
+        std::process::exit(1);
+    });
 
-    let content = match app.get_one::<PathBuf>("input") {
+    let content = match flags.input {
         None => {
             let mut buffer = Vec::new();
             let mut stdin = stdin().lock();
@@ -70,9 +154,9 @@ fn main() {
         },
     };
 
-    let (assemble_options, render_options) = match app.get_one::<PathBuf>("skin") {
+    let (assemble_options, render_options) = match flags.output {
         None => (PathAssembleOptions::default(), RenderOptions::default()),
-        Some(skin_path) => {
+        Some(ref skin_path) => {
             let skin = match std::fs::read_to_string(skin_path) {
                 Ok(content) => content,
                 Err(err) => {
@@ -88,7 +172,7 @@ fn main() {
                     std::process::exit(1);
                 }
             }
-        },
+        }
     };
 
     let figure = match Figure::from_json5(&content) {
@@ -102,11 +186,11 @@ fn main() {
 
     let assembled = figure.assemble_with_options(assemble_options);
 
-    let result = match app.get_one::<PathBuf>("output") {
+    let result = match flags.output {
         None => {
             let mut writer = BufWriter::new(stdout().lock());
             assembled.write_svg(&mut writer)
-        },
+        }
         Some(output_path) => {
             let output_file = match std::fs::OpenOptions::new()
                 .write(true)
