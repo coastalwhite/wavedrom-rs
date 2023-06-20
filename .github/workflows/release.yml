@@ -101,7 +101,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install Rust
-        run: rustup update 1.67.1 --no-self-update && rustup default 1.67.1
+        run: rustup update 1.69 --no-self-update && rustup default 1.69
       - name: Install cargo-dist
         run: ${{ matrix.install-dist }}
       - name: Run cargo-dist
