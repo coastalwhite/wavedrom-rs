@@ -5,13 +5,15 @@
 //! uppercase ASCII character then is is not displayed on the diagram otherwise it is also shown on
 //! the diagram.
 //!
-//! There are several types of edges, a full overview can be seen in the wavedrom-rs book. Here
-//! they are represented with the [`EdgeVariant`] structure.
+//! There are several types of edges, a full overview can be seen in the [wavedrom-rs book][book].
+//! Here they are represented with the [`EdgeVariant`] structure.
 //!
 //! In [WaveJson][crate::wavejson] an edge is given by a string that defined under the `edge`
 //! property array at the root JSON level. The edge there given in the following order: `<start
 //! node><edge identifier><end node> [label]`. The label is text that is put on the middle of the
 //! edge.
+//!
+//! [book]: https://coastalwhite.github.io/wavedrom-rs
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
