@@ -262,8 +262,10 @@ impl Figure {
                         match state {
                             CycleState::X => definitions.has_undefined = true,
                             CycleState::Gap => definitions.has_gaps = true,
-                            CycleState::PosedgeClockMarked => definitions.has_posedge_marker = true,
-                            CycleState::NegedgeClockMarked => definitions.has_negedge_marker = true,
+                            // NOTE: This is overeager for the definition on the High and Low
+                            // marked states, but this is fine for now.
+                            CycleState::PosedgeClockMarked | CycleState::HighMarked => definitions.has_posedge_marker = true,
+                            CycleState::NegedgeClockMarked | CycleState::LowMarked => definitions.has_negedge_marker = true,
                             _ => {}
                         }
                     }
