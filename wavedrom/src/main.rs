@@ -154,7 +154,7 @@ fn main() {
         },
     };
 
-    let (assemble_options, render_options) = match flags.output {
+    let (assemble_options, render_options) = match flags.skin {
         None => (PathAssembleOptions::default(), RenderOptions::default()),
         Some(ref skin_path) => {
             let skin = match std::fs::read_to_string(skin_path) {
