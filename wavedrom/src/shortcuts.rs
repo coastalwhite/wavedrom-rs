@@ -10,8 +10,8 @@ mod json5 {
     use std::fmt::Display;
     use std::io;
 
-    use crate::svg::options::RenderOptions;
-    use crate::PathAssembleOptions;
+    use crate::signal::options::{PathAssembleOptions, RenderOptions};
+    use crate::Figure;
 
     /// An error with the [`render_json5`][crate::render_json5] or
     /// [`render_json5_with_options`][crate::render_json5_with_options] functions.
@@ -41,7 +41,10 @@ mod json5 {
         assemble_options: PathAssembleOptions,
         render_options: &RenderOptions,
     ) -> Result<(), RenderJson5Error> {
-        let figure = crate::Figure::from_json5(json)?;
+        let figure = Figure::from_json5(json)?;
+
+        let Figure::Signal(figure) = figure;
+
         let assembled = figure.assemble_with_options(assemble_options);
         assembled.write_svg_with_options(writer, render_options)?;
 
@@ -80,8 +83,8 @@ mod serde_json {
     use std::fmt::Display;
     use std::io;
 
-    use crate::svg::options::RenderOptions;
-    use crate::PathAssembleOptions;
+    use crate::signal::options::{PathAssembleOptions, RenderOptions};
+    use crate::Figure;
 
     /// An error with the [`render_json`][crate::render_json] or
     /// [`render_json_with_options`][crate::render_json_with_options] functions.
@@ -111,7 +114,10 @@ mod serde_json {
         assemble_options: PathAssembleOptions,
         render_options: &RenderOptions,
     ) -> Result<(), RenderJsonError> {
-        let figure = crate::Figure::from_json(json)?;
+        let figure = Figure::from_json(json)?;
+
+        let Figure::Signal(figure) = figure;
+
         let assembled = figure.assemble_with_options(assemble_options);
         assembled.write_svg_with_options(writer, render_options)?;
 

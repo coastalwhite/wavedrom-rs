@@ -1,7 +1,8 @@
 use std::num::NonZeroU16;
 
-use crate::markers::ClockEdgeMarker;
-use crate::{ClockEdge, CycleOffset};
+use super::options::PathAssembleOptions;
+use super::markers::{ClockEdge, ClockEdgeMarker};
+use super::CycleOffset;
 
 /// The path given for a [`Signal`][crate::signal::Signal]
 #[derive(Debug, Clone)]
@@ -167,29 +168,6 @@ struct PathData {
 
     is_fully_stroked: bool,
     actions: Vec<PathCommand>,
-}
-
-/// The options that are used during assembly of a [`Figure`][crate::figure::Figure] or
-/// [`SignalPath`].
-#[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "skins", derive(serde::Deserialize, serde::Serialize))]
-pub struct PathAssembleOptions {
-    /// The height of a single signal bar
-    pub signal_height: u16,
-    /// The width of a single cycle
-    pub cycle_width: u16,
-    /// The offset from the cycle transition point where a state transition can start
-    pub transition_offset: u16,
-}
-
-impl Default for PathAssembleOptions {
-    fn default() -> Self {
-        Self {
-            signal_height: 24,
-            cycle_width: 48,
-            transition_offset: 4,
-        }
-    }
 }
 
 /// A [`SignalPath`] that is assembled and ready to be rendered.

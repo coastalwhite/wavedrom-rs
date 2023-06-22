@@ -1,8 +1,9 @@
-use crate::{FigureSection, AssembledFigure, PathAssembleOptions, FigureSectionGroup, Signal, CycleState, DefinitionTracker, AssembledLine, SignalPath};
-use crate::edges::{EdgeDefinition, EdgeVariant, LineEdgeMarkersBuilder};
-use crate::markers::{CycleEnumerationMarker, GroupMarker};
+use super::edges::{EdgeDefinition, EdgeVariant, LineEdgeMarkersBuilder};
+use super::markers::{CycleEnumerationMarker, GroupMarker};
+use super::options::PathAssembleOptions;
+use super::{AssembledFigure, AssembledLine, CycleState, DefinitionTracker, Signal, SignalPath};
 
-impl Default for Figure {
+impl Default for SignalFigure {
     fn default() -> Self {
         Self {
             header_text: None,
@@ -50,11 +51,11 @@ impl Default for Figure {
 ///
 /// **Result:**
 ///
-#[doc=include_str!("../assets/doc-figure-example.svg")]
+#[doc=include_str!("../../assets/doc-figure-example.svg")]
 ///
 /// [dtd]: https://en.wikipedia.org/wiki/Digital_timing_diagram
 #[derive(Debug, Clone)]
-pub struct Figure {
+pub struct SignalFigure {
     header_text: Option<String>,
     footer_text: Option<String>,
 
@@ -65,10 +66,30 @@ pub struct Figure {
 
     edges: Vec<EdgeDefinition>,
 
-    sections: Vec<FigureSection>,
+    sections: Vec<SignalFigureSection>,
 }
 
-impl Figure {
+/// A section of the figure's signals
+#[derive(Debug, Clone)]
+pub enum SignalFigureSection {
+    /// A [`Signal`]
+    Signal(Signal),
+    /// A group of [`Signal`]s
+    Group(SignalFigureSectionGroup),
+}
+
+/// A section of the figure's group
+#[derive(Debug, Clone)]
+pub struct SignalFigureSectionGroup(Option<String>, Vec<SignalFigureSection>);
+
+impl SignalFigureSectionGroup {
+    /// Create a new [`SignalFigureSectionGroup`]
+    pub fn new(label: Option<String>, items: Vec<SignalFigureSection>) -> SignalFigureSectionGroup {
+        Self(label, items)
+    }
+}
+
+impl SignalFigure {
     /// Create a new [`Figure`] with a set of parameters.
     pub fn with(
         title: Option<String>,
@@ -78,7 +99,7 @@ impl Figure {
         bottom_cycle_marker: Option<CycleEnumerationMarker>,
 
         hscale: u16,
-        sections: Vec<FigureSection>,
+        sections: Vec<SignalFigureSection>,
 
         edges: Vec<EdgeDefinition>,
     ) -> Self {
@@ -173,39 +194,42 @@ impl Figure {
 
     /// Add a [`Signal`] line to the [`Figure`].
     pub fn add_signal(mut self, signal: Signal) -> Self {
-        self.sections.push(FigureSection::Signal(signal));
+        self.sections.push(SignalFigureSection::Signal(signal));
         self
     }
 
     /// Add a set of [`Signal`] lines to the [`Figure`].
     pub fn add_signals(mut self, signals: impl IntoIterator<Item = Signal>) -> Self {
         self.sections
-            .extend(signals.into_iter().map(FigureSection::Signal));
+            .extend(signals.into_iter().map(SignalFigureSection::Signal));
         self
     }
 
-    /// Add a [`FigureSection`] to the [`Figure`].
-    pub fn add_section(mut self, section: FigureSection) -> Self {
+    /// Add a [`SignalFigureSection`] to the [`Figure`].
+    pub fn add_section(mut self, section: SignalFigureSection) -> Self {
         self.sections.push(section);
         self
     }
 
-    /// Add a set of [`FigureSection`]s to the [`Figure`].
-    pub fn add_sections(mut self, sections: impl IntoIterator<Item = FigureSection>) -> Self {
+    /// Add a set of [`SignalFigureSection`]s to the [`Figure`].
+    pub fn add_sections(mut self, sections: impl IntoIterator<Item = SignalFigureSection>) -> Self {
         self.sections.extend(sections);
         self
     }
 
-    /// Add a [`FigureSectionGroup`] to the [`Figure`].
-    pub fn add_group(mut self, group: FigureSectionGroup) -> Self {
-        self.sections.push(FigureSection::Group(group));
+    /// Add a [`SignalFigureSectionGroup`] to the [`Figure`].
+    pub fn add_group(mut self, group: SignalFigureSectionGroup) -> Self {
+        self.sections.push(SignalFigureSection::Group(group));
         self
     }
 
-    /// Add a set of [`FigureSectionGroup`]s to the [`Figure`].
-    pub fn add_groups(mut self, groups: impl IntoIterator<Item = FigureSectionGroup>) -> Self {
+    /// Add a set of [`SignalFigureSectionGroup`]s to the [`Figure`].
+    pub fn add_groups(
+        mut self,
+        groups: impl IntoIterator<Item = SignalFigureSectionGroup>,
+    ) -> Self {
         self.sections
-            .extend(groups.into_iter().map(FigureSection::Group));
+            .extend(groups.into_iter().map(SignalFigureSection::Group));
         self
     }
 
@@ -264,8 +288,12 @@ impl Figure {
                             CycleState::Gap => definitions.has_gaps = true,
                             // NOTE: This is overeager for the definition on the High and Low
                             // marked states, but this is fine for now.
-                            CycleState::PosedgeClockMarked | CycleState::HighMarked => definitions.has_posedge_marker = true,
-                            CycleState::NegedgeClockMarked | CycleState::LowMarked => definitions.has_negedge_marker = true,
+                            CycleState::PosedgeClockMarked | CycleState::HighMarked => {
+                                definitions.has_posedge_marker = true
+                            }
+                            CycleState::NegedgeClockMarked | CycleState::LowMarked => {
+                                definitions.has_negedge_marker = true
+                            }
                             _ => {}
                         }
                     }
@@ -290,7 +318,7 @@ impl Figure {
                     groups.push((idx, group));
                 }
                 SectionItem::GroupEnd(depth) => {
-                    let (start_idx, FigureSectionGroup(label, _)) = groups
+                    let (start_idx, SignalFigureSectionGroup(label, _)) = groups
                         .pop()
                         .expect("A group should be been pushe for this end");
 
@@ -352,19 +380,25 @@ impl Figure {
     }
 }
 
+impl From<Signal> for SignalFigureSection {
+    fn from(wave: Signal) -> Self {
+        Self::Signal(wave)
+    }
+}
+
 enum SectionItem<'a> {
-    GroupStart(u32, &'a FigureSectionGroup),
+    GroupStart(u32, &'a SignalFigureSectionGroup),
     GroupEnd(u32),
     Signal(u32, &'a Signal),
 }
 
 struct SectionIterator<'a> {
-    top_level: std::slice::Iter<'a, FigureSection>,
-    sections: Vec<std::slice::Iter<'a, FigureSection>>,
+    top_level: std::slice::Iter<'a, SignalFigureSection>,
+    sections: Vec<std::slice::Iter<'a, SignalFigureSection>>,
 }
 
 impl<'a> SectionIterator<'a> {
-    fn new(sections: &'a [FigureSection]) -> Self {
+    fn new(sections: &'a [SignalFigureSection]) -> Self {
         Self {
             top_level: sections.iter(),
             sections: Vec::new(),
@@ -384,11 +418,11 @@ impl<'a> Iterator for SectionIterator<'a> {
                 let _ = self.sections.pop()?;
                 SectionItem::GroupEnd(depth)
             }
-            Some(FigureSection::Group(group)) => {
+            Some(SignalFigureSection::Group(group)) => {
                 self.sections.push(group.1.iter());
                 SectionItem::GroupStart(depth + 1, group)
             }
-            Some(FigureSection::Signal(signal)) => SectionItem::Signal(depth, signal),
+            Some(SignalFigureSection::Signal(signal)) => SectionItem::Signal(depth, signal),
         })
     }
 }

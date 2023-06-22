@@ -32,7 +32,7 @@ macro_rules! replace_merge {
 }
 
 macro_rules! define_options {
-    ( $(#[$struct_doc:meta])* $struct_name:ident, $(#[$opt_struct_doc:meta])* $opt_struct_name:ident { $( $(#[$property_doc:meta])* $property_name:ident: $property_type:ty$([$opt_property_type:ty])? $(=> $property_default_value:expr)?),+ $(,)? } ) => (
+    ( $(#[$struct_doc:meta])* $([$copy:meta])? $struct_name:ident, $(#[$opt_struct_doc:meta])* $opt_struct_name:ident { $( $(#[$property_doc:meta])* $property_name:ident: $property_type:ty$([$opt_property_type:ty])? $(=> $property_default_value:expr)?),+ $(,)? } ) => (
         #[derive(Debug, Clone)]
         $(
         #[$struct_doc]
@@ -316,5 +316,24 @@ impl GroupIndicatorOptions {
     /// The label spacing added to the label font size
     pub fn label_height(&self) -> u32 {
         self.label_spacing + self.label_fontsize
+    }
+}
+
+
+define_options! {
+    /// The options that are used during assembly of a
+    /// [`SignalFigure`][crate::signal::SignalFigure] or [`SignalPath`].
+    #[derive(Copy)]
+    PathAssembleOptions,
+
+    /// A subset of the [`PathAssembleOptions`]
+    #[derive(Copy)]
+    PartialPathAssembleOptions {
+        /// The height of a single signal bar
+        signal_height: u16 => 24,
+        /// The width of a single cycle
+        cycle_width: u16 => 48,
+        /// The offset from the cycle transition point where a state transition can start
+        transition_offset: u16 => 4,
     }
 }

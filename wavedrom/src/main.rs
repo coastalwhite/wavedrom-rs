@@ -2,9 +2,9 @@ use std::fmt::Display;
 use std::io::{stdin, stdout, BufWriter, Read};
 use std::path::PathBuf;
 
-use wavedrom::options::RenderOptions;
+use wavedrom::signal::options::{RenderOptions, PathAssembleOptions};
 use wavedrom::skin::Skin;
-use wavedrom::{Figure, PathAssembleOptions};
+use wavedrom::Figure;
 
 #[derive(Default)]
 struct Flags {
@@ -184,6 +184,7 @@ fn main() {
         }
     };
 
+    let Figure::Signal(figure) = figure;
     let assembled = figure.assemble_with_options(assemble_options);
 
     let result = match flags.output {

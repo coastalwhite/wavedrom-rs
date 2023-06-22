@@ -1,6 +1,6 @@
 //! A collection of markers that get overlayed onto the signal diagram.
 
-use crate::CycleOffset;
+use super::CycleOffset;
 
 /// A marker for a group of [`AssembledLine`][crate::AssembledLine]s.
 ///

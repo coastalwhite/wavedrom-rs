@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    CycleEnumerationMarker, CycleOffset, CycleState, Figure, FigureSection,
-    FigureSectionGroup, Signal,
-};
+use crate::signal::markers::CycleEnumerationMarker;
+use crate::signal::{CycleOffset, CycleState};
+use crate::signal::{Signal, SignalFigure, SignalFigureSection, SignalFigureSectionGroup};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignalJson {
@@ -65,7 +64,7 @@ pub struct Config {
     pub skin: Option<String>,
 }
 
-impl From<SignalJson> for Figure {
+impl From<SignalJson> for SignalFigure {
     fn from(value: SignalJson) -> Self {
         let (title, top_cycle_marker) = if let Some(head) = value.head {
             let title = head.text;
@@ -97,8 +96,8 @@ impl From<SignalJson> for Figure {
         let sections = value
             .signal
             .into_iter()
-            .map(FigureSection::from)
-            .collect::<Vec<FigureSection>>();
+            .map(SignalFigureSection::from)
+            .collect::<Vec<SignalFigureSection>>();
 
         let mut edges = Vec::new();
 
@@ -110,7 +109,7 @@ impl From<SignalJson> for Figure {
             }
         }
 
-        Figure::with(
+        SignalFigure::with(
             title,
             footer,
             top_cycle_marker,
@@ -122,7 +121,7 @@ impl From<SignalJson> for Figure {
     }
 }
 
-impl From<SignalItem> for FigureSection {
+impl From<SignalItem> for SignalFigureSection {
     fn from(signal: SignalItem) -> Self {
         match signal {
             SignalItem::Group(items) => {
@@ -138,13 +137,13 @@ impl From<SignalItem> for FigureSection {
 
                             None
                         }
-                        SignalGroupItem::Item(line) => Some(FigureSection::from(line)),
+                        SignalGroupItem::Item(line) => Some(SignalFigureSection::from(line)),
                     })
-                    .collect::<Vec<FigureSection>>();
+                    .collect::<Vec<SignalFigureSection>>();
 
-                FigureSection::Group(FigureSectionGroup(label, items))
+                SignalFigureSection::Group(SignalFigureSectionGroup::new(label, items))
             }
-            SignalItem::Item(item) => FigureSection::Signal(Signal::from(item)),
+            SignalItem::Item(item) => SignalFigureSection::Signal(Signal::from(item)),
         }
     }
 }

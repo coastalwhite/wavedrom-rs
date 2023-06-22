@@ -42,7 +42,7 @@ impl WaveJson {
 impl From<WaveJson> for Figure {
     fn from(value: WaveJson) -> Self {
         match value {
-            WaveJson::Signal(signal_json) => signal_json.into(),
+            WaveJson::Signal(signal_json) => Figure::Signal(signal_json.into()),
         }
     }
 }

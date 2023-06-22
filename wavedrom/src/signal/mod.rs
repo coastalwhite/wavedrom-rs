@@ -1,6 +1,24 @@
+//! The logic to render signal diagram
+
+mod cycle_offset;
+pub mod edges;
+mod figure;
+pub mod markers;
+pub mod options;
+mod path;
+mod render;
+
+pub use cycle_offset::{CycleOffset, InCycleOffset};
+pub use figure::{SignalFigure, SignalFigureSection, SignalFigureSectionGroup};
+pub use path::*;
+pub use render::*;
+
 use std::num::NonZeroU16;
 
-use crate::{CycleOffset, CycleState};
+use edges::LineEdgeMarkers;
+use markers::{CycleEnumerationMarker, GroupMarker};
+
+use self::options::PathAssembleOptions;
 
 /// A diagram signal line with a set of cycles.
 #[derive(Debug, Clone)]
@@ -11,6 +29,160 @@ pub struct Signal {
     node: String,
     period: NonZeroU16,
     phase: CycleOffset,
+}
+
+/// A line of the [`AssembledFigure`].
+///
+/// This contains the shaped signal path, the group nesting depth and the name of the signal line.
+#[derive(Debug, Clone)]
+pub struct AssembledLine<'a> {
+    text: &'a str,
+    path: AssembledSignalPath,
+}
+
+#[derive(Default, Debug)]
+struct DefinitionTracker {
+    has_undefined: bool,
+    has_gaps: bool,
+    has_posedge_marker: bool,
+    has_negedge_marker: bool,
+}
+
+/// A [`Figure`] that has been assembled with the [`Figure::assemble`] or
+/// [`Figure::assemble_with_options`] methods.
+///
+/// An assembled figure contains all the information necessary to perform rendering.
+#[derive(Debug)]
+pub struct AssembledFigure<'a> {
+    num_cycles: u32,
+
+    hscale: u16,
+
+    definitions: DefinitionTracker,
+
+    group_label_at_depth: Vec<bool>,
+    max_group_depth: u32,
+
+    header_text: Option<&'a str>,
+    footer_text: Option<&'a str>,
+
+    top_cycle_marker: Option<CycleEnumerationMarker>,
+    bottom_cycle_marker: Option<CycleEnumerationMarker>,
+
+    path_assemble_options: PathAssembleOptions,
+
+    lines: Vec<AssembledLine<'a>>,
+    group_markers: Vec<GroupMarker<'a>>,
+
+    line_edge_markers: LineEdgeMarkers<'a>,
+}
+
+impl<'a> AssembledFigure<'a> {
+    #[inline]
+    fn amount_labels_below(&self, depth: u32) -> u32 {
+        self.group_label_at_depth
+            .iter()
+            .take(depth as usize)
+            .filter(|x| **x)
+            .count() as u32
+    }
+
+    /// Returns the maximum cycle width over all lines.
+    #[inline]
+    pub fn num_cycles(&self) -> u32 {
+        self.num_cycles
+    }
+
+    /// Returns the scaling factor for the horizontal axis.
+    #[inline]
+    pub fn horizontal_scale(&self) -> u16 {
+        self.hscale
+    }
+
+    /// Returns whether the [`AssembledFigure`] contains any [`CycleState::X`]
+    #[inline]
+    pub fn has_undefined(&self) -> bool {
+        self.definitions.has_undefined
+    }
+
+    /// Returns whether the [`AssembledFigure`] contains any [`CycleState::Gap`]
+    #[inline]
+    pub fn has_gaps(&self) -> bool {
+        self.definitions.has_gaps
+    }
+
+    /// Returns whether the [`AssembledFigure`] contains any [`CycleState::PosedgeClockMarked`]
+    #[inline]
+    pub fn has_posedge_marker(&self) -> bool {
+        self.definitions.has_posedge_marker
+    }
+
+    /// Returns whether the [`AssembledFigure`] contains any [`CycleState::NegedgeClockMarked`]
+    #[inline]
+    pub fn has_negedge_marker(&self) -> bool {
+        self.definitions.has_negedge_marker
+    }
+
+    /// Returns the whether there is a label at group nesting level `depth`.
+    #[inline]
+    pub fn has_group_label_at_depth(&self, depth: u32) -> bool {
+        let Ok(depth) = usize::try_from(depth) else {
+            return false;
+        };
+
+        self.group_label_at_depth
+            .get(depth)
+            .cloned()
+            .unwrap_or(false)
+    }
+
+    /// Returns the maximum depth of the group nesting.
+    #[inline]
+    pub fn group_nesting(&self) -> u32 {
+        self.max_group_depth
+    }
+
+    /// Returns the lines that the [`AssembledFigure`] contains
+    #[inline]
+    pub fn lines(&self) -> &[AssembledLine<'a>] {
+        &self.lines
+    }
+
+    /// Returns the markers for the group nestings
+    #[inline]
+    pub fn group_markers(&self) -> &[GroupMarker<'a>] {
+        &self.group_markers
+    }
+
+    /// Returns a potential header text of the [`AssembledFigure`]
+    #[inline]
+    pub fn header_text(&self) -> Option<&'a str> {
+        self.header_text
+    }
+
+    /// Returns a potential footer text of the [`AssembledFigure`]
+    #[inline]
+    pub fn footer_text(&self) -> Option<&'a str> {
+        self.footer_text
+    }
+
+    /// Returns a [`CycleEnumerationMarker`] above the signals of the [`AssembledFigure`]
+    #[inline]
+    pub fn top_cycle_marker(&self) -> Option<CycleEnumerationMarker> {
+        self.top_cycle_marker
+    }
+
+    /// Returns a [`CycleEnumerationMarker`] below the signals of the [`AssembledFigure`]
+    #[inline]
+    pub fn bottom_cycle_marker(&self) -> Option<CycleEnumerationMarker> {
+        self.bottom_cycle_marker
+    }
+}
+
+impl AssembledLine<'_> {
+    fn is_empty(&self) -> bool {
+        self.path.is_empty() && self.text.is_empty()
+    }
 }
 
 impl Default for Signal {

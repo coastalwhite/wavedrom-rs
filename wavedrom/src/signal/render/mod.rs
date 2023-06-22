@@ -1,42 +1,20 @@
-use std::borrow::Cow;
 use std::io;
 
-use crate::path::{PathAssembleOptions, PathCommand, PathSegmentBackground};
-use crate::{ClockEdge, Color};
+use super::markers::ClockEdge;
+use super::path::{PathCommand, PathSegmentBackground};
+use crate::escape::escape_str;
+use crate::{Color, Font};
 
 use self::edges::{write_edge_text, write_line_edge, write_line_edge_markers};
-use self::options::SignalOptions;
 
 use super::path::AssembledSignalPath;
 use super::AssembledFigure;
 
 mod dimensions;
 mod edges;
-mod font;
-pub mod options;
 
+use super::options::{PathAssembleOptions, RenderOptions, SignalOptions};
 use dimensions::SvgDimensions;
-pub use font::Font;
-use options::RenderOptions;
-
-fn escape_str(s: &str) -> Cow<str> {
-    if !s.contains(['<', '>', '"', '&']) {
-        return Cow::Borrowed(s);
-    }
-
-    let mut output = String::with_capacity(s.len());
-    for c in s.chars() {
-        match c {
-            '<' => output.push_str("&lt;"),
-            '>' => output.push_str("&gt;"),
-            '"' => output.push_str("&quot;"),
-            '&' => output.push_str("&amp;"),
-            _ => output.push(c),
-        }
-    }
-
-    Cow::Owned(output)
-}
 
 fn gap(
     writer: &mut impl io::Write,

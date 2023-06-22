@@ -70,9 +70,8 @@ fn handle_supports(pre: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
 mod nop_lib {
     use mdbook::BookItem;
     use mdbook_wavedrom_rs::insert_wavedrom;
-    use wavedrom::options::RenderOptions;
+    use wavedrom::signal::options::{RenderOptions, PathAssembleOptions};
     use wavedrom::skin::Skin;
-    use wavedrom::PathAssembleOptions;
 
     use super::*;
 
@@ -111,7 +110,7 @@ mod nop_lib {
                     match Skin::from_json5(&skin) {
                         Ok(skin) => {
                             if let Some(assemble) = skin.assemble {
-                                assemble_options = assemble;
+                                assemble_options.merge_in(assemble);
                             }
 
                             if let Some(render) = skin.render {

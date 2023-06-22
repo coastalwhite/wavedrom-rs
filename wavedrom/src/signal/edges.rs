@@ -19,7 +19,7 @@ use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use crate::{CycleOffset, Signal};
+use super::{CycleOffset, Signal};
 
 /// A set of edge markers. Both the edge lines and the text_nodes.
 #[derive(Debug, Clone)]

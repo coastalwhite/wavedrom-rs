@@ -74,7 +74,7 @@ impl Font {
 impl Font {
     fn get_face(&self) -> &ttf_parser::Face<'static> {
         EMBEDDED_HELVETICA.get_or_init(|| {
-            ttf_parser::Face::parse(include_bytes!("../../helvetica.ttf"), 0).unwrap()
+            ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap()
         })
     }
 

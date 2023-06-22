@@ -1,6 +1,8 @@
-use crate::svg::font::Font;
-use crate::svg::options::RenderOptions;
-use crate::{AssembledFigure, PathAssembleOptions};
+use crate::signal::{
+    options::{PathAssembleOptions, RenderOptions},
+    AssembledFigure,
+};
+use crate::Font;
 
 pub struct SvgDimensions<'a> {
     figure: &'a AssembledFigure<'a>,

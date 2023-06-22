@@ -1,8 +1,8 @@
 use std::sync::Mutex;
 
-use wavedrom::options::RenderOptions;
+use wavedrom::signal::options::{PathAssembleOptions, RenderOptions};
 use wavedrom::skin::Skin;
-use wavedrom::{Color, PathAssembleOptions};
+use wavedrom::Color;
 
 macro_rules! prefix_fn {
     ($property:expr) => {
@@ -217,11 +217,12 @@ pub fn merge_in_skin_internal(json: &str) -> Result<(), ()> {
     };
 
     if let Some(assemble) = skin.assemble {
-        *unsafe {
+        unsafe {
             ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default()))
         }
         .get_mut()
-        .unwrap() = assemble;
+        .unwrap()
+        .merge_in(assemble);
     }
 
     if let Some(render) = skin.render {
@@ -253,7 +254,7 @@ pub fn export() -> wavedrom::json5::Result<String> {
     let render = get_render_options().clone();
 
     let skin = Skin {
-        assemble: Some(assemble),
+        assemble: Some(assemble.into()),
         render: Some(render.into()),
     };
 

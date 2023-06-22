@@ -1,14 +1,14 @@
 use std::fmt::Display;
 use std::io;
 
-use crate::edges::LineEdge;
-use crate::{
-    Color, EdgeArrowType, EdgeVariant, PathAssembleOptions, SharpEdgeVariant, SplineEdgeVariant,
-};
-
 use super::dimensions::SvgDimensions;
-use super::options::RenderOptions;
-use super::{escape_str, Font};
+
+use crate::escape::escape_str;
+use crate::signal::{
+    edges::{EdgeArrowType, EdgeVariant, LineEdge, SharpEdgeVariant, SplineEdgeVariant},
+    options::{PathAssembleOptions, RenderOptions},
+};
+use crate::{Color, Font};
 
 /// A f64 type that automatically rounds when formatting
 struct SVGF64(pub f64);
@@ -165,7 +165,7 @@ pub fn write_line_edge(
                 }
             },
             EdgeVariant::Sharp(sharp_edge) => match sharp_edge {
-                SharpEdgeVariant::Straight(_) | crate::SharpEdgeVariant::Cross => {
+                SharpEdgeVariant::Straight(_) | SharpEdgeVariant::Cross => {
                     let dir = (
                         f64::from(to_x) - f64::from(from_x),
                         f64::from(to_y) - f64::from(from_y),
