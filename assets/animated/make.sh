@@ -1,4 +1,7 @@
 #! /bin/sh
+#
+# This script requires imagemagick (convert).
+# https://imagemagick.org/
 
 OUT="../banner.gif"
 
