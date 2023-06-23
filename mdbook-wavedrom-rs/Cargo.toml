@@ -5,6 +5,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license = "MPL-2.0"
 
 keywords = ["diagram", "svg", "signal", "digital", "timing"]

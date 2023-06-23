@@ -55,6 +55,14 @@ cd ./tests
 ./run [path/to/skin.json5]
 ```
 
+## MSRV
+
+This crate currently only compiles with Rust 1.70. To select that version use:
+
+```bash
+rustup update 1.70 --no-self-update && rustup default 1.70
+```
+
 ## Contribution
 
 Please report any bugs and possible improvements as an issue within this

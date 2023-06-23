@@ -13,6 +13,7 @@ homepage = "https://github.com/coastalwhite/wavedrom-rs"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "A Pure Rust Digital Timing Diagram Generator based on WaveDrom-JS"
+rust-version = "1.70"
 
 [workspace.dependencies]
 clap = "4.3.2"
