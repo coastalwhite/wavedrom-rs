@@ -1,0 +1,8 @@
+{
+    reg: [
+        { bits: 11, name: "left", attr: ["A", "B", "C"] },
+        { bits: 7, name: "right", attr: "XYZ" },
+        { bits: 1, name: "G", type: 3 },
+        { bits: 22, name: "right", type: 2 },
+    ]
+}

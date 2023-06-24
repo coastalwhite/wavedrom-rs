@@ -43,10 +43,15 @@ mod json5 {
     ) -> Result<(), RenderJson5Error> {
         let figure = Figure::from_json5(json)?;
 
-        let Figure::Signal(figure) = figure;
-
-        let assembled = figure.assemble_with_options(assemble_options);
-        assembled.write_svg_with_options(writer, render_options)?;
+        match figure {
+            Figure::Signal(figure) => {
+                let assembled = figure.assemble_with_options(assemble_options);
+                assembled.write_svg_with_options(writer, render_options)?;
+            },
+            Figure::Register(register) => {
+                register.write_svg(writer)?;
+            }
+        }
 
         Ok(())
     }
@@ -116,10 +121,15 @@ mod serde_json {
     ) -> Result<(), RenderJsonError> {
         let figure = Figure::from_json(json)?;
 
-        let Figure::Signal(figure) = figure;
-
-        let assembled = figure.assemble_with_options(assemble_options);
-        assembled.write_svg_with_options(writer, render_options)?;
+        match figure {
+            Figure::Signal(figure) => {
+                let assembled = figure.assemble_with_options(assemble_options);
+                assembled.write_svg_with_options(writer, render_options)?;
+            },
+            Figure::Register(register) => {
+                register.write_svg(writer)?;
+            }
+        }
 
         Ok(())
     }
