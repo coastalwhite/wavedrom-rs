@@ -145,12 +145,14 @@ mod color;
 mod font;
 mod shortcuts;
 pub mod signal;
+pub mod reg;
 mod escape;
  
 pub use font::Font;
 pub use color::Color;
 pub use shortcuts::*;
 
+use self::reg::Register;
 use self::signal::SignalFigure;
 
 #[cfg(feature = "serde")]
@@ -160,4 +162,6 @@ pub mod wavejson;
 pub enum Figure {
     /// A figure containing a set of signals
     Signal(SignalFigure),
+
+    Register(Register),
 }
