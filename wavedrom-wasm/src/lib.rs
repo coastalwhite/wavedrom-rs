@@ -41,10 +41,14 @@ fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
     {
         let assemble_options = get_assemble_options();
         let render_options = get_render_options();
-        let Figure::Signal(figure) = figure;
-        let Ok(()) = figure.assemble_with_options(*assemble_options).write_svg_with_options(&mut buffer, render_options) else {
-            return Err(RenderError::WriteError);
-        };
+        match figure {
+            Figure::Signal(figure) => {
+                let Ok(()) = figure.assemble_with_options(*assemble_options).write_svg_with_options(&mut buffer, render_options) else {
+                    return Err(RenderError::WriteError);
+                };
+            }
+            Figure::Register(register) => todo!(),
+        }
     }
 
     let size = buffer.len() - 5;

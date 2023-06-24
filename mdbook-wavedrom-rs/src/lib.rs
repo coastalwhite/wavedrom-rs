@@ -109,11 +109,15 @@ pub fn insert_wavedrom(
             let wavedrom_figure =
                 Figure::from_json5(&diagram_content).map_err(|_| InsertionError::InvalidFigure)?;
 
-            let Figure::Signal(wavedrom_figure) = wavedrom_figure;
-            wavedrom_figure
-                .assemble_with_options(assemble_options)
-                .write_svg_with_options(&mut wavedrom_code, render_options)
-                .map_err(|_| InsertionError::WriteSvg)?;
+            match wavedrom_figure {
+                Figure::Signal(wavedrom_figure) => {
+                    wavedrom_figure
+                        .assemble_with_options(assemble_options)
+                        .write_svg_with_options(&mut wavedrom_code, render_options)
+                        .map_err(|_| InsertionError::WriteSvg)?;
+                }
+                Figure::Register(register) => todo!(),
+            }
 
             let wavedrom_code =
                 String::from_utf8(wavedrom_code).map_err(|_| InsertionError::InvalidUtf8)?;
