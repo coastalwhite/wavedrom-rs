@@ -1,5 +1,6 @@
 use std::fmt::Display;
-use std::io::{stdin, stdout, BufWriter, Read};
+use std::fs::File;
+use std::io::{stdin, stdout, BufWriter, Read, self, StdoutLock};
 use std::path::PathBuf;
 
 use wavedrom::signal::options::{RenderOptions, PathAssembleOptions};
@@ -11,6 +12,27 @@ struct Flags {
     input: Option<PathBuf>,
     output: Option<PathBuf>,
     skin: Option<PathBuf>,
+}
+
+enum OutputWriter<'a> {
+    Stdio(StdoutLock<'a>),
+    File(File),
+}
+
+impl<'a> io::Write for OutputWriter<'a> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self {
+            Self::Stdio(stdio) => stdio.write(buf),
+            Self::File(file) => file.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        match self {
+            Self::Stdio(stdio) => stdio.flush(),
+            Self::File(file) => file.flush(),
+        }
+    }
 }
 
 enum ParsingError {
@@ -184,13 +206,9 @@ fn main() {
         }
     };
 
-    let Figure::Signal(figure) = figure;
-    let assembled = figure.assemble_with_options(assemble_options);
-
-    let result = match flags.output {
+    let mut writer = BufWriter::new(match flags.output {
         None => {
-            let mut writer = BufWriter::new(stdout().lock());
-            assembled.write_svg(&mut writer)
+            OutputWriter::Stdio(stdout().lock())
         }
         Some(output_path) => {
             let output_file = match std::fs::OpenOptions::new()
@@ -206,8 +224,18 @@ fn main() {
                 }
             };
 
-            let mut writer = BufWriter::new(output_file);
+            OutputWriter::File(output_file)
+        }
+    });
+
+
+    let result = match figure {
+        Figure::Signal(figure) => {
+            let assembled = figure.assemble_with_options(assemble_options);
             assembled.write_svg_with_options(&mut writer, &render_options)
+        }
+        Figure::Register(register) => {
+            register.write_svg(&mut writer)
         }
     };
 
