@@ -70,7 +70,7 @@ fn handle_supports(pre: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
 mod nop_lib {
     use mdbook::BookItem;
     use mdbook_wavedrom_rs::insert_wavedrom;
-    use wavedrom::signal::options::{RenderOptions, PathAssembleOptions};
+    use wavedrom::signal::options::{PathAssembleOptions, RenderOptions};
     use wavedrom::skin::Skin;
 
     use super::*;
@@ -130,10 +130,11 @@ mod nop_lib {
             book.for_each_mut(|item| match item {
                 BookItem::Separator | BookItem::PartTitle(_) => {}
                 BookItem::Chapter(chapter) => {
-                    if let Ok(new_content) =
-                        insert_wavedrom(&chapter.content, assemble_options, &render_options)
-                    {
-                        chapter.content = new_content
+                    match insert_wavedrom(&chapter.content, assemble_options, &render_options) {
+                        Ok(new_content) => chapter.content = new_content,
+                        Err(err) => {
+                            eprintln!("Failed to render wavedrom. Reason: {err}");
+                        }
                     }
                 }
             });

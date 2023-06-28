@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
 use wavedrom::json5::Error as JsonError;
-use wavedrom::signal::options::{RenderOptions, PathAssembleOptions};
+use wavedrom::signal::options::{PathAssembleOptions, RenderOptions};
 use wavedrom::Figure;
 
 #[derive(Debug)]
@@ -65,9 +65,7 @@ pub fn insert_wavedrom(
                                 keep_source_code_tag = Some(
                                     span.start
                                         ..span.start
-                                            + content[span.start..]
-                                                .find('\n')
-                                                .unwrap_or(span.end),
+                                            + content[span.start..].find('\n').unwrap_or(span.end),
                                 )
                             }
                         }
@@ -96,6 +94,9 @@ pub fn insert_wavedrom(
                 code.as_ref().trim_start().starts_with("wavedrom"),
                 "After an opening a wavedrom code block we expect it to close again"
             );
+
+            wavedrom_block_start.take();
+
             let block_end = span.end;
 
             let mut diagram_content = String::with_capacity(block_end - block_start);
@@ -132,7 +133,7 @@ pub fn insert_wavedrom(
         out.push_str(&content[end_prev..span.start]);
         out.push_str(r#"<pre class="wavedrom">"#);
         out.push_str(&block);
-        out.push_str("</pre>\n\n");
+        out.push_str("</pre>");
 
         if let Some(tag_span) = keep_source_code {
             out.push_str(&content[span.start..tag_span.start]);
@@ -152,6 +153,24 @@ pub fn insert_wavedrom(
 mod tests {
     use super::*;
 
+    fn replace_between(s: &str, start: &str, stop: &str, replacement: &str) -> String {
+        let mut s = String::from(s);
+
+        loop {
+            let Some(start_idx) = s.find(start) else {
+                break;
+            };
+
+            let Some(stop_idx) = s.find(stop) else {
+                break;
+            };
+
+            s.replace_range(start_idx..stop_idx + stop.len(), replacement);
+        }
+
+        s
+    }
+
     #[test]
     fn basic_insertion() {
         let content = r#"
@@ -170,8 +189,57 @@ mod tests {
             &RenderOptions::default(),
         )
         .unwrap();
+
         assert_ne!(content, &replaced_content);
-        assert!(replaced_content.contains(r#"<pre class="wavedrom">"#));
-        assert!(replaced_content.contains("</svg>"));
+
+        let replaced_content = replace_between(&replaced_content, "<svg", "</svg>", "<svg/>");
+
+        assert_eq!(replaced_content.trim(), r#"
+# Header
+
+<pre class="wavedrom"><svg/></pre>
+        "#.trim())
+    }
+
+    #[test]
+    fn multiple_insertions() {
+        let content = r#"
+# Header
+
+```wavedrom
+{
+    "signal": []
+}
+```
+
+ABC:
+
+```wavedrom
+{
+    "signal": []
+}
+```
+        "#;
+
+        let replaced_content = insert_wavedrom(
+            content,
+            PathAssembleOptions::default(),
+            &RenderOptions::default(),
+        )
+        .unwrap();
+
+        assert_ne!(content, &replaced_content);
+
+        let replaced_content = replace_between(&replaced_content, "<svg ", "</svg>", "<svg/>");
+
+        assert_eq!(replaced_content.trim(), r#"
+# Header
+
+<pre class="wavedrom"><svg/></pre>
+
+ABC:
+
+<pre class="wavedrom"><svg/></pre>
+        "#.trim())
     }
 }
