@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::reg::{Lane, LaneBitRange, RegisterFigure};
+use crate::reg::{Lane, LaneBitRange, RegisterFigure, LaneName};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegJson {
@@ -11,10 +11,17 @@ pub struct RegJson {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegItem {
     bits: u32,
-    name: Option<String>,
+    name: Option<RegItemName>,
     attr: Option<RegItemAttribute>,
     #[serde(rename = "type")]
     variant: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum RegItemName {
+    Text(String),
+    Binary(u64),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,7 +57,11 @@ fn create_lane_bitrange(num_bits: u32, item: &RegItem) -> LaneBitRange {
         });
 
     LaneBitRange::with(
-        item.name.clone(),
+        match &item.name {
+            None => LaneName::None,
+            Some(RegItemName::Text(s)) => LaneName::Text(s.clone()),
+            Some(RegItemName::Binary(b)) => LaneName::Binary(*b),
+        },
         attributes,
         num_bits,
         item.variant.unwrap_or(0),
