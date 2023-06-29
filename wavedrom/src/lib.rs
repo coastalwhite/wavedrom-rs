@@ -154,7 +154,7 @@ pub use font::Font;
 pub use color::Color;
 pub use shortcuts::*;
 
-use self::reg::Register;
+use self::reg::RegisterFigure;
 use self::signal::SignalFigure;
 
 #[cfg(feature = "serde")]
@@ -165,5 +165,5 @@ pub enum Figure {
     /// A figure containing a set of signals
     Signal(SignalFigure),
 
-    Register(Register),
+    Register(RegisterFigure),
 }
