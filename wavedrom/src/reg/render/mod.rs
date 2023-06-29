@@ -150,11 +150,10 @@ impl Lane {
             // Draw field separation markers
             write!(
                 writer,
-                r##"<line x1="{x}" y1="{BAR_Y}" x2="{x}" y2="{bar_bottom}" stroke="#000" stroke-width="2"/>"##,
+                r##"<path d="M{x},{BAR_Y}v{BAR_HEIGHT}" stroke="#000" stroke-width="2"/>"##,
                 x = to_display_num(
                     BAR_WIDTH - (f64::from(offset) * BAR_WIDTH) / f64::from(self.width)
                 ),
-                bar_bottom = BAR_Y + BAR_HEIGHT,
             )?;
         }
 
@@ -239,7 +238,7 @@ impl LaneBitRange {
 
             write!(
                 writer,
-                r##"<use transform="translate({x},{y})" xlink:href="#bm"/>"##,
+                r##"<use x="{x}" y="{y}" xlink:href="#bm"/>"##,
                 x = to_display_num(BAR_WIDTH - i * BAR_WIDTH / f64::from(bit_width)),
                 y = BAR_Y,
             )?;
@@ -261,22 +260,25 @@ impl LaneBitRange {
                     )?;
                 }
                 FieldString::Binary(mut binary) => {
+                    write!(
+                        writer,
+                        r##"<text y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0">"##,
+                        y = BAR_MIDDLE,
+                    )?;
                     for i in 0..self.length {
                         write!(
                             writer,
-                            r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{bit}</tspan></text>"##,
+                            r#"<tspan x="{x}">{bit}</tspan>"#,
                             x = to_display_num(
-                                BAR_WIDTH
-                                    - (f64::from(offset_start + i) + 0.5) * BAR_WIDTH
-                                        / f64::from(bit_width)
+                                BAR_WIDTH - (f64::from(offset_end - i - 1) + 0.5) * BAR_WIDTH / f64::from(bit_width)
                             ),
-                            y = BAR_MIDDLE,
                             bit = binary & 1,
                         )?;
 
                         binary &= !1;
                         binary >>= 1;
                     }
+                    write!(writer, "</text>")?;
                 }
             }
         }
@@ -335,20 +337,24 @@ impl LaneBitRange {
                     )?;
                 }
                 FieldString::Binary(mut binary) => {
+                    write!(
+                        writer,
+                        r##"<text y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0">"##,
+                        y = to_display_num(
+                            BAR_Y
+                                + BAR_HEIGHT
+                                + ATTRIBUTE_Y_OFFSET
+                                + (ATTRIBUTE_FONTSIZE + ATTRIBUTE_Y_SPACING) * f64::from(i)
+                        ),
+                    )?;
                     for j in 0..self.length {
                         write!(
                             writer,
-                            r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{bit}</tspan></text>"##,
+                            r#"<tspan x="{x}">{bit}</tspan>"#,
                             x = to_display_num(
                                 BAR_WIDTH
-                                    - (f64::from(offset_start + j) + 0.5) * BAR_WIDTH
+                                    - (f64::from(offset_end - j - 1) + 0.5) * BAR_WIDTH
                                         / f64::from(bit_width)
-                            ),
-                            y = to_display_num(
-                                BAR_Y
-                                    + BAR_HEIGHT
-                                    + ATTRIBUTE_Y_OFFSET
-                                    + (ATTRIBUTE_FONTSIZE + ATTRIBUTE_Y_SPACING) * f64::from(i)
                             ),
                             bit = binary & 1,
                         )?;
@@ -356,6 +362,7 @@ impl LaneBitRange {
                         binary &= !1;
                         binary >>= 1;
                     }
+                    write!(writer, "</text>")?;
                 }
             }
         }
