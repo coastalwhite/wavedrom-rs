@@ -1,0 +1,4 @@
+{
+    reg: [ { bits: 5, name: "ALLOCATED" } ],
+    config: { bits: 8 },
+}
