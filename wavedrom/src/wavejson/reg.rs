@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::reg::{Lane, LaneBitRange, RegisterFigure, LaneName};
+use crate::reg::{Lane, LaneBitRange, RegisterFigure, FieldString};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegJson {
@@ -11,7 +11,7 @@ pub struct RegJson {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegItem {
     bits: u32,
-    name: Option<RegItemName>,
+    name: Option<RegFieldString>,
     attr: Option<RegItemAttribute>,
     #[serde(rename = "type")]
     variant: Option<u32>,
@@ -19,7 +19,7 @@ pub struct RegItem {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum RegItemName {
+pub enum RegFieldString {
     Text(String),
     Binary(u64),
 }
@@ -43,8 +43,8 @@ pub struct RegJsonConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RegItemAttribute {
-    One(String),
-    Multiple(Vec<String>),
+    One(RegFieldString),
+    Multiple(Vec<RegFieldString>),
 }
 
 fn create_lane_bitrange(num_bits: u32, item: &RegItem) -> LaneBitRange {
@@ -52,20 +52,25 @@ fn create_lane_bitrange(num_bits: u32, item: &RegItem) -> LaneBitRange {
         .attr
         .as_ref()
         .map_or_else(Vec::default, |attr| match attr {
-            RegItemAttribute::One(s) => vec![s.clone()],
-            RegItemAttribute::Multiple(strs) => strs.clone(),
+            RegItemAttribute::One(s) => vec![s.clone().into()],
+            RegItemAttribute::Multiple(strs) => strs.iter().cloned().map(Into::into).collect(),
         });
 
     LaneBitRange::with(
-        match &item.name {
-            None => LaneName::None,
-            Some(RegItemName::Text(s)) => LaneName::Text(s.clone()),
-            Some(RegItemName::Binary(b)) => LaneName::Binary(*b),
-        },
+        item.name.clone().map(Into::into),
         attributes,
         num_bits,
         item.variant.unwrap_or(0),
     )
+}
+
+impl From<RegFieldString> for FieldString {
+    fn from(value: RegFieldString) -> Self {
+        match value {
+            RegFieldString::Text(s) => FieldString::Text(s),
+            RegFieldString::Binary(b) => FieldString::Binary(b),
+        }
+    }
 }
 
 impl From<RegJson> for RegisterFigure {
