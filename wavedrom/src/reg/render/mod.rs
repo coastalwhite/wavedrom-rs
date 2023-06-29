@@ -2,7 +2,7 @@ use std::io;
 
 use crate::Font;
 
-use super::{Lane, LaneBitRange, RegisterFigure};
+use super::{Lane, LaneBitRange, LaneName, RegisterFigure};
 
 fn to_display_num(n: f64) -> f64 {
     (n * 1000.).round() / 1000.
@@ -108,7 +108,7 @@ impl Lane {
         }
 
         let mut offset = 0;
-        for bit_range in self.bit_ranges.iter() {
+        for bit_range in &self.bit_ranges {
             if bit_range.length == 0 {
                 continue;
             }
@@ -118,20 +118,6 @@ impl Lane {
             bit_range.write_svg(writer, offset, self.width, self.start_bit)?;
 
             offset = offset_end;
-
-            if offset == self.width {
-                break;
-            }
-
-            // Draw field separation markers
-            write!(
-                writer,
-                r##"<line x1="{x}" y1="{BAR_Y}" x2="{x}" y2="{bar_bottom}" stroke="#000"/>"##,
-                x = to_display_num(
-                    BAR_WIDTH - (f64::from(offset) * BAR_WIDTH) / f64::from(self.width)
-                ),
-                bar_bottom = BAR_Y + BAR_HEIGHT,
-            )?;
         }
 
         let amount_of_field_bits: u32 = self
@@ -143,15 +129,38 @@ impl Lane {
         if amount_of_field_bits != self.width {
             LaneBitRange::new_padding(self.width - amount_of_field_bits).write_svg(
                 writer,
-                offset,
+                amount_of_field_bits,
                 self.width,
                 self.start_bit,
             )?;
         }
 
+        let mut offset = 0;
+        for bit_range in &self.bit_ranges {
+            if bit_range.length == 0 {
+                continue;
+            }
+
+            offset = offset + bit_range.length;
+
+            if offset == self.width {
+                break;
+            }
+
+            // Draw field separation markers
+            write!(
+                writer,
+                r##"<line x1="{x}" y1="{BAR_Y}" x2="{x}" y2="{bar_bottom}" stroke="#000" stroke-width="2"/>"##,
+                x = to_display_num(
+                    BAR_WIDTH - (f64::from(offset) * BAR_WIDTH) / f64::from(self.width)
+                ),
+                bar_bottom = BAR_Y + BAR_HEIGHT,
+            )?;
+        }
+
         write!(
             writer,
-            r##"<path d="M0,{BAR_Y}h{BAR_WIDTH}v{BAR_HEIGHT}H0V{BAR_Y}z" stroke="#000" fill="none"/>"##
+            r##"<path d="M0,{BAR_Y}h{BAR_WIDTH}v{BAR_HEIGHT}H0V{BAR_Y}z" stroke="#000" stroke-width="2" fill="none"/>"##
         )?;
 
         Ok(())
@@ -239,18 +248,40 @@ impl LaneBitRange {
         let offset_center = f64::from(offset_start + offset_end) / 2.;
 
         // Draw the field name
-        if let Some(name) = &self.name {
-            write!(
-                writer,
-                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{name}</tspan></text>"##,
-                x = to_display_num(BAR_WIDTH - offset_center * BAR_WIDTH / f64::from(bit_width)),
-                y = BAR_MIDDLE,
-            )?;
+        match &self.name {
+            LaneName::Text(name) => {
+                write!(
+                    writer,
+                    r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{name}</tspan></text>"##,
+                    x = to_display_num(
+                        BAR_WIDTH - offset_center * BAR_WIDTH / f64::from(bit_width)
+                    ),
+                    y = BAR_MIDDLE,
+                )?;
+            }
+            LaneName::Binary(mut binary) => {
+                for i in 0..self.length {
+                    write!(
+                        writer,
+                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{bit}</tspan></text>"##,
+                        x = to_display_num(
+                            BAR_WIDTH
+                                - (f64::from(offset_start + i) + 0.5) * BAR_WIDTH
+                                    / f64::from(bit_width)
+                        ),
+                        y = BAR_MIDDLE,
+                        bit = binary & 1,
+                    )?;
+
+                    binary &= !1;
+                    binary >>= 1;
+                }
+            }
+            LaneName::None => {}
         }
 
         // Draw the start and end markers
         if self.length == 1 {
-            // TODO: Better Centering
             write!(
                 writer,
                 r##"<text x="{x}" y="{BITMARKER_FONTSIZE}" text-anchor="middle" font-family="{font_family}" font-size="{BITMARKER_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{bit_idx}</tspan></text>"##,
