@@ -25,9 +25,12 @@ TEST_FILE_EXTENSION = ".json5"
 
 def build_svg(path, out, skin):
     if skin == None:
-        os.system(f"../target/debug/wavedrom -i '{path}' -o '{out}'")
+        rv = os.system(f"../target/debug/wavedrom -i '{path}' -o '{out}'")
     else:
-        os.system(f"../target/debug/wavedrom -i '{path}' -o '{out}' -s '{skin}'")
+        rv = os.system(f"../target/debug/wavedrom -i '{path}' -o '{out}' -s '{skin}'")
+
+    if rv != 0:
+        print(f"Failed the test at {path}")
 
 class TestFile:
     def __init__(self, path: str) -> None:
