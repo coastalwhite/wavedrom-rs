@@ -2,13 +2,13 @@ use std::io;
 
 use crate::Font;
 
-use super::{Lane, LaneBitRange, LaneName, RegisterFigure};
+use super::{FieldString, Lane, LaneBitRange, RegisterFigure};
 
 fn to_display_num(n: f64) -> f64 {
     (n * 1000.).round() / 1000.
 }
 
-const WIDTH: f64 = 600.;
+const WIDTH: f64 = 800.;
 
 const PAD_LEFT: f64 = 4.;
 const PAD_RIGHT: f64 = 4.;
@@ -248,36 +248,37 @@ impl LaneBitRange {
         let offset_center = f64::from(offset_start + offset_end) / 2.;
 
         // Draw the field name
-        match &self.name {
-            LaneName::Text(name) => {
-                write!(
-                    writer,
-                    r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{name}</tspan></text>"##,
-                    x = to_display_num(
-                        BAR_WIDTH - offset_center * BAR_WIDTH / f64::from(bit_width)
-                    ),
-                    y = BAR_MIDDLE,
-                )?;
-            }
-            LaneName::Binary(mut binary) => {
-                for i in 0..self.length {
+        if let Some(name) = &self.name {
+            match name {
+                FieldString::Text(name) => {
                     write!(
                         writer,
-                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{bit}</tspan></text>"##,
+                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{name}</tspan></text>"##,
                         x = to_display_num(
-                            BAR_WIDTH
-                                - (f64::from(offset_start + i) + 0.5) * BAR_WIDTH
-                                    / f64::from(bit_width)
+                            BAR_WIDTH - offset_center * BAR_WIDTH / f64::from(bit_width)
                         ),
                         y = BAR_MIDDLE,
-                        bit = binary & 1,
                     )?;
+                }
+                FieldString::Binary(mut binary) => {
+                    for i in 0..self.length {
+                        write!(
+                            writer,
+                            r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{bit}</tspan></text>"##,
+                            x = to_display_num(
+                                BAR_WIDTH
+                                    - (f64::from(offset_start + i) + 0.5) * BAR_WIDTH
+                                        / f64::from(bit_width)
+                            ),
+                            y = BAR_MIDDLE,
+                            bit = binary & 1,
+                        )?;
 
-                    binary &= !1;
-                    binary >>= 1;
+                        binary &= !1;
+                        binary >>= 1;
+                    }
                 }
             }
-            LaneName::None => {}
         }
 
         // Draw the start and end markers
@@ -311,23 +312,52 @@ impl LaneBitRange {
         }
 
         for (i, attribute) in self.attributes.iter().enumerate() {
-            if attribute.is_empty() {
-                continue;
-            }
-
             let i = i as u32;
 
-            write!(
-                writer,
-                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{ATTRIBUTE_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{offset_start}</tspan></text>"##,
-                x = to_display_num(BAR_WIDTH - (offset_center * BAR_WIDTH) / f64::from(bit_width)),
-                y = to_display_num(
-                    BAR_Y
-                        + BAR_HEIGHT
-                        + ATTRIBUTE_Y_OFFSET
-                        + (ATTRIBUTE_FONTSIZE + ATTRIBUTE_Y_SPACING) * f64::from(i)
-                ),
-            )?;
+            match attribute {
+                FieldString::Text(attribute) => {
+                    if attribute.is_empty() {
+                        continue;
+                    }
+
+                    write!(
+                        writer,
+                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{ATTRIBUTE_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{offset_start}</tspan></text>"##,
+                        x = to_display_num(
+                            BAR_WIDTH - (offset_center * BAR_WIDTH) / f64::from(bit_width)
+                        ),
+                        y = to_display_num(
+                            BAR_Y
+                                + BAR_HEIGHT
+                                + ATTRIBUTE_Y_OFFSET
+                                + (ATTRIBUTE_FONTSIZE + ATTRIBUTE_Y_SPACING) * f64::from(i)
+                        ),
+                    )?;
+                }
+                FieldString::Binary(mut binary) => {
+                    for j in 0..self.length {
+                        write!(
+                            writer,
+                            r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{bit}</tspan></text>"##,
+                            x = to_display_num(
+                                BAR_WIDTH
+                                    - (f64::from(offset_start + j) + 0.5) * BAR_WIDTH
+                                        / f64::from(bit_width)
+                            ),
+                            y = to_display_num(
+                                BAR_Y
+                                    + BAR_HEIGHT
+                                    + ATTRIBUTE_Y_OFFSET
+                                    + (ATTRIBUTE_FONTSIZE + ATTRIBUTE_Y_SPACING) * f64::from(i)
+                            ),
+                            bit = binary & 1,
+                        )?;
+
+                        binary &= !1;
+                        binary >>= 1;
+                    }
+                }
+            }
         }
 
         Ok(())

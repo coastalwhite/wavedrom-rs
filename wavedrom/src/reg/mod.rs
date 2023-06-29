@@ -4,10 +4,9 @@ pub struct RegisterFigure {
     lanes: Vec<Lane>,
 }
 
-pub enum LaneName {
+pub enum FieldString {
     Text(String),
     Binary(u64),
-    None,
 }
 
 pub struct Lane {
@@ -17,8 +16,8 @@ pub struct Lane {
 }
 
 pub struct LaneBitRange {
-    name: LaneName,
-    attributes: Vec<String>,
+    name: Option<FieldString>,
+    attributes: Vec<FieldString>,
     length: u32,
     variant: u32,
 }
@@ -38,7 +37,7 @@ impl RegisterFigure {
 }
 
 impl LaneBitRange {
-    pub fn with(name: LaneName, attributes: Vec<String>, length: u32, variant: u32) -> Self {
+    pub fn with(name: Option<FieldString>, attributes: Vec<FieldString>, length: u32, variant: u32) -> Self {
         Self {
             name,
             attributes,
@@ -49,7 +48,7 @@ impl LaneBitRange {
 
     pub fn new(length: u32) -> Self {
         Self {
-            name: LaneName::None,
+            name: None,
             attributes: Vec::new(),
             length,
             variant: 0,
@@ -58,7 +57,7 @@ impl LaneBitRange {
 
     pub fn new_padding(length: u32) -> Self {
         Self {
-            name: LaneName::None,
+            name: None,
             attributes: Vec::new(),
             length,
             variant: 0,
