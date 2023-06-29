@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::reg::{Register, RegisterBitRange};
+use crate::reg::{Lane, LaneBitRange, RegisterFigure};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegJson {
@@ -27,8 +27,8 @@ pub struct RegJsonConfig {
     fontweight: Option<u32>,
     fontfamily: Option<u32>,
     compact: Option<u32>,
-    hflip: Option<u32>,
-    vflip: Option<u32>,
+    hflip: Option<bool>,
+    vflip: Option<bool>,
     uneven: Option<bool>,
     offset: Option<u32>,
 }
@@ -40,20 +40,137 @@ pub enum RegItemAttribute {
     Multiple(Vec<String>),
 }
 
-impl From<RegJson> for Register {
-    fn from(value: RegJson) -> Self {
-        let mut register = Register::new();
+fn create_lane_bitrange(num_bits: u32, item: &RegItem) -> LaneBitRange {
+    let attributes = item
+        .attr
+        .as_ref()
+        .map_or_else(Vec::default, |attr| match attr {
+            RegItemAttribute::One(s) => vec![s.clone()],
+            RegItemAttribute::Multiple(strs) => strs.clone(),
+        });
 
-        for item in value.reg {
-            let attributes = item.attr.map_or_else(Vec::default, |attr| match attr {
-                RegItemAttribute::One(s) => vec![s],
-                RegItemAttribute::Multiple(strs) => strs,
-            });
-            let bit_range =
-                RegisterBitRange::with(item.name, attributes, item.bits, item.variant.unwrap_or(0));
-            register = register.add(bit_range);
+    LaneBitRange::with(
+        item.name.clone(),
+        attributes,
+        num_bits,
+        item.variant.unwrap_or(0),
+    )
+}
+
+impl From<RegJson> for RegisterFigure {
+    fn from(value: RegJson) -> Self {
+        let num_lanes = value
+            .config
+            .as_ref()
+            .and_then(|config| config.lanes)
+            .unwrap_or(1);
+        let num_lanes = u32::max(1, num_lanes);
+
+        let num_bits = value
+            .config
+            .as_ref()
+            .and_then(|config| config.bits)
+            .unwrap_or_else(|| value.reg.iter().map(|range| range.bits).sum());
+
+        let vflip = value
+            .config
+            .as_ref()
+            .and_then(|config| config.vflip)
+            .unwrap_or_default();
+
+        let mut lanes = if num_lanes == 1 {
+            let mut lane = Lane::new();
+
+            let mut allocated_bits = 0;
+            for item in value.reg {
+                let bits = if allocated_bits + item.bits > num_bits {
+                    num_bits - allocated_bits
+                } else {
+                    item.bits
+                };
+
+                allocated_bits += bits;
+
+                let bit_range = create_lane_bitrange(bits, &item);
+
+                lane = lane.add(bit_range);
+            }
+
+            if allocated_bits != num_bits {
+                lane = lane.pad(num_bits - allocated_bits);
+            }
+
+            vec![lane]
+        } else {
+            let bits_per_lane = if num_lanes > num_bits {
+                1
+            } else if num_bits % num_lanes == 0 {
+                num_bits / num_lanes
+            } else {
+                num_bits / num_lanes + 1
+            };
+
+            let mut lanes = Vec::with_capacity(num_lanes as usize);
+
+            let mut lane = Lane::new();
+
+            let mut figure_allocated_bits = 0;
+            let mut lane_allocated_bits = 0;
+            for item in value.reg {
+                if figure_allocated_bits == num_bits {
+                    break;
+                }
+
+                let mut unprocessed_bits = item.bits;
+                while unprocessed_bits != 0 {
+                    let bits_to_lane =
+                        u32::min(unprocessed_bits, bits_per_lane - lane_allocated_bits);
+                    let bits_to_lane = u32::min(bits_to_lane, num_bits - figure_allocated_bits);
+
+                    let is_bit_range_split = (bits_to_lane != unprocessed_bits) && unprocessed_bits != 0;
+                    let is_lane_full = lane_allocated_bits == bits_per_lane;
+
+                    let bit_range = create_lane_bitrange(bits_to_lane, &item);
+
+                    lane = lane.add(bit_range);
+                    unprocessed_bits -= bits_to_lane;
+                    lane_allocated_bits += bits_to_lane;
+                    figure_allocated_bits += bits_to_lane;
+
+                    let is_figure_full = figure_allocated_bits == num_bits;
+                    if is_figure_full {
+                        break;
+                    }
+
+                    if is_bit_range_split || is_lane_full {
+                        lanes.push(std::mem::take(&mut lane));
+                        lane = lane.start_bit((lanes.len() as u32) * bits_per_lane);
+                        lane_allocated_bits = 0;
+                    }
+                }
+            }
+
+            if lanes.len() as u32 != num_lanes {
+                if lane_allocated_bits != 0 {
+                    lane = lane.pad(bits_per_lane - lane_allocated_bits);
+                    lanes.push(lane);
+                }
+
+                let needed_lanes = num_lanes - (lanes.len() as u32);
+                for _ in 0..needed_lanes {
+                    lanes.push(
+                        Lane::padded(bits_per_lane).start_bit((lanes.len() as u32) * bits_per_lane),
+                    );
+                }
+            }
+
+            lanes
+        };
+
+        if vflip {
+            lanes.reverse();
         }
 
-        register
+        RegisterFigure::with(lanes)
     }
 }
