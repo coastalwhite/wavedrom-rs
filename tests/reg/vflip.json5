@@ -1,0 +1,10 @@
+{
+    reg: [
+        { bits: 5, name: "ALLOCATED" },
+    ],
+    config: {
+        lanes: 2,
+        bits: 8,
+        vflip: true,
+    }
+}

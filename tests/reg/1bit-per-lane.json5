@@ -1,0 +1,4 @@
+{
+	reg: [ { bits: 2, name: "ALLOCATED" } ],
+	config: { lanes: 5 },
+}
