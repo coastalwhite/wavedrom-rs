@@ -146,9 +146,13 @@ pub mod skin;
 mod color;
 mod font;
 mod shortcuts;
+mod escape;
+
+#[macro_use]
+mod options;
+
 pub mod signal;
 pub mod reg;
-mod escape;
  
 pub use font::Font;
 pub use color::Color;
