@@ -2,66 +2,46 @@ use std::io;
 
 use crate::Font;
 
+use super::options::RegisterRenderOptions;
 use super::{FieldString, Lane, LaneBitRange, RegisterFigure};
 
 fn to_display_num(n: f64) -> f64 {
     (n * 1000.).round() / 1000.
 }
 
-const WIDTH: f64 = 800.;
-
-const PAD_LEFT: f64 = 4.;
-const PAD_RIGHT: f64 = 4.;
-
-const LANE_SPACING: f64 = 4.;
-
-const PAD_TOP: f64 = 4.;
-const PAD_BOTTOM: f64 = 4.;
-
-const BAR_Y: f64 = SE_MARKER_Y_OFFSET + BITMARKER_FONTSIZE;
-
-const BAR_WIDTH: f64 = WIDTH - PAD_LEFT - PAD_RIGHT;
-const BAR_HEIGHT: f64 = 40.;
-
-const BAR_MIDDLE: f64 = (BAR_Y + BAR_Y + BAR_HEIGHT) / 2.;
-
-const NAME_FONTSIZE: f64 = BAR_HEIGHT * 2. / 5.;
-const BITMARKER_FONTSIZE: f64 = 12.;
-const ATTRIBUTE_FONTSIZE: f64 = NAME_FONTSIZE;
-
-const HINT_INDENT: f64 = BAR_HEIGHT / 10.;
-
-const SE_MARKER_X_OFFSET: f64 = 2.;
-const SE_MARKER_Y_OFFSET: f64 = 2.;
-
-const ATTRIBUTE_Y_OFFSET: f64 = 4.;
-const ATTRIBUTE_Y_SPACING: f64 = 4.;
-
 impl RegisterFigure {
     pub fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
-        let mut height = PAD_TOP + PAD_BOTTOM;
+        self.write_svg_with_options(writer, &RegisterRenderOptions::default())
+    }
+
+    pub fn write_svg_with_options(
+        &self,
+        writer: &mut impl io::Write,
+        options: &RegisterRenderOptions,
+    ) -> io::Result<()> {
+        let mut height = f64::from(options.padding.top + options.padding.bottom);
         let mut displayed_lanes = 0;
         for lane in &self.lanes {
             if lane.is_empty() {
-                height += LANE_SPACING;
+                height += f64::from(options.spacings.lane_spacing);
 
                 continue;
             }
 
             displayed_lanes += 1;
-            height += lane.display_height() + LANE_SPACING;
+            height += lane.display_height(options) + f64::from(options.spacings.lane_spacing);
         }
 
         let height = if displayed_lanes == 0 {
             0.
         } else {
-            height - LANE_SPACING
+            height - f64::from(options.spacings.lane_spacing)
         };
 
         write!(
             writer,
             r#"<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 {figure_width} {figure_height}" overflow="hidden" width="{figure_width}" height="{figure_height}">"#,
-            figure_width = WIDTH,
+            figure_width = options.padding.left + options.padding.right + options.bar_width,
             figure_height = to_display_num(height),
         )?;
 
@@ -72,26 +52,31 @@ impl RegisterFigure {
 
         write!(
             writer,
-            r##"<defs><g id="bm"><path d="M0,0v{HINT_INDENT}m0,{jump}v{HINT_INDENT}" stroke="#000" fill="none"/></g></defs>"##,
-            jump = BAR_HEIGHT - 2. * HINT_INDENT,
+            r##"<defs><g id="bm"><path d="M0,0v{hint_indent}m0,{jump}v{hint_indent}" stroke="#000" fill="none"/></g></defs>"##,
+            jump = options.bar_height - 2 * options.hint_indent,
+            hint_indent = options.hint_indent,
         )?;
 
-        let mut y = PAD_TOP;
+        let mut y = f64::from(options.padding.top);
 
         for lane in &self.lanes {
             if lane.is_empty() {
-                y += LANE_SPACING;
+                y += f64::from(options.spacings.lane_spacing);
 
                 continue;
             }
 
-            write!(writer, r##"<g transform="translate({PAD_LEFT},{y})">"##)?;
+            write!(
+                writer,
+                r##"<g transform="translate({x},{y})">"##,
+                x = options.padding.left,
+            )?;
 
-            lane.write_svg(writer)?;
+            lane.write_svg(writer, options)?;
 
-            let lane_height = lane.display_height();
+            let lane_height = lane.display_height(options);
 
-            y += lane_height + LANE_SPACING;
+            y += lane_height + f64::from(options.spacings.lane_spacing);
 
             write!(writer, "</g>")?;
         }
@@ -102,10 +87,18 @@ impl RegisterFigure {
 }
 
 impl Lane {
-    pub fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
+    fn write_svg(
+        &self,
+        writer: &mut impl io::Write,
+        options: &RegisterRenderOptions,
+    ) -> io::Result<()> {
         if self.width == 0 {
             return Ok(());
         }
+
+        let bar_width = options.bar_width;
+        let bar_height = options.bar_height;
+        let bar_y = options.bit_marker_fontsize + options.offsets.bit_marker_y_offset;
 
         let mut offset = 0;
         for bit_range in &self.bit_ranges {
@@ -115,7 +108,7 @@ impl Lane {
 
             let offset_end = offset + bit_range.length;
 
-            bit_range.write_svg(writer, offset, self.width, self.start_bit)?;
+            bit_range.write_svg(writer, offset, self.width, self.start_bit, options)?;
 
             offset = offset_end;
         }
@@ -132,6 +125,7 @@ impl Lane {
                 amount_of_field_bits,
                 self.width,
                 self.start_bit,
+                options,
             )?;
         }
 
@@ -150,24 +144,24 @@ impl Lane {
             // Draw field separation markers
             write!(
                 writer,
-                r##"<path d="M{x},{BAR_Y}v{BAR_HEIGHT}" stroke="#000" stroke-width="2"/>"##,
+                r##"<path d="M{x},{bar_y}v{bar_height}" stroke="#000" stroke-width="2"/>"##,
                 x = to_display_num(
-                    BAR_WIDTH - (f64::from(offset) * BAR_WIDTH) / f64::from(self.width)
+                    f64::from(bar_width) - (f64::from(offset * bar_width)) / f64::from(self.width)
                 ),
             )?;
         }
 
         write!(
             writer,
-            r##"<path d="M0,{BAR_Y}h{BAR_WIDTH}v{BAR_HEIGHT}H0V{BAR_Y}z" stroke="#000" stroke-width="2" fill="none"/>"##
+            r##"<path d="M0,{bar_y}h{bar_width}v{bar_height}H0V{bar_y}z" stroke="#000" stroke-width="2" fill="none"/>"##
         )?;
 
         Ok(())
     }
 
-    pub fn display_height(&self) -> f64 {
-        let bit_marker_height = BITMARKER_FONTSIZE + SE_MARKER_Y_OFFSET;
-        let bar_height = BAR_HEIGHT;
+    pub fn display_height(&self, options: &RegisterRenderOptions) -> f64 {
+        let bit_marker_height = options.bit_marker_fontsize + options.offsets.bit_marker_y_offset;
+        let bar_height = options.bar_height;
         let max_attributes = self
             .bit_ranges
             .iter()
@@ -175,35 +169,41 @@ impl Lane {
             .max()
             .unwrap_or_default();
         let attributes_height = if max_attributes == 0 {
-            0.
+            0
         } else {
-            let max_attributes = f64::from(max_attributes);
-            max_attributes * ATTRIBUTE_FONTSIZE
-                + (max_attributes * ATTRIBUTE_Y_SPACING)
-                + ATTRIBUTE_Y_OFFSET
+            max_attributes * options.attribute_fontsize
+                + ((max_attributes - 1) * options.spacings.attribute_spacing)
+                + options.offsets.attribute_y_offset
         };
 
-        bit_marker_height + bar_height + attributes_height
+        f64::from(bit_marker_height + bar_height + attributes_height)
     }
 }
 
 impl LaneBitRange {
-    pub fn write_svg(
+    fn write_svg(
         &self,
         writer: &mut impl io::Write,
         offset: u32,
         bit_width: u32,
         start_bit: u32,
+        options: &RegisterRenderOptions,
     ) -> io::Result<()> {
+        if self.length == 0 {
+            return Ok(());
+        }
+
         let font = Font::default();
 
         let font_family = font
             .get_font_family_name()
             .unwrap_or_else(|| String::from("Helvetica"));
 
-        if self.length == 0 {
-            return Ok(());
-        }
+        let bar_width = options.bar_width;
+        let bar_height = options.bar_height;
+        let bar_y = options.bit_marker_fontsize + options.offsets.bit_marker_y_offset;
+
+        let bar_middle = f64::from(bar_y + bar_y + bar_height) / 2.;
 
         let offset_start = offset;
         let offset_end = offset + self.length;
@@ -218,16 +218,16 @@ impl LaneBitRange {
 
             // TODO: Can this be deleted
             let width = to_display_num(if offset_end == bit_width {
-                BAR_WIDTH - f64::from(offset_start) * BAR_WIDTH / f64::from(bit_width)
+                f64::from(bar_width) - f64::from(offset_start * bar_width) / f64::from(bit_width)
             } else {
-                f64::from(self.length) * BAR_WIDTH / f64::from(bit_width)
+                f64::from(self.length * bar_width) / f64::from(bit_width)
             });
 
             write!(
                 writer,
-                r##"<path d="M{x},{BAR_Y}h{width}v{BAR_HEIGHT}h-{width}v-{BAR_HEIGHT}z" stroke="none" fill="{background}"/>"##,
+                r##"<path d="M{x},{bar_y}h{width}v{bar_height}h-{width}v-{bar_height}z" stroke="none" fill="{background}"/>"##,
                 x = to_display_num(
-                    BAR_WIDTH - f64::from(offset_end) * BAR_WIDTH / f64::from(bit_width)
+                    f64::from(bar_width) - f64::from(offset_end * bar_width) / f64::from(bit_width)
                 ),
             )?;
         }
@@ -238,9 +238,10 @@ impl LaneBitRange {
 
             write!(
                 writer,
-                r##"<use x="{x}" y="{y}" xlink:href="#bm"/>"##,
-                x = to_display_num(BAR_WIDTH - i * BAR_WIDTH / f64::from(bit_width)),
-                y = BAR_Y,
+                r##"<use x="{x}" y="{bar_y}" xlink:href="#bm"/>"##,
+                x = to_display_num(
+                    f64::from(bar_width) - i * f64::from(bar_width) / f64::from(bit_width)
+                ),
             )?;
         }
 
@@ -252,25 +253,28 @@ impl LaneBitRange {
                 FieldString::Text(name) => {
                     write!(
                         writer,
-                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{name}</tspan></text>"##,
+                        r##"<text x="{x}" y="{bar_middle}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0"><tspan>{name}</tspan></text>"##,
                         x = to_display_num(
-                            BAR_WIDTH - offset_center * BAR_WIDTH / f64::from(bit_width)
+                            f64::from(bar_width)
+                                - offset_center * f64::from(bar_width) / f64::from(bit_width)
                         ),
-                        y = BAR_MIDDLE,
+                        fontsize = options.name_fontsize,
                     )?;
                 }
                 FieldString::Binary(mut binary) => {
                     write!(
                         writer,
-                        r##"<text y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0">"##,
-                        y = BAR_MIDDLE,
+                        r##"<text y="{bar_middle}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0">"##,
+                        fontsize = options.name_fontsize,
                     )?;
                     for i in 0..self.length {
                         write!(
                             writer,
                             r#"<tspan x="{x}">{bit}</tspan>"#,
                             x = to_display_num(
-                                BAR_WIDTH - (f64::from(offset_end - i - 1) + 0.5) * BAR_WIDTH / f64::from(bit_width)
+                                f64::from(bar_width)
+                                    - (f64::from(offset_end - i - 1) + 0.5) * f64::from(bar_width)
+                                        / f64::from(bit_width)
                             ),
                             bit = binary & 1,
                         )?;
@@ -287,28 +291,38 @@ impl LaneBitRange {
         if self.length == 1 {
             write!(
                 writer,
-                r##"<text x="{x}" y="{BITMARKER_FONTSIZE}" text-anchor="middle" font-family="{font_family}" font-size="{BITMARKER_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{bit_idx}</tspan></text>"##,
-                x = to_display_num(BAR_WIDTH - (offset_center * BAR_WIDTH) / f64::from(bit_width)),
+                r##"<text x="{x}" y="{y}" text-anchor="middle" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0"><tspan>{bit_idx}</tspan></text>"##,
+                x = to_display_num(
+                    f64::from(bar_width)
+                        - (offset_center * f64::from(bar_width)) / f64::from(bit_width)
+                ),
+                y = options.bit_marker_fontsize,
+                fontsize = options.bit_marker_fontsize,
                 bit_idx = start_bit + offset_start,
             )?;
         } else {
             write!(
                 writer,
-                r##"<text x="{x}" y="{BITMARKER_FONTSIZE}" text-anchor="end" font-family="{font_family}" font-size="{BITMARKER_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{text}</tspan></text>"##,
+                r##"<text x="{x}" y="{y}" text-anchor="end" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0"><tspan>{text}</tspan></text>"##,
                 x = to_display_num(
-                    BAR_WIDTH
-                        - f64::from(offset_start) * BAR_WIDTH / f64::from(bit_width)
-                        - SE_MARKER_X_OFFSET
+                    f64::from(bar_width)
+                        - f64::from(offset_start) * f64::from(bar_width) / f64::from(bit_width)
+                        - f64::from(options.offsets.bit_marker_x_offset)
                 ),
+                y = options.bit_marker_fontsize,
+                fontsize = options.bit_marker_fontsize,
                 text = start_bit + offset_start,
             )?;
             write!(
                 writer,
-                r##"<text x="{x}" y="{BITMARKER_FONTSIZE}" text-anchor="start" font-family="{font_family}" font-size="{BITMARKER_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{text}</tspan></text>"##,
+                r##"<text x="{x}" y="{y}" text-anchor="start" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0"><tspan>{text}</tspan></text>"##,
                 x = to_display_num(
-                    BAR_WIDTH - f64::from(offset_end) * BAR_WIDTH / f64::from(bit_width)
-                        + SE_MARKER_X_OFFSET
+                    f64::from(bar_width)
+                        - f64::from(offset_end) * f64::from(bar_width) / f64::from(bit_width)
+                        + f64::from(options.offsets.bit_marker_x_offset)
                 ),
+                y = options.bit_marker_fontsize,
+                fontsize = options.bit_marker_fontsize,
                 text = start_bit + offset_end - 1,
             )?;
         }
@@ -324,36 +338,35 @@ impl LaneBitRange {
 
                     write!(
                         writer,
-                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{ATTRIBUTE_FONTSIZE}" fill="#000" letter-spacing="0"><tspan>{offset_start}</tspan></text>"##,
+                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0"><tspan>{offset_start}</tspan></text>"##,
                         x = to_display_num(
-                            BAR_WIDTH - (offset_center * BAR_WIDTH) / f64::from(bit_width)
+                            f64::from(bar_width)
+                                - (offset_center * f64::from(bar_width)) / f64::from(bit_width)
                         ),
-                        y = to_display_num(
-                            BAR_Y
-                                + BAR_HEIGHT
-                                + ATTRIBUTE_Y_OFFSET
-                                + (ATTRIBUTE_FONTSIZE + ATTRIBUTE_Y_SPACING) * f64::from(i)
-                        ),
+                        y = bar_y
+                            + bar_height
+                            + options.offsets.attribute_y_offset
+                            + (options.attribute_fontsize + options.spacings.attribute_spacing) * i,
+                        fontsize = options.attribute_fontsize,
                     )?;
                 }
                 FieldString::Binary(mut binary) => {
                     write!(
                         writer,
-                        r##"<text y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{NAME_FONTSIZE}" fill="#000" letter-spacing="0">"##,
-                        y = to_display_num(
-                            BAR_Y
-                                + BAR_HEIGHT
-                                + ATTRIBUTE_Y_OFFSET
-                                + (ATTRIBUTE_FONTSIZE + ATTRIBUTE_Y_SPACING) * f64::from(i)
-                        ),
+                        r##"<text y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0">"##,
+                        y = bar_y
+                            + bar_height
+                            + options.offsets.attribute_y_offset
+                            + (options.attribute_fontsize + options.spacings.attribute_spacing) * i,
+                        fontsize = options.attribute_fontsize,
                     )?;
                     for j in 0..self.length {
                         write!(
                             writer,
                             r#"<tspan x="{x}">{bit}</tspan>"#,
                             x = to_display_num(
-                                BAR_WIDTH
-                                    - (f64::from(offset_end - j - 1) + 0.5) * BAR_WIDTH
+                                f64::from(bar_width)
+                                    - (f64::from(offset_end - j - 1) + 0.5) * f64::from(bar_width)
                                         / f64::from(bit_width)
                             ),
                             bit = binary & 1,
