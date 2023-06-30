@@ -1,6 +1,7 @@
 //! Module with a WaveDrom skin
 use serde::{Deserialize, Serialize};
 
+use crate::reg::options::{PartialRegisterRenderOptions, RegisterRenderOptions};
 use crate::signal::options::{
     PartialPathAssembleOptions, PartialRenderOptions, PathAssembleOptions, RenderOptions,
 };
@@ -14,6 +15,8 @@ pub struct Skin {
     pub assemble: Option<PartialPathAssembleOptions>,
     /// Render options given as an optional subset of a [`RenderOptions`]
     pub render: Option<PartialRenderOptions>,
+    /// Render options for rendering a register bit overview
+    pub register: Option<PartialRegisterRenderOptions>,
 }
 
 impl Skin {
@@ -27,6 +30,11 @@ impl Skin {
             self.render
                 .map_or_else(RenderOptions::default, RenderOptions::from),
         )
+    }
+
+    pub fn register_render_options(self) -> RegisterRenderOptions {
+        self.register
+            .map_or_else(RegisterRenderOptions::default, RegisterRenderOptions::from)
     }
 
     /// Parse a [`Skin`] from a human-friendly / JSON5 file.
