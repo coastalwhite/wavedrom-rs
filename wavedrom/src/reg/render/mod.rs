@@ -338,7 +338,7 @@ impl LaneBitRange {
 
                     write!(
                         writer,
-                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0"><tspan>{offset_start}</tspan></text>"##,
+                        r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0"><tspan>{attribute}</tspan></text>"##,
                         x = to_display_num(
                             f64::from(bar_width)
                                 - (offset_center * f64::from(bar_width)) / f64::from(bit_width)

@@ -1,5 +1,6 @@
 use std::sync::Mutex;
 
+use wavedrom::reg::options::{RegisterRenderOptions, PartialRegisterRenderOptions};
 use wavedrom::signal::options::{PathAssembleOptions, RenderOptions};
 use wavedrom::skin::Skin;
 use wavedrom::Color;
@@ -256,6 +257,7 @@ pub fn export() -> wavedrom::json5::Result<String> {
     let skin = Skin {
         assemble: Some(assemble.into()),
         render: Some(render.into()),
+        register: Some(RegisterRenderOptions::default().into()),
     };
 
     wavedrom::json5::to_string(&skin)
