@@ -1,4 +1,5 @@
 pub mod render;
+pub mod options;
 
 pub struct RegisterFigure {
     lanes: Vec<Lane>,
