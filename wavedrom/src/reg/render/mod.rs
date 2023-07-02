@@ -1,12 +1,27 @@
 use std::io;
 
 use crate::Font;
+use crate::escape::escape_str;
 
 use super::options::RegisterRenderOptions;
 use super::{FieldString, Lane, LaneBitRange, RegisterFigure};
 
+const DISPLAY_PRECISION: u8 = 3;
+const DISPLAY_PRECISION_ROUNDING: f64 = {
+    let mut n = 10.;
+    let mut i = 0;
+    loop {
+        if i >= DISPLAY_PRECISION {
+            break n;
+        }
+
+        n *= 10.;
+        i += 1;
+    }
+};
+
 fn to_display_num(n: f64) -> f64 {
-    (n * 1000.).round() / 1000.
+    (n * DISPLAY_PRECISION_ROUNDING).round() / DISPLAY_PRECISION_ROUNDING
 }
 
 impl RegisterFigure {
@@ -251,6 +266,7 @@ impl LaneBitRange {
         if let Some(name) = &self.name {
             match name {
                 FieldString::Text(name) => {
+                    let name = escape_str(name);
                     write!(
                         writer,
                         r##"<text x="{x}" y="{bar_middle}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0"><tspan>{name}</tspan></text>"##,
@@ -335,6 +351,8 @@ impl LaneBitRange {
                     if attribute.is_empty() {
                         continue;
                     }
+
+                    let attribute = escape_str(attribute);
 
                     write!(
                         writer,
