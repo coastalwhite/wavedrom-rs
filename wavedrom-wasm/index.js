@@ -142,6 +142,27 @@ const PARAMETERS = [
     ["edge-color", serialize_color, deserialize_color],
     ["edge-arrow-color", serialize_color, deserialize_color],
     "edge-arrow-size",
+
+    "register-bar-width",
+    "register-bar-height",
+
+    "register-hint-indent",
+
+    "register-name-fontsize",
+    "register-bitmarker-fontsize",
+    "register-attribute-fontsize",
+
+    "register-padding-top",
+    "register-padding-bottom",
+    "register-padding-left",
+    "register-padding-right",
+    
+    "register-spacing-lane",
+    "register-spacing-attribute",
+
+    "register-offset-bitmarker-x",
+    "register-offset-bitmarker-y",
+    "register-offset-attribute-y",
 ];
 
 document.getElementById("input").value = `
