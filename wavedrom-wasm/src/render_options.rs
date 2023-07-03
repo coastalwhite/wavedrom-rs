@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use wavedrom::reg::options::{RegisterRenderOptions, PartialRegisterRenderOptions};
+use wavedrom::reg::options::RegisterRenderOptions;
 use wavedrom::signal::options::{PathAssembleOptions, RenderOptions};
 use wavedrom::skin::Skin;
 use wavedrom::Color;
@@ -23,7 +23,10 @@ macro_rules! surround_fn {
 }
 
 macro_rules! parameters {
-    ([$assemble:ident, $render:ident], $($name:ident [$($property:ident$([$prop_idx:literal])?).+] $([$as:ty])? $({$deserialize_fn:ident, $serialize_fn:ident})?),+ $(,)?) => {
+    (
+        [$assemble:ident, $render:ident, $register:ident],
+        $($name:ident [$($property:ident$([$prop_idx:literal])?).+] $([$as:ty])? $({$deserialize_fn:ident, $serialize_fn:ident})?),+ $(,)?
+    ) => {
         #[repr(u32)]
         enum RenderParameter {
         $(
@@ -44,14 +47,18 @@ macro_rules! parameters {
 
         #[no_mangle]
         pub extern "C" fn modify_parameter(parameter: u32, value: u32) {
-            let mut $render =
-                unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
-                    .lock()
-                    .unwrap();
             let mut $assemble =
                 unsafe { ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default())) }
                     .lock()
                     .unwrap();
+            let mut $render =
+                unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
+                    .lock()
+                    .unwrap();
+            let mut $register = unsafe { REGISTER_OPTIONS.get_or_insert_with(|| Mutex::new(RegisterRenderOptions::default())) }
+                    .lock()
+                    .unwrap();
+
             let Some(parameter) = RenderParameter::from_u32(parameter) else {
                 return;
             };
@@ -71,6 +78,10 @@ macro_rules! parameters {
             let $render = unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
                     .lock()
                     .unwrap();
+            let $register = unsafe { REGISTER_OPTIONS.get_or_insert_with(|| Mutex::new(RegisterRenderOptions::default())) }
+                    .lock()
+                    .unwrap();
+
             let Some(parameter) = RenderParameter::from_u32(parameter) else {
                 return 0;
             };
@@ -88,7 +99,7 @@ macro_rules! parameters {
 }
 
 parameters![
-    [assemble, render],
+    [assemble, render, register],
 
     SignalHeight[assemble.signal_height][u16],
     CycleWidth[assemble.cycle_width][u16],
@@ -167,6 +178,27 @@ parameters![
     EdgeColor[render.edge.edge_color]{ parse_color, serialize_color },
     EdgeArrowColor[render.edge.edge_arrow_color]{ parse_color, serialize_color },
     EdgeArrowSize[render.edge.edge_arrow_size],
+
+    RegisterBarWidth[register.bar_width],
+    RegisterBarHeight[register.bar_height],
+
+    RegisterHintIndent[register.hint_indent],
+
+    RegisterNameFontsize[register.name_fontsize],
+    RegisterBitmarkerFontsize[register.bit_marker_fontsize],
+    RegisterAttributeFontsize[register.attribute_fontsize],
+
+    RegisterPaddingTop[register.padding.top],
+    RegisterPaddingBottom[register.padding.bottom],
+    RegisterPaddingLeft[register.padding.left],
+    RegisterPaddingRight[register.padding.right],
+
+    RegisterSpacingLane[register.spacing.lane_spacing],
+    RegisterSpacingAttribute[register.spacing.attribute_spacing],
+
+    RegisterOffsetBitmarkerX[register.offset.bit_marker_x],
+    RegisterOffsetBitmarkerY[register.offset.bit_marker_y],
+    RegisterOffsetAttributeY[register.offset.attribute_y],
 ];
 
 fn parse_color(value: u32) -> Color {
@@ -198,6 +230,7 @@ fn serialize_opt_color(color: &Option<Color>) -> u32 {
 
 static mut ASSEMBLE_OPTIONS: Option<Mutex<PathAssembleOptions>> = None;
 static mut RENDER_OPTIONS: Option<Mutex<RenderOptions>> = None;
+static mut REGISTER_OPTIONS: Option<Mutex<RegisterRenderOptions>> = None;
 
 pub fn get_assemble_options() -> &'static PathAssembleOptions {
     unsafe { ASSEMBLE_OPTIONS.get_or_insert_with(|| Mutex::new(PathAssembleOptions::default())) }
@@ -207,6 +240,12 @@ pub fn get_assemble_options() -> &'static PathAssembleOptions {
 
 pub fn get_render_options() -> &'static RenderOptions {
     unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
+        .get_mut()
+        .unwrap()
+}
+
+pub fn get_register_options() -> &'static RegisterRenderOptions {
+    unsafe { REGISTER_OPTIONS.get_or_insert_with(|| Mutex::new(RegisterRenderOptions::default())) }
         .get_mut()
         .unwrap()
 }
@@ -233,6 +272,15 @@ pub fn merge_in_skin_internal(json: &str) -> Result<(), ()> {
             .merge_in(render);
     }
 
+    if let Some(register) = skin.register {
+        unsafe {
+            REGISTER_OPTIONS.get_or_insert_with(|| Mutex::new(RegisterRenderOptions::default()))
+        }
+        .get_mut()
+        .unwrap()
+        .merge_in(register);
+    }
+
     Ok(())
 }
 
@@ -247,17 +295,24 @@ pub fn reset() {
     *unsafe { RENDER_OPTIONS.get_or_insert_with(|| Mutex::new(RenderOptions::default())) }
         .get_mut()
         .unwrap() = RenderOptions::default();
+
+    *unsafe {
+        REGISTER_OPTIONS.get_or_insert_with(|| Mutex::new(RegisterRenderOptions::default()))
+    }
+    .get_mut()
+    .unwrap() = RegisterRenderOptions::default();
 }
 
 #[inline]
 pub fn export() -> wavedrom::json5::Result<String> {
     let assemble = *get_assemble_options();
     let render = get_render_options().clone();
+    let register = get_register_options().clone();
 
     let skin = Skin {
         assemble: Some(assemble.into()),
         render: Some(render.into()),
-        register: Some(RegisterRenderOptions::default().into()),
+        register: Some(register.into()),
     };
 
     wavedrom::json5::to_string(&skin)
