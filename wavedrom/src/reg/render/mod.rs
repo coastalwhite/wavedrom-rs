@@ -38,19 +38,19 @@ impl RegisterFigure {
         let mut displayed_lanes = 0;
         for lane in &self.lanes {
             if lane.is_empty() {
-                height += f64::from(options.spacings.lane_spacing);
+                height += f64::from(options.spacing.lane_spacing);
 
                 continue;
             }
 
             displayed_lanes += 1;
-            height += lane.display_height(options) + f64::from(options.spacings.lane_spacing);
+            height += lane.display_height(options, self.vspace) + f64::from(options.spacing.lane_spacing);
         }
 
         let height = if displayed_lanes == 0 {
             0.
         } else {
-            height - f64::from(options.spacings.lane_spacing)
+            height - f64::from(options.spacing.lane_spacing)
         };
 
         write!(
@@ -76,7 +76,7 @@ impl RegisterFigure {
 
         for lane in &self.lanes {
             if lane.is_empty() {
-                y += f64::from(options.spacings.lane_spacing);
+                y += f64::from(options.spacing.lane_spacing);
 
                 continue;
             }
@@ -89,9 +89,9 @@ impl RegisterFigure {
 
             lane.write_svg(writer, options)?;
 
-            let lane_height = lane.display_height(options);
+            let lane_height = lane.display_height(options, self.vspace);
 
-            y += lane_height + f64::from(options.spacings.lane_spacing);
+            y += lane_height + f64::from(options.spacing.lane_spacing);
 
             write!(writer, "</g>")?;
         }
@@ -113,7 +113,7 @@ impl Lane {
 
         let bar_width = options.bar_width;
         let bar_height = options.bar_height;
-        let bar_y = options.bit_marker_fontsize + options.offsets.bit_marker_y_offset;
+        let bar_y = options.bit_marker_fontsize + options.offset.bit_marker_y;
 
         let mut offset = 0;
         for bit_range in &self.bit_ranges {
@@ -174,9 +174,9 @@ impl Lane {
         Ok(())
     }
 
-    pub fn display_height(&self, options: &RegisterRenderOptions) -> f64 {
-        let bit_marker_height = options.bit_marker_fontsize + options.offsets.bit_marker_y_offset;
-        let bar_height = options.bar_height;
+    pub fn display_height(&self, options: &RegisterRenderOptions, vspace: Option<u32>) -> f64 {
+        let bit_marker_height = options.bit_marker_fontsize + options.offset.bit_marker_y;
+        let bar_height = vspace.unwrap_or(options.bar_height);
         let max_attributes = self
             .bit_ranges
             .iter()
@@ -187,8 +187,8 @@ impl Lane {
             0
         } else {
             max_attributes * options.attribute_fontsize
-                + ((max_attributes - 1) * options.spacings.attribute_spacing)
-                + options.offsets.attribute_y_offset
+                + ((max_attributes - 1) * options.spacing.attribute_spacing)
+                + options.offset.attribute_y
         };
 
         f64::from(bit_marker_height + bar_height + attributes_height)
@@ -216,7 +216,7 @@ impl LaneBitRange {
 
         let bar_width = options.bar_width;
         let bar_height = options.bar_height;
-        let bar_y = options.bit_marker_fontsize + options.offsets.bit_marker_y_offset;
+        let bar_y = options.bit_marker_fontsize + options.offset.bit_marker_y;
 
         let bar_middle = f64::from(bar_y + bar_y + bar_height) / 2.;
 
@@ -323,7 +323,7 @@ impl LaneBitRange {
                 x = to_display_num(
                     f64::from(bar_width)
                         - f64::from(offset_start) * f64::from(bar_width) / f64::from(bit_width)
-                        - f64::from(options.offsets.bit_marker_x_offset)
+                        - f64::from(options.offset.bit_marker_x)
                 ),
                 y = options.bit_marker_fontsize,
                 fontsize = options.bit_marker_fontsize,
@@ -335,7 +335,7 @@ impl LaneBitRange {
                 x = to_display_num(
                     f64::from(bar_width)
                         - f64::from(offset_end) * f64::from(bar_width) / f64::from(bit_width)
-                        + f64::from(options.offsets.bit_marker_x_offset)
+                        + f64::from(options.offset.bit_marker_x)
                 ),
                 y = options.bit_marker_fontsize,
                 fontsize = options.bit_marker_fontsize,
@@ -363,8 +363,8 @@ impl LaneBitRange {
                         ),
                         y = bar_y
                             + bar_height
-                            + options.offsets.attribute_y_offset
-                            + (options.attribute_fontsize + options.spacings.attribute_spacing) * i,
+                            + options.offset.attribute_y
+                            + (options.attribute_fontsize + options.spacing.attribute_spacing) * i,
                         fontsize = options.attribute_fontsize,
                     )?;
                 }
@@ -374,8 +374,8 @@ impl LaneBitRange {
                         r##"<text y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0">"##,
                         y = bar_y
                             + bar_height
-                            + options.offsets.attribute_y_offset
-                            + (options.attribute_fontsize + options.spacings.attribute_spacing) * i,
+                            + options.offset.attribute_y
+                            + (options.attribute_fontsize + options.spacing.attribute_spacing) * i,
                         fontsize = options.attribute_fontsize,
                     )?;
                     for j in 0..self.length {

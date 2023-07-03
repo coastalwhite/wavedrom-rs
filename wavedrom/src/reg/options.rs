@@ -5,8 +5,8 @@ define_options! {
     /// A subset of the [`RegisterRenderOptions`]
     PartialRegisterRenderOptions {
         padding: RegisterPaddings[PartialRegisterPaddings],
-        spacings: RegisterSpacings[PartialRegisterSpacings],
-        offsets: RegisterOffsets[PartialRegisterOffsets],
+        spacing: RegisterSpacings[PartialRegisterSpacings],
+        offset: RegisterOffsets[PartialRegisterOffsets],
 
         bar_width: u32 => 800,
         bar_height: u32 => 40,
@@ -49,9 +49,9 @@ define_options! {
 
     /// A subset of the [`RegisterRenderOptions`]
     PartialRegisterOffsets {
-        bit_marker_x_offset: u32 => 2,
-        bit_marker_y_offset: u32 => 2,
+        bit_marker_x: u32 => 2,
+        bit_marker_y: u32 => 2,
 
-        attribute_y_offset: u32 => 4,
+        attribute_y: u32 => 4,
     }
 }

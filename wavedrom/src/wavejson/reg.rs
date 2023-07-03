@@ -88,12 +88,6 @@ impl From<RegJson> for RegisterFigure {
             .and_then(|config| config.bits)
             .unwrap_or_else(|| value.reg.iter().map(|range| range.bits).sum());
 
-        let vflip = value
-            .config
-            .as_ref()
-            .and_then(|config| config.vflip)
-            .unwrap_or_default();
-
         let mut lanes = if num_lanes == 1 {
             let mut lane = Lane::new();
 
@@ -183,10 +177,24 @@ impl From<RegJson> for RegisterFigure {
             lanes
         };
 
+        let vflip = value
+            .config
+            .as_ref()
+            .and_then(|config| config.vflip)
+            .unwrap_or_default();
         if vflip {
             lanes.reverse();
         }
 
-        RegisterFigure::with(lanes)
+        let mut figure = RegisterFigure::with(lanes);
+    
+        if let Some(vspace) = value.config.as_ref().and_then(|c| c.vspace) {
+            figure = figure.vspace(vspace);
+        }
+        if let Some(hspace) = value.config.as_ref().and_then(|c| c.hspace) {
+            figure = figure.hspace(hspace);
+        }
+
+        figure
     }
 }

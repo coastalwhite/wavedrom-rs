@@ -3,6 +3,8 @@ pub mod options;
 
 pub struct RegisterFigure {
     lanes: Vec<Lane>,
+    vspace: Option<u32>,
+    hspace: Option<u32>,
 }
 
 pub enum FieldString {
@@ -27,13 +29,25 @@ impl FromIterator<Lane> for RegisterFigure {
     fn from_iter<T: IntoIterator<Item = Lane>>(iter: T) -> Self {
         Self {
             lanes: <Vec<Lane>>::from_iter(iter),
+            vspace: None,
+            hspace: None,
         }
     }
 }
 
 impl RegisterFigure {
     pub fn with(lanes: Vec<Lane>) -> Self {
-        Self { lanes }
+        Self { lanes, vspace: None, hspace: None }
+    }
+
+    pub fn vspace(mut self, vspace: u32) -> Self {
+        self.vspace = Some(vspace);
+        self
+    }
+    
+    pub fn hspace(mut self, hspace: u32) -> Self {
+        self.hspace = Some(hspace);
+        self
     }
 }
 
