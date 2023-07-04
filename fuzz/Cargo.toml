@@ -1,0 +1,28 @@
+[package]
+name = "wavedrom-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.wavedrom]
+path = "../wavedrom"
+features = ["arbitrary"]
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "wavejson-render"
+path = "fuzz_targets/wavejson_render.rs"
+test = false
+doc = false

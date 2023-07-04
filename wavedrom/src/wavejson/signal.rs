@@ -5,6 +5,7 @@ use crate::signal::{CycleOffset, CycleState};
 use crate::signal::{Signal, SignalFigure, SignalFigureSection, SignalFigureSectionGroup};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct SignalJson {
     pub signal: Vec<SignalItem>,
     pub head: Option<Head>,
@@ -14,6 +15,7 @@ pub struct SignalJson {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[serde(untagged)]
 pub enum SignalItem {
     Group(Vec<SignalGroupItem>),
@@ -21,6 +23,7 @@ pub enum SignalItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[serde(untagged)]
 pub enum SignalGroupItem {
     String(String),
@@ -28,6 +31,7 @@ pub enum SignalGroupItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct SignalObject {
     pub name: Option<String>,
     pub wave: Option<String>,
@@ -38,6 +42,7 @@ pub struct SignalObject {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[serde(untagged)]
 pub enum SignalData {
     One(String),
@@ -45,6 +50,7 @@ pub enum SignalData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct Head {
     pub text: Option<String>,
     pub tick: Option<u32>,
@@ -52,6 +58,7 @@ pub struct Head {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct Foot {
     pub text: Option<String>,
     pub tock: Option<u32>,
@@ -59,6 +66,7 @@ pub struct Foot {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct Config {
     pub hscale: Option<u16>,
     pub skin: Option<String>,
