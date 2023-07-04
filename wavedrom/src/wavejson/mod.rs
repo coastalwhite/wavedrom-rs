@@ -10,6 +10,7 @@ use crate::Figure;
 pub mod signal;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[serde(untagged)]
 pub enum WaveJson {
     Signal(SignalJson),

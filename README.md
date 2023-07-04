@@ -55,6 +55,15 @@ cd ./tests
 ./run [path/to/skin.json5]
 ```
 
+## Fuzzing
+
+This project is fuzzed with [`cargo-fuzz`][cargo-fuzz]. This improves the
+stability of the project.
+
+```bash
+cargo +nightly fuzz run wavejson-render
+```
+
 ## MSRV
 
 This crate currently only compiles with Rust 1.70. To select that version use:
@@ -84,3 +93,4 @@ Licensed under a [MIT License](./LICENSE). The demo website utilizes icons from
 [mdbook-wavedrom]: ./mdbook-wavedrom
 [dtd]: https://en.wikipedia.org/wiki/Digital_timing_diagram
 [book]: https://coastalwhite.github.io/wavedrom-rs
+[cargo-fuzz]: https://github.com/rust-fuzz/cargo-fuzz
