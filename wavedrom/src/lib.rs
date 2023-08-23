@@ -117,7 +117,7 @@ wavedrom::render_json5(r##"
 //! [helvetica]: https://en.wikipedia.org/wiki/Helvetica
 //! [dtd]: https://en.wikipedia.org/wiki/Digital_timing_diagram
 //! [editor]: https://gburghoorn.com/wavedrom
-//! [cli]: https://github.com/coastalwhite/wavedrom-rs/tree/main/wavedrom-cli
+//! [cli]: https://github.com/coastalwhite/wavedrom-rs/tree/main/wavedrom
 //! [mdbook-wavedrom]: https://github.com/coastalwhite/wavedrom-rs/tree/main/mdbook-wavedrom
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
