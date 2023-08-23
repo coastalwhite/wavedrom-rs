@@ -1,0 +1,558 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>A Hitchhiker&#x27;s Guide to WaveDrom-rs</title>
+        <meta name="robots" content="noindex" />
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="A Installation Guide and Reference Guide for WaveDrom-rs">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = null;
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="wavedrom-js.html"><strong aria-hidden="true">1.</strong> Note on WaveDrom-js</a></li><li class="chapter-item expanded affix "><li class="part-title">Installation Guide</li><li class="chapter-item expanded "><a href="installation/crate.html"><strong aria-hidden="true">2.</strong> Rust Crate</a></li><li class="chapter-item expanded "><a href="installation/cli.html"><strong aria-hidden="true">3.</strong> Command-Line Interface</a></li><li class="chapter-item expanded "><a href="installation/editor.html"><strong aria-hidden="true">4.</strong> Editor Website</a></li><li class="chapter-item expanded "><a href="installation/mdbook.html"><strong aria-hidden="true">5.</strong> MdBook Preprocessor</a></li><li class="chapter-item expanded "><a href="installation/ci.html"><strong aria-hidden="true">6.</strong> GitHub CI</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference Guide</li><li class="chapter-item expanded "><a href="signal-types/mod.html"><strong aria-hidden="true">7.</strong> Signal Types</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="signal-types/top-bottom.html"><strong aria-hidden="true">7.1.</strong> Top & Bottom</a></li><li class="chapter-item expanded "><a href="signal-types/clock.html"><strong aria-hidden="true">7.2.</strong> Clock</a></li><li class="chapter-item expanded "><a href="signal-types/z-x.html"><strong aria-hidden="true">7.3.</strong> High Impedance & Undefined</a></li><li class="chapter-item expanded "><a href="signal-types/data.html"><strong aria-hidden="true">7.4.</strong> Data Types</a></li><li class="chapter-item expanded "><a href="signal-types/gap.html"><strong aria-hidden="true">7.5.</strong> Gaps</a></li><li class="chapter-item expanded "><a href="signal-types/up-down.html"><strong aria-hidden="true">7.6.</strong> Up & Down</a></li></ol></li><li class="chapter-item expanded "><a href="signal-groups.html"><strong aria-hidden="true">8.</strong> Signal Groups</a></li><li class="chapter-item expanded "><a href="header-footer.html"><strong aria-hidden="true">9.</strong> Header & Footer</a></li><li class="chapter-item expanded "><a href="cycle-enumeration.html"><strong aria-hidden="true">10.</strong> Cycle Enumeration</a></li><li class="chapter-item expanded "><a href="edges.html"><strong aria-hidden="true">11.</strong> Edges</a></li><li class="chapter-item expanded "><a href="skins.html"><strong aria-hidden="true">12.</strong> Skins</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">A Hitchhiker&#x27;s Guide to WaveDrom-rs</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/coastalwhite/wavedrom-rs/tree/main/docs" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="wavedrom-rs"><a class="header" href="#wavedrom-rs">WaveDrom-rs</a></h1>
+<p>This is the book for <a href="https://github.com/coastalwhite/wavedrom-rs"><code>wavedrom-rs</code></a>. It provides a reference on the
+features of <code>wavedrom-rs</code> and aims to be an extension of the original
+<a href="https://wavedrom.com/tutorial.html">Hitcherhiker's Guide to WaveDrom</a>.</p>
+<p>This book teaches you how to generate beautiful <a href="https://en.wikipedia.org/wiki/Digital_timing_diagram">Digital Timing
+Diagrams</a> such as the one illustrated below. These diagrams are easy
+to edit and extend.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 536 152" overflow="hidden" width="536" height="152"><defs><g id="cl"><path fill="none" d="M0,0v136" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><use transform="translate(48,8)" xlink:href="#cl"/><use transform="translate(96,8)" xlink:href="#cl"/><use transform="translate(144,8)" xlink:href="#cl"/><use transform="translate(192,8)" xlink:href="#cl"/><use transform="translate(240,8)" xlink:href="#cl"/><use transform="translate(288,8)" xlink:href="#cl"/><use transform="translate(336,8)" xlink:href="#cl"/><use transform="translate(384,8)" xlink:href="#cl"/><use transform="translate(432,8)" xlink:href="#cl"/><use transform="translate(480,8)" xlink:href="#cl"/><use transform="translate(528,8)" xlink:href="#cl"/></g><g><g transform="translate(8,16)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>clk</tspan></text></g><g transform="translate(40)"><path fill="none" d="M0,24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,48)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>req</tspan></text></g><g transform="translate(40)"><path fill="none" d="M0,24h44l8,-24h40l8,24h380" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,80)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>done</tspan></text></g><g transform="translate(40)"><path fill="none" d="M0,24h332l8,-24h40l8,24h92" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,112)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>state</tspan></text></g><g transform="translate(40)"><path fill="#FFF" d="M0,0h44l4,12l-4,12h-44v-24z" stroke="none"/><path fill="none" d="M0,0h44l4,12l-4,12h-44m0,-24" stroke-width="1" stroke="#000"/><g transform="translate(24,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>Idle</tspan></text></g><path fill="#FFF" d="M48,12l4,-12h88l4,12l-4,12h-88l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(96,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>Fetch</tspan></text></g><path fill="#FFF" d="M144,12l4,-12h88l4,12l-4,12h-88l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(192,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>Calculate</tspan></text></g><path fill="#FFF" d="M240,12l4,-12h88l4,12l-4,12h-88l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(288,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>Process</tspan></text></g><path fill="#FFF" d="M336,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(360,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>Return</tspan></text></g><path fill="#FFF" d="M384,12l4,-12h92v24h-92l-4,-12z" stroke="none"/><path fill="none" d="M384,12l4,-12h92m0,24h-92l-4,-12" stroke-width="1" stroke="#000"/><g transform="translate(432,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>Idle</tspan></text></g></g></g></g></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        { name: &quot;clk&quot;,  wave: &quot;p.........&quot; },
+        { name: &quot;req&quot;,  wave: &quot;010.......&quot; },
+        { name: &quot;done&quot;, wave: &quot;0......10.&quot; },
+        {
+            name: &quot;state&quot;,
+            wave: &quot;==.=.=.==.&quot;,
+            data: [ 'Idle', 'Fetch', 'Calculate', 'Process', 'Return', 'Idle' ]
+        }
+    ]
+}
+</code></pre>
+<p>This book has sections.</p>
+<ol>
+<li>Installation of <code>wavedrom-rs</code> for different environments</li>
+<li>Capabilities of <code>wavedrom-rs</code></li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="note-on-wavedrom-js"><a class="header" href="#note-on-wavedrom-js">Note on WaveDrom-js</a></h1>
+<p>Wavedrom-rs is a port of a <a href="https://wavedrom.com/">JavaScript implementation with the same
+name</a>. This project is not officially associated with that
+project, but does try to be an complete replacement for the <a href="https://en.wikipedia.org/wiki/Digital_timing_diagram">Digital Timing
+Diagram</a> part of this project.</p>
+<p>This project currently supports all features of the JavaScript project with
+exception of:</p>
+<ul>
+<li>JavaScript skins</li>
+<li>Custom tspans through JsonML in headers and footers</li>
+</ul>
+<p>There is currently no plan to implement these features.</p>
+<p>In turn, wavedrom-rs improves on its JavaScript counterpart in several areas.</p>
+<ul>
+<li>Proper handling of UTF-8 character widths</li>
+<li>Minimization of SVG in several areas</li>
+<li>More customization editor</li>
+<li>More correct rendering of edges</li>
+<li>JSON skins</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rust-crate"><a class="header" href="#rust-crate">Rust Crate</a></h1>
+<p>Wavedrom-rs can be used as a Rust crate to programmatically generate diagrams.
+The documentation for this can be found at
+<a href="https://docs.rs/wavedrom/latest/wavedrom/">docs.rs</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="command-line-interface"><a class="header" href="#command-line-interface">Command-Line Interface</a></h1>
+<p>There is an official Command-Line Interface for wavedrom that can easily be
+incorporated into scripts or workflows. This binary is available from the
+<a href="https://github.com/coastalwhite/wavedrom-rs/releases">GitHub releases</a>.</p>
+<p>A binary can be downloaded from here and be put into a location corresponding to
+a operating system.</p>
+<p>For Mac and Linux, <code>/usr/bin/local</code> is a good place to store the binary.</p>
+<h2 id="compilation-from-source"><a class="header" href="#compilation-from-source">Compilation from source</a></h2>
+<p>It is possible to compile from the GitHub directory. This generates the most
+up-to-date binary, but may be less stable. This requires <code>git</code> and the Rust
+toolchain <code>cargo</code> to be installed.</p>
+<pre><code class="language-bash">git clone https://github.com/coastalwhite/wavedrom-rs
+cargo install --path=./wavedrom
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="editor-website"><a class="header" href="#editor-website">Editor Website</a></h1>
+<p>The editor website uses <a href="https://webassembly.org/">WebAssembly</a> to run a only instance of wavedrom.
+It also allows easy customization, importation and exportation of skins. The
+official instance can be found <a href="https://gburghoorn.com/wavedrom">here</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="mdbook-preprocessor"><a class="header" href="#mdbook-preprocessor">MdBook Preprocessor</a></h1>
+<p>This offers an integration for <a href="https://github.com/coastalwhite/wavedrom-rs">wavedrom-rs</a> with <a href="https://rust-lang.github.io/mdBook/">mdbook</a>.</p>
+<h2 id="getting-started"><a class="header" href="#getting-started">Getting started</a></h2>
+<p>First, install the preprocessor utilizing the <a href="https://www.rust-lang.org/tools/install">Rust Toolchain</a>.</p>
+<pre><code class="language-bash">cargo install mdbook-wavedrom-rs
+</code></pre>
+<p>Then, add the preprocessor to the list of preprocessors in your <a href="https://rust-lang.github.io/mdBook/">mdbook</a>
+configuration file <code>book.toml</code>.</p>
+<pre><code class="language-toml"># book.toml
+
+[preprocessor.wavedrom-rs]
+</code></pre>
+<p>Afterwards, you should be able to add a <code>wavedrom</code> codeblock, which should
+automatically get replaced by a <a href="https://github.com/coastalwhite/wavedrom-rs">wavedrom-rs</a> diagram when building the
+<a href="https://rust-lang.github.io/mdBook/">mdbook</a>.</p>
+<pre><code class="language-markdown"># Chapter 1
+
+```wavedrom
+{
+    signal: [
+        { name: &quot;clk&quot;, wave: &quot;p.......&quot; },
+        { name: &quot;pulses&quot;, wave: &quot;0..10.10&quot; },
+    ]
+}
+```
+</code></pre>
+<h2 id="add-a-skin"><a class="header" href="#add-a-skin">Add a skin</a></h2>
+<p>A WaveDrom skin can be added by adding a path to a skin file in the <code>skin</code>
+property.</p>
+<pre><code class="language-toml"># book.toml
+
+[preprocessor.wavedrom-rs]
+skin = &quot;path/to/skin.json5&quot;
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="github-ci"><a class="header" href="#github-ci">GitHub CI</a></h1>
+<p>To incorporate wavedrom-rs into your CI/CD workflow you can download and run
+the <a href="installation/./cli.html">Command-Line Interface</a>. This is done with the following code.
+Remember to replace the <code>file.svg</code> and <code>diagram.svg</code> with your desired input
+and output file.</p>
+<pre><code class="language-yaml">- name: WaveDrom-rs render
+  run: |
+       curl -sLO https://github.com/coastalwhite/wavedrom-rs/releases/download/v0.1.0/wavedrom-x86_64-unknown-linux-gnu.tar.xz
+       tar xvf wavedrom-x86_64-unknown-linux-gnu.tar.xz 
+       chmod +x wavedrom-x86_64-unknown-linux-gnu/wavedrom
+       mv wavedrom-x86_64-unknown-linux-gnu/wavedrom /usr/local/bin/wavedrom
+       wavedrom -i file.json -o diagram.svg
+</code></pre>
+<p>The same can be done for the <a href="installation/./mdbook.html">MdBook Preprocessor</a>. Afterwards, it
+can be used by mdbook as a preprocessor.</p>
+<pre><code class="language-yaml">- name: WaveDrom-rs MdBook
+  run: |
+       curl -sLO https://github.com/coastalwhite/wavedrom-rs/releases/download/v0.1.0/mdbook-wavedrom-rs-x86_64-unknown-linux-gnu.tar.xz
+       tar xvf mdbook-wavedrom-rs-x86_64-unknown-linux-gnu.tar.xz 
+       chmod +x mdbook-wavedrom-rs-x86_64-unknown-linux-gnu/mdbook-wavedrom-rs
+       mv mdbook-wavedrom-rs-x86_64-unknown-linux-gnu/mdbook-wavedrom-rs /usr/local/bin/mdbook-wavedrom-rs
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="signal-types"><a class="header" href="#signal-types">Signal Types</a></h1>
+<p>This section lists all the different signal types.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="top--bottom"><a class="header" href="#top--bottom">Top &amp; Bottom</a></h1>
+<p>The Top and Bottom signals correspond to the logical <em>on</em> and <em>off</em> states. They
+are represented by a <code>1</code> and <code>0</code>. Transitions to and from these states takes a
+certain amount of time.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 448 152" overflow="hidden" width="448" height="152"><defs><g id="cl"><path fill="none" d="M0,0v136" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><use transform="translate(8,8)" xlink:href="#cl"/><use transform="translate(56,8)" xlink:href="#cl"/><use transform="translate(104,8)" xlink:href="#cl"/><use transform="translate(152,8)" xlink:href="#cl"/><use transform="translate(200,8)" xlink:href="#cl"/><use transform="translate(248,8)" xlink:href="#cl"/><use transform="translate(296,8)" xlink:href="#cl"/><use transform="translate(344,8)" xlink:href="#cl"/><use transform="translate(392,8)" xlink:href="#cl"/><use transform="translate(440,8)" xlink:href="#cl"/></g><g><g transform="translate(8,16)"><path fill="none" d="M0,0h44l8,24h40l8,-24h40l8,24h40l8,-24h40l8,24h40l8,-24h40l8,24h40l8,-24h44" stroke-width="1" stroke="#000"/></g><g transform="translate(8,48)"><path fill="none" d="M0,24h140l8,-24h232l8,24h44" stroke-width="1" stroke="#000"/></g><g transform="translate(8,80)"></g><g transform="translate(8,112)"><path fill="none" d="M0,0h92l8,24h88l8,-24h88l8,24h88l8,-24h44" stroke-width="1" stroke="#000"/></g></g></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        { wave: &quot;101010101&quot; },
+        { wave: &quot;000111110&quot; },
+
+        // You can create a vertical gap with an empty signal
+        {},
+
+        // You can continue a signal with '.'
+        { wave: &quot;1.0.1.0.1&quot; },
+    ]
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="clock"><a class="header" href="#clock">Clock</a></h1>
+<p>Clock Signals are periodic signals. There are several ways to manage a close
+signal.</p>
+<ul>
+<li><em>Positive edge</em> clock with <code>p</code> and <code>P</code></li>
+<li><em>Negative edge</em> clock with <code>n</code> and <code>N</code></li>
+<li>Manual <em>positive edge</em> or <em>High</em> with <code>h</code> or <code>H</code></li>
+<li>Manual <em>negitive edge</em> or <em>Low</em> with <code>l</code> or <code>L</code></li>
+</ul>
+<p>The state's case determines whether to place a edge marker.</p>
+<ul>
+<li>Lowercase does <em>NOT</em> contain a edge marker </li>
+<li>Uppercase does contain a edge marker</li>
+</ul>
+<p>The period of a clock signal can be controlled with the <code>period</code> option. Any
+fractional period will get rounded up to an integer.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 543 344" overflow="hidden" width="543" height="344"><defs><g id="pei"><path d="M-4,4L0,-4L4,4H-8z" fill="#000" stroke="none"/></g><g id="nei"><path d="M-4,-4L0,4L4,-4H-8z" fill="#000" stroke="none"/></g><g id="cl"><path fill="none" d="M0,0v328" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><use transform="translate(151,8)" xlink:href="#cl"/><use transform="translate(199,8)" xlink:href="#cl"/><use transform="translate(247,8)" xlink:href="#cl"/><use transform="translate(295,8)" xlink:href="#cl"/><use transform="translate(343,8)" xlink:href="#cl"/><use transform="translate(391,8)" xlink:href="#cl"/><use transform="translate(439,8)" xlink:href="#cl"/><use transform="translate(487,8)" xlink:href="#cl"/><use transform="translate(535,8)" xlink:href="#cl"/></g><g><g transform="translate(8,16)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>posedge clk</tspan></text></g><g transform="translate(143)"><path fill="none" d="M0,24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,48)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>posedge clk marked</tspan></text></g><g transform="translate(143)"><path fill="none" d="M0,24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24" stroke-width="1" stroke="#000"/><use transform="translate(0,12)" xlink:href="#pei"/><use transform="translate(48,12)" xlink:href="#pei"/><use transform="translate(96,12)" xlink:href="#pei"/><use transform="translate(144,12)" xlink:href="#pei"/><use transform="translate(192,12)" xlink:href="#pei"/><use transform="translate(240,12)" xlink:href="#pei"/><use transform="translate(288,12)" xlink:href="#pei"/><use transform="translate(336,12)" xlink:href="#pei"/></g></g><g transform="translate(8,80)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>posedge clk period=2</tspan></text></g><g transform="translate(143)"><path fill="none" d="M0,24v-24h96v24h96v-24h96v24h96" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,112)"><g transform="translate(143)"></g></g><g transform="translate(8,144)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>negedge clk</tspan></text></g><g transform="translate(143)"><path fill="none" d="M0,0v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,176)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>negedge clk marked</tspan></text></g><g transform="translate(143)"><path fill="none" d="M0,0v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24" stroke-width="1" stroke="#000"/><use transform="translate(0,12)" xlink:href="#nei"/><use transform="translate(48,12)" xlink:href="#nei"/><use transform="translate(96,12)" xlink:href="#nei"/><use transform="translate(144,12)" xlink:href="#nei"/><use transform="translate(192,12)" xlink:href="#nei"/><use transform="translate(240,12)" xlink:href="#nei"/><use transform="translate(288,12)" xlink:href="#nei"/><use transform="translate(336,12)" xlink:href="#nei"/></g></g><g transform="translate(8,208)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>negedge clk period=2</tspan></text></g><g transform="translate(143)"><path fill="none" d="M0,0v24h48v-24h48v24h48v-24h48v24h48v-24h48v24h48v-24h48" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,240)"><g transform="translate(143)"></g></g><g transform="translate(8,272)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>manual</tspan></text></g><g transform="translate(143)"><path fill="none" d="M0,0h48v24h48v-24h96v24h192" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,304)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>manual marked</tspan></text></g><g transform="translate(143)"><path fill="none" d="M0,0h48v24h48v-24h96v24h192" stroke-width="1" stroke="#000"/><use transform="translate(48,12)" xlink:href="#nei"/><use transform="translate(96,12)" xlink:href="#pei"/><use transform="translate(192,12)" xlink:href="#nei"/></g></g></g></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        { name: &quot;posedge clk&quot;,          wave: &quot;p.......&quot; },
+        { name: &quot;posedge clk marked&quot;,   wave: &quot;P.......&quot; },
+        { name: &quot;posedge clk period=2&quot;, wave: &quot;p.&quot;,       period: 4 },
+        {},
+        { name: &quot;negedge clk&quot;,          wave: &quot;n.......&quot; },
+        { name: &quot;negedge clk marked&quot;,   wave: &quot;N.......&quot; },
+        { name: &quot;negedge clk period=2&quot;, wave: &quot;n...&quot;,     period: 2 },
+        {},
+        { name: &quot;manual&quot;,               wave: &quot;hlh.l...&quot; },
+        { name: &quot;manual marked&quot;,        wave: &quot;HLH.L...&quot; },
+    ]
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="high-impedance--undefined"><a class="header" href="#high-impedance--undefined">High Impedance &amp; Undefined</a></h1>
+<p>The <em>High Impedance</em> is given by a <code>z</code> and is represented by a straight
+centered line. The <em>Undefined</em> is given by a <code>x</code> and is represented by hatch
+pattern.</p>
+<p>A <em>Undefined</em> line needs to be extended with a <code>.</code> to avoid a transition.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 562 88" overflow="hidden" width="562" height="88"><defs><pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)"><line x1="0" y="0" x2="0" y2="10" stroke="#000" stroke-width="1"/></pattern><g id="cl"><path fill="none" d="M0,0v72" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><use transform="translate(74,8)" xlink:href="#cl"/><use transform="translate(122,8)" xlink:href="#cl"/><use transform="translate(170,8)" xlink:href="#cl"/><use transform="translate(218,8)" xlink:href="#cl"/><use transform="translate(266,8)" xlink:href="#cl"/><use transform="translate(314,8)" xlink:href="#cl"/><use transform="translate(362,8)" xlink:href="#cl"/><use transform="translate(410,8)" xlink:href="#cl"/><use transform="translate(458,8)" xlink:href="#cl"/><use transform="translate(506,8)" xlink:href="#cl"/><use transform="translate(554,8)" xlink:href="#cl"/></g><g><g transform="translate(8,16)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>data</tspan></text></g><g transform="translate(66)"><path fill="none" d="M0,24h44c0,-12 4,-12 8,-12h136c0,-12 4,-12 8,-12h40c0,12 4,12 8,12h92" stroke-width="1" stroke="#000"/><path fill="url(#x-bg)" d="M336,12l4,-12h140v24h-140l-4,-12z" stroke="none"/><path fill="none" d="M336,12l4,-12h140m0,24h-140l-4,-12" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,48)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>response</tspan></text></g><g transform="translate(66)"><path fill="none" d="M0,24h48" stroke-width="1" stroke="#000"/><path fill="url(#x-bg)" d="M48,24l4,-24h140l-4,24h-140z" stroke-width="1" stroke="#000"/><path fill="none" d="M192,0h48" stroke-width="1" stroke="#000"/><path fill="url(#x-bg)" d="M240,0h92c0,12 4,12 8,12c-4,0 -8,0 -8,12h-88l-4,-24z" stroke-width="1" stroke="#000"/><path fill="none" d="M340,12h140" stroke-width="1" stroke="#000"/></g></g></g></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        { name: &quot;data&quot;,     wave: &quot;0z..1z.x..&quot; },
+        { name: &quot;response&quot;, wave: &quot;0x..1x.z..&quot; },
+    ]
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="data-types"><a class="header" href="#data-types">Data Types</a></h1>
+<p>To display general data in signal, we have the <code>data</code> property and several
+states that can contain data. The data states corresponding to the numbers <code>2</code>
+to <code>9</code> with different background colors. Similarly, the <code>=</code> state can also be
+used as a data state. The <code>data</code> property defines the data that goes into the
+data states. If the <code>data</code> property is given a string, the string is split
+over whitespace and filled into states. The <code>data</code> property can also be defined
+with an array.</p>
+<p>Data states need to be extended using the <code>.</code> state, otherwise it is transited
+to a new data state.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 621 152" overflow="hidden" width="621" height="152"><defs><g id="cl"><path fill="none" d="M0,0v136" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><use transform="translate(85,8)" xlink:href="#cl"/><use transform="translate(133,8)" xlink:href="#cl"/><use transform="translate(181,8)" xlink:href="#cl"/><use transform="translate(229,8)" xlink:href="#cl"/><use transform="translate(277,8)" xlink:href="#cl"/><use transform="translate(325,8)" xlink:href="#cl"/><use transform="translate(373,8)" xlink:href="#cl"/><use transform="translate(421,8)" xlink:href="#cl"/><use transform="translate(469,8)" xlink:href="#cl"/><use transform="translate(517,8)" xlink:href="#cl"/><use transform="translate(565,8)" xlink:href="#cl"/><use transform="translate(613,8)" xlink:href="#cl"/></g><g><g transform="translate(8,16)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>data states</tspan></text></g><g transform="translate(77)"><path fill="none" d="M0,24h48" stroke-width="1" stroke="#000"/><path fill="#FFF" d="M48,24l4,-24h40l4,12l-4,12h-44z" stroke-width="1" stroke="#000"/><path fill="#F7F7A1" d="M96,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><path fill="#F9D49F" d="M144,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><path fill="#ADDEFF" d="M192,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><path fill="#ACD5B6" d="M240,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><path fill="#A4ABE1" d="M288,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><path fill="#E8A8F0" d="M336,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><path fill="#FBDADA" d="M384,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><path fill="#FFF" d="M432,12l4,-12h40l4,24h-44l-4,-12z" stroke-width="1" stroke="#000"/><path fill="none" d="M480,24h48" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,48)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>with text</tspan></text></g><g transform="translate(77)"><path fill="none" d="M0,24h48" stroke-width="1" stroke="#000"/><path fill="#FFF" d="M48,24l4,-24h40l4,12l-4,12h-44z" stroke-width="1" stroke="#000"/><g transform="translate(72,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>a</tspan></text></g><path fill="#F7F7A1" d="M96,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(120,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>b</tspan></text></g><path fill="#F9D49F" d="M144,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(168,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>c</tspan></text></g><path fill="#ADDEFF" d="M192,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(216,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>d</tspan></text></g><path fill="#ACD5B6" d="M240,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(264,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>e</tspan></text></g><path fill="#A4ABE1" d="M288,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(312,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>f</tspan></text></g><path fill="#E8A8F0" d="M336,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(360,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>g</tspan></text></g><path fill="#FBDADA" d="M384,12l4,-12h40l4,12l-4,12h-40l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(408,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>h</tspan></text></g><path fill="#FFF" d="M432,12l4,-12h40l4,24h-44l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(456,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>i</tspan></text></g><path fill="none" d="M480,24h48" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,80)"><g transform="translate(77)"></g></g><g transform="translate(8,112)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>continued</tspan></text></g><g transform="translate(77)"><path fill="#FFF" d="M0,0h140l4,12l-4,12h-140v-24z" stroke="none"/><path fill="none" d="M0,0h140l4,12l-4,12h-140m0,-24" stroke-width="1" stroke="#000"/><g transform="translate(72,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>First State</tspan></text></g><path fill="#FFF" d="M144,12l4,-12h136l4,12l-4,12h-136l-4,-12z" stroke-width="1" stroke="#000"/><g transform="translate(216,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>Second State</tspan></text></g><path fill="#FFF" d="M288,12l4,-12h236v24h-236l-4,-12z" stroke="none"/><path fill="none" d="M288,12l4,-12h236m0,24h-236l-4,-12" stroke-width="1" stroke="#000"/><g transform="translate(408,12)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>Third State</tspan></text></g></g></g></g></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        { name: &quot;data states&quot;, wave: &quot;023456789=0&quot; },
+        { name: &quot;with text&quot;,   wave: &quot;023456789=0&quot;, data: &quot;a b c d e f g h i&quot; },
+        {},
+        { name: &quot;continued&quot;,   wave: &quot;2..2..2....&quot;, data: [
+            &quot;First State&quot;,
+            &quot;Second State&quot;,
+            &quot;Third State&quot;,
+        ]}
+    ]
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="gaps"><a class="header" href="#gaps">Gaps</a></h1>
+<p>Gaps in the signal can be added with the <code>|</code> state. This extends the previous
+signal by one and placed a gap indicator over extension cycle.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 344 120" overflow="hidden" width="344" height="120"><defs><g id="gap"><path d="M-10,18C-6,18 -2.867722,3.9047482 -2,0S2,-18 6,-18H10C6,-18 2.867722,-3.9047482 2,0S-2,18 -6,18H-10z" fill="#FFF" stroke="none"/><path d="M-10,18C-6,18 -2.867722,3.9047482 -2,0S2,-18 6,-18" fill="none" stroke="#000" stroke-width="1"/><path d="M10,-18C6,-18 2.867722,-3.9047482 2,0S-2,18 -6,18" fill="none" stroke="#000" stroke-width="1"/></g><g id="cl"><path fill="none" d="M0,0v104" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><use transform="translate(48,8)" xlink:href="#cl"/><use transform="translate(96,8)" xlink:href="#cl"/><use transform="translate(144,8)" xlink:href="#cl"/><use transform="translate(192,8)" xlink:href="#cl"/><use transform="translate(240,8)" xlink:href="#cl"/><use transform="translate(288,8)" xlink:href="#cl"/><use transform="translate(336,8)" xlink:href="#cl"/></g><g><g transform="translate(8,16)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>clk</tspan></text></g><g transform="translate(40)"><path fill="none" d="M0,24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24" stroke-width="1" stroke="#000"/><use transform="translate(168,12)" xlink:href="#gap"/></g></g><g transform="translate(8,48)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>req</tspan></text></g><g transform="translate(40)"><path fill="none" d="M0,24h44l8,-24h40l8,24h188" stroke-width="1" stroke="#000"/><use transform="translate(168,12)" xlink:href="#gap"/></g></g><g transform="translate(8,80)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>done</tspan></text></g><g transform="translate(40)"><path fill="none" d="M0,24h188l8,-24h40l8,24h44" stroke-width="1" stroke="#000"/><use transform="translate(168,12)" xlink:href="#gap"/></g></g></g></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        { name: &quot;clk&quot;,  wave: &quot;p..|..&quot; },
+        { name: &quot;req&quot;,  wave: &quot;010|..&quot; },
+        { name: &quot;done&quot;, wave: &quot;0..|10&quot; },
+    ]
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="up--down"><a class="header" href="#up--down">Up &amp; Down</a></h1>
+<p>The <em>Up</em> and <em>Down</em> states are used to gradually transition to a logical <code>1</code> and
+<code>0</code>. <em>Up</em> and <em>Down</em> are represented with a <code>u</code> and <code>d</code>.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 538 88" overflow="hidden" width="538" height="88"><defs><g id="cl"><path fill="none" d="M0,0v72" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><use transform="translate(50,8)" xlink:href="#cl"/><use transform="translate(98,8)" xlink:href="#cl"/><use transform="translate(146,8)" xlink:href="#cl"/><use transform="translate(194,8)" xlink:href="#cl"/><use transform="translate(242,8)" xlink:href="#cl"/><use transform="translate(290,8)" xlink:href="#cl"/><use transform="translate(338,8)" xlink:href="#cl"/><use transform="translate(386,8)" xlink:href="#cl"/><use transform="translate(434,8)" xlink:href="#cl"/><use transform="translate(482,8)" xlink:href="#cl"/><use transform="translate(530,8)" xlink:href="#cl"/></g><g><g transform="translate(8,16)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>up</tspan></text></g><g transform="translate(42)"><path fill="none" d="M0,24h140c4,0 4,-24 8,-24h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0c4,0 4,24 8,24h136c4,0 4,-24 8,-24h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,48)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>down</tspan></text></g><g transform="translate(42)"><path fill="none" d="M0,0h92c4,0 4,24 8,24h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0c4,0 4,-24 8,-24h88c4,0 4,24 8,24h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0h4m4,0c4,0 4,-24 8,-24h44" stroke-width="1" stroke="#000"/></g></g></g></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        { name: &quot;up&quot;,   wave: &quot;0..u..0..u&quot; },
+        { name: &quot;down&quot;, wave: &quot;1.d.1.d..1&quot; },
+    ]
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="signal-groups"><a class="header" href="#signal-groups">Signal Groups</a></h1>
+<p>A sequence of signals can be grouped by putting them into an array. A name /
+label for the group can also be added by starting the array with a string.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 327 184" overflow="hidden" width="327" height="184"><defs><g id="cl"><path fill="none" d="M0,0v168" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><use transform="translate(79,8)" xlink:href="#cl"/><use transform="translate(127,8)" xlink:href="#cl"/><use transform="translate(175,8)" xlink:href="#cl"/><use transform="translate(223,8)" xlink:href="#cl"/><use transform="translate(271,8)" xlink:href="#cl"/><use transform="translate(319,8)" xlink:href="#cl"/></g><g><g transform="translate(45,76)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0" transform="rotate(270)"><tspan>embed</tspan></text></g><path fill="none" d="M52,48m4,0c-3,0 -4,1 -4,4v48c0,3 1,4 4,4" stroke="#000"/><g transform="translate(19,60)"><text text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0" transform="rotate(270)"><tspan>group</tspan></text></g><path fill="none" d="M26,16m4,0c-3,0 -4,1 -4,4v80c0,3 1,4 4,4" stroke="#000"/><path fill="none" d="M26,112m4,0c-3,0 -4,1 -4,4v48c0,3 1,4 4,4" stroke="#000"/></g><g><g transform="translate(60,16)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>A</tspan></text></g><g transform="translate(19)"><path fill="none" d="M0,24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24v-24h24v24h24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(60,48)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>B</tspan></text></g><g transform="translate(19)"><path fill="#FFF" d="M0,0h240v24h-240v-24z" stroke="none"/><path fill="none" d="M0,0h240m0,24h-240m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(60,80)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>C</tspan></text></g><g transform="translate(19)"><path fill="#F7F7A1" d="M0,0h240v24h-240v-24z" stroke="none"/><path fill="none" d="M0,0h240m0,24h-240m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(60,112)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>D</tspan></text></g><g transform="translate(19)"><path fill="#F9D49F" d="M0,0h240v24h-240v-24z" stroke="none"/><path fill="none" d="M0,0h240m0,24h-240m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(60,144)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>E</tspan></text></g><g transform="translate(19)"><path fill="#ADDEFF" d="M0,0h240v24h-240v-24z" stroke="none"/><path fill="none" d="M0,0h240m0,24h-240m0,-24" stroke-width="1" stroke="#000"/></g></g></g></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        [
+            &quot;group&quot;,
+            { name: &quot;A&quot;, wave: &quot;p....&quot; },
+            [
+                &quot;embed&quot;,
+                { name: &quot;B&quot;, wave: &quot;2....&quot; },
+                { name: &quot;C&quot;, wave: &quot;3....&quot; },
+            ],
+        ],
+        [
+            { name: &quot;D&quot;, wave: &quot;4....&quot; },
+            { name: &quot;E&quot;, wave: &quot;5....&quot; },
+        ]
+    ]
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="header--footer"><a class="header" href="#header--footer">Header &amp; Footer</a></h1>
+<p>Both the <code>head</code> and the <code>foot</code> properties can be used to add header and footer
+text.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 323 248" overflow="hidden" width="323" height="248"><defs><g id="cl"><path fill="none" d="M0,0v168" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><text x="161" y="24" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="24" fill="#000" letter-spacing="0"><tspan>Hello World!</tspan></text><g><use transform="translate(27,40)" xlink:href="#cl"/><use transform="translate(75,40)" xlink:href="#cl"/><use transform="translate(123,40)" xlink:href="#cl"/><use transform="translate(171,40)" xlink:href="#cl"/><use transform="translate(219,40)" xlink:href="#cl"/><use transform="translate(267,40)" xlink:href="#cl"/><use transform="translate(315,40)" xlink:href="#cl"/></g><g><g transform="translate(8,48)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>A</tspan></text></g><g transform="translate(19)"><path fill="#FFF" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,80)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>B</tspan></text></g><g transform="translate(19)"><path fill="#F7F7A1" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,112)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>C</tspan></text></g><g transform="translate(19)"><path fill="#F9D49F" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,144)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>D</tspan></text></g><g transform="translate(19)"><path fill="#ADDEFF" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,176)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>E</tspan></text></g><g transform="translate(19)"><path fill="#ACD5B6" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g></g><text x="153" y="224" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="24" fill="#000" letter-spacing="0"><tspan>Bye World!</tspan></text></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        { name: &quot;A&quot;, wave: &quot;2.....&quot; },
+        { name: &quot;B&quot;, wave: &quot;3.....&quot; },
+        { name: &quot;C&quot;, wave: &quot;4.....&quot; },
+        { name: &quot;D&quot;, wave: &quot;5.....&quot; },
+        { name: &quot;E&quot;, wave: &quot;6.....&quot; },
+    ],
+    head: {
+        text: &quot;Hello World!&quot;,
+    },
+    foot: {
+        text: &quot;Bye World!&quot;,
+    }
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cycle-enumeration-marker"><a class="header" href="#cycle-enumeration-marker">Cycle Enumeration Marker</a></h1>
+<p>The <code>head.tick</code> and the <code>foot.tock</code> properties can be set to add cycle
+enumeration markers. The <code>every</code> property defines every how many cycles a
+marker should be put.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 323 208" overflow="hidden" width="323" height="208"><defs><g id="cl"><path fill="none" d="M0,0v168" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><text x="51" y="20" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="12" fill="#000" letter-spacing="0"><tspan>42</tspan></text><text x="99" y="20" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="12" fill="#000" letter-spacing="0"><tspan>43</tspan></text><text x="147" y="20" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="12" fill="#000" letter-spacing="0"><tspan>44</tspan></text><text x="195" y="20" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="12" fill="#000" letter-spacing="0"><tspan>45</tspan></text><text x="243" y="20" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="12" fill="#000" letter-spacing="0"><tspan>46</tspan></text><text x="291" y="20" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="12" fill="#000" letter-spacing="0"><tspan>47</tspan></text></g><g><use transform="translate(27,20)" xlink:href="#cl"/><use transform="translate(75,20)" xlink:href="#cl"/><use transform="translate(123,20)" xlink:href="#cl"/><use transform="translate(171,20)" xlink:href="#cl"/><use transform="translate(219,20)" xlink:href="#cl"/><use transform="translate(267,20)" xlink:href="#cl"/><use transform="translate(315,20)" xlink:href="#cl"/></g><g><g transform="translate(8,28)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>A</tspan></text></g><g transform="translate(19)"><path fill="#FFF" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,60)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>B</tspan></text></g><g transform="translate(19)"><path fill="#F7F7A1" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,92)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>C</tspan></text></g><g transform="translate(19)"><path fill="#F9D49F" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,124)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>D</tspan></text></g><g transform="translate(19)"><path fill="#ADDEFF" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,156)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>E</tspan></text></g><g transform="translate(19)"><path fill="#ACD5B6" d="M0,0h288v24h-288v-24z" stroke="none"/><path fill="none" d="M0,0h288m0,24h-288m0,-24" stroke-width="1" stroke="#000"/></g></g></g><g><text x="51" y="188" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="12" fill="#000" letter-spacing="0"><tspan>1</tspan></text><text x="147" y="188" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="12" fill="#000" letter-spacing="0"><tspan>3</tspan></text><text x="243" y="188" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="12" fill="#000" letter-spacing="0"><tspan>5</tspan></text></g></svg></pre>
+<pre><code class="language-json">{
+    signal: [
+        { name: &quot;A&quot;, wave: &quot;2.....&quot; },
+        { name: &quot;B&quot;, wave: &quot;3.....&quot; },
+        { name: &quot;C&quot;, wave: &quot;4.....&quot; },
+        { name: &quot;D&quot;, wave: &quot;5.....&quot; },
+        { name: &quot;E&quot;, wave: &quot;6.....&quot; },
+    ],
+    head: {
+        tick: 42,
+    },
+    foot: {
+        tock: 1,
+        every: 2,
+    }
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="edges"><a class="header" href="#edges">Edges</a></h1>
+<p>Edges or arrows can be used to better highlight certain properties of the
+diagram. An edge is defined as between two nodes. Nodes are defined on signals
+and then edges are defined as <code>&lt;start&gt;&lt;type&gt;&lt;end&gt; [label]</code> in the <code>edge</code>
+property.</p>
+<pre class="wavedrom"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 611 184" overflow="hidden" width="611" height="184"><defs><g id="cl"><path fill="none" d="M0,0v168" stroke-width="1" stroke-dasharray="2" stroke="#CCC"/></g></defs><rect width="100%" height="100%" fill="#FFF"/><g><use transform="translate(27,8)" xlink:href="#cl"/><use transform="translate(75,8)" xlink:href="#cl"/><use transform="translate(123,8)" xlink:href="#cl"/><use transform="translate(171,8)" xlink:href="#cl"/><use transform="translate(219,8)" xlink:href="#cl"/><use transform="translate(267,8)" xlink:href="#cl"/><use transform="translate(315,8)" xlink:href="#cl"/><use transform="translate(363,8)" xlink:href="#cl"/><use transform="translate(411,8)" xlink:href="#cl"/><use transform="translate(459,8)" xlink:href="#cl"/><use transform="translate(507,8)" xlink:href="#cl"/><use transform="translate(555,8)" xlink:href="#cl"/><use transform="translate(603,8)" xlink:href="#cl"/></g><g><g transform="translate(8,16)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>A</tspan></text></g><g transform="translate(19)"><path fill="none" d="M0,24h44l8,-24h424l8,24h92" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,48)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>B</tspan></text></g><g transform="translate(19)"><path fill="none" d="M0,24h92l8,-24h376l8,24h92" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,80)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>C</tspan></text></g><g transform="translate(19)"><path fill="none" d="M0,24h140l8,-24h232l8,24h188" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,112)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>D</tspan></text></g><g transform="translate(19)"><path fill="none" d="M0,24h188l8,-24h136l8,24h236" stroke-width="1" stroke="#000"/></g></g><g transform="translate(8,144)"><g transform="translate(0,12)"><text dominant-baseline="middle" font-family="Helvetica" font-size="14" fill="#000" letter-spacing="0"><tspan>E</tspan></text></g><g transform="translate(19)"><path fill="none" d="M0,24h236l8,-24h40l8,24h284" stroke-width="1" stroke="#000"/></g></g></g><g><g><path d="M79,28C99,28 99,60 119,60" fill="none" stroke="#00F" stroke-width="1"/><path d="" fill="#00F" stroke="none"/></g><g><path d="M167.5,92C143.5,92 96.29999999999998,99 77.1,35" fill="none" stroke="#00F" stroke-width="1"/><path d="" fill="#00F" stroke="none"/></g><g><path d="M174.5,92C186.5,92 207.3,85 215.751,113.169" fill="none" stroke="#00F" stroke-width="1"/><path d="M216.9,117L218.433,108.188L210.77,110.487z" fill="#00F" stroke="none"/></g><g><path d="M221.1,131C230.7,163 251,156 263,156" fill="none" stroke="#00F" stroke-width="1"/><path d="" fill="#00F" stroke="none"/></g><g><path d="M271,156H309" fill="none" stroke="#00F" stroke-width="1"/><path d="M313,156L305,152L305,160z" fill="#00F" stroke="none"/></g><g><path d="M317,154.667L355.672,128.885" fill="none" stroke="#00F" stroke-width="1"/><path d="M359,126.667L350.125,127.776L354.562,134.432z" fill="#00F" stroke="none"/></g><g><path d="M367,124C379,124 399.29999999999995,131 407.751,102.831" fill="none" stroke="#00F" stroke-width="1"/><path d="M408.9,99L402.77,105.513L410.433,107.812z" fill="#00F" stroke="none"/></g><g><path d="M415,92C459,92 459,60 501,60" fill="none" stroke="#00F" stroke-width="1"/><path d="M505,60L497,56L497,64z" fill="#00F" stroke="none"/></g><g><path d="M413.1,85C432.3,21 481,28 501,28" fill="none" stroke="#00F" stroke-width="1"/><path d="M505,28L497,24L497,32z" fill="#00F" stroke="none"/></g><g><rect x="71" y="21" width="8" height="14" stroke="none" fill="#FFF"/><text x="75" y="28" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>a</tspan></text></g><g><rect x="119" y="53" width="8" height="14" stroke="none" fill="#FFF"/><text x="123" y="60" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>b</tspan></text></g><g><rect x="93" y="37" width="12" height="14" stroke="none" fill="#FFF"/><text x="99" y="44" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>t1</tspan></text></g><g><rect x="167.5" y="85" width="7" height="14" stroke="none" fill="#FFF"/><text x="171" y="92" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>c</tspan></text></g><g><rect x="71" y="21" width="8" height="14" stroke="none" fill="#FFF"/><text x="75" y="28" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>a</tspan></text></g><g><rect x="114.7" y="77.83333333333333" width="12" height="14" stroke="none" fill="#FFF"/><text x="120.7" y="84.83333333333333" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>t2</tspan></text></g><g><rect x="167.5" y="85" width="7" height="14" stroke="none" fill="#FFF"/><text x="171" y="92" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>c</tspan></text></g><g><rect x="215" y="117" width="8" height="14" stroke="none" fill="#FFF"/><text x="219" y="124" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>d</tspan></text></g><g><rect x="177" y="86.83333333333333" width="39" height="14" stroke="none" fill="#FFF"/><text x="196.5" y="93.83333333333333" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>time 3</tspan></text></g><g><rect x="215" y="117" width="8" height="14" stroke="none" fill="#FFF"/><text x="219" y="124" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>d</tspan></text></g><g><rect x="263" y="149" width="8" height="14" stroke="none" fill="#FFF"/><text x="267" y="156" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>e</tspan></text></g><g><rect x="263" y="149" width="8" height="14" stroke="none" fill="#FFF"/><text x="267" y="156" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>e</tspan></text></g><g><rect x="313" y="149" width="4" height="14" stroke="none" fill="#FFF"/><text x="315" y="156" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>f</tspan></text></g><g><rect x="313" y="149" width="4" height="14" stroke="none" fill="#FFF"/><text x="315" y="156" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>f</tspan></text></g><g><rect x="359" y="117" width="8" height="14" stroke="none" fill="#FFF"/><text x="363" y="124" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>g</tspan></text></g><g><rect x="359" y="117" width="8" height="14" stroke="none" fill="#FFF"/><text x="363" y="124" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>g</tspan></text></g><g><rect x="407" y="85" width="8" height="14" stroke="none" fill="#FFF"/><text x="411" y="92" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>h</tspan></text></g><g><rect x="407" y="85" width="8" height="14" stroke="none" fill="#FFF"/><text x="411" y="92" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>h</tspan></text></g><g><rect x="505" y="53" width="4" height="14" stroke="none" fill="#FFF"/><text x="507" y="60" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>i</tspan></text></g><g><rect x="428.5" y="69" width="61" height="14" stroke="none" fill="#FFF"/><text x="459" y="76" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>some text</tspan></text></g><g><rect x="407" y="85" width="8" height="14" stroke="none" fill="#FFF"/><text x="411" y="92" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>h</tspan></text></g><g><rect x="505" y="21" width="4" height="14" stroke="none" fill="#FFF"/><text x="507" y="28" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica" font-size="14" letter-spacing="0" fill="#000"><tspan>j</tspan></text></g></g></svg></pre>
+<pre><code class="language-json">{ signal: [
+  { name: 'A', wave: '01........0.',  node: '.a........j' },
+  { name: 'B', wave: '0.1.......0.',  node: '..b.......i' },
+  { name: 'C', wave: '0..1....0...',  node: '...c....h..' },
+  { name: 'D', wave: '0...1..0....',  node: '....d..g...' },
+  { name: 'E', wave: '0....10.....',  node: '.....ef....' }
+  ],
+  edge: [
+    'a~b t1', 'c-~a t2', 'c-~&gt;d time 3', 'd~-e',
+    'e~&gt;f', 'f-&gt;g', 'g-~&gt;h', 'h~&gt;i some text', 'h~-&gt;j'
+  ]
+}
+</code></pre>
+<p>There are several types of arrows.</p>
+<div class="table-wrapper"><table><thead><tr><th>Identifier</th><th>Type</th><th>Property</th></tr></thead><tbody>
+<tr><td><code>~</code></td><td>Spline</td><td>Start and ending horizontal</td></tr>
+<tr><td><code>-~</code></td><td>Spline</td><td>Start horizontal</td></tr>
+<tr><td><code>~-</code></td><td>Spline</td><td>Ending horizontal</td></tr>
+<tr><td><code>-</code></td><td>Sharp</td><td>Shortest path</td></tr>
+<tr><td><code>+</code></td><td>Sharp</td><td>Shortest path with bars</td></tr>
+<tr><td>`-</td><td>-`</td><td>Sharp</td></tr>
+<tr><td>`-</td><td>`</td><td>Sharp</td></tr>
+<tr><td>`</td><td>-`</td><td>Sharp</td></tr>
+</tbody></table>
+</div>
+<p>For all except the <code>+</code> the <code>&lt;</code> and <code>&gt;</code> can be appended to add arrows at the
+beginning and the end.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="skins"><a class="header" href="#skins">Skins</a></h1>
+<p>Skins allow customization of font sizes, colors, dimensions, paddings and
+spacings. Skins are created with a JSON that can contain any subset of the
+assemble and render options.</p>
+<p>A <a href="https://github.com/coastalwhite/wavedrom-rs/tree/main/skins/template.json5">template skin
+file</a>
+can be found in the repository. Skins can also be previewed, edited and exported
+from the editor by opening the <code>Render Settings</code>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </div>
+    </body>
+</html>
