@@ -89,7 +89,7 @@ Licensed under a [MIT License](./LICENSE). The demo website utilizes icons from
 [lucide]: https://lucide.dev/
 [hitchhiker]: https://wavedrom.com/tutorial.html
 [cratesio]: https://crates.io/crates/wavedrom-rs
-[cli]: ./wavedrom-cli
+[cli]: ./wavedrom
 [mdbook-wavedrom]: ./mdbook-wavedrom
 [dtd]: https://en.wikipedia.org/wiki/Digital_timing_diagram
 [book]: https://coastalwhite.github.io/wavedrom-rs

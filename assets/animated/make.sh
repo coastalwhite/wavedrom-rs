@@ -12,7 +12,7 @@ HEIGHT=196
 
 set -e
 
-(cd ../../wavedrom-cli && cargo build --quiet)
+(cd ../../wavedrom && cargo build --quiet)
 
 cli="../../target/debug/wavedrom"
 
