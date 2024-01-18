@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::io::{stdin, stdout, BufWriter, Read};
+use std::io::{stdin, stdout, BufWriter, Read, Write};
 use std::path::PathBuf;
 use std::path::Path;
 
@@ -142,6 +142,65 @@ fn get_file_extension(file_path: &str) -> Option<&str> {
     }
 }
 
+fn export_svg_file(output_path:&PathBuf, svg_data:&[u8]) -> std::result::Result<(), std::io::Error>{
+    let output_file = match std::fs::OpenOptions::new()
+                            .write(true)
+                            .create(true)
+                            .truncate(true)
+                            .open(&output_path)
+                        {
+                            Ok(f) => f,
+                            Err(err) => {
+                                eprintln!("[ERROR]: Failed to open output file. Reason: {err}");
+                                std::process::exit(1);
+                            }
+                        };
+                        let mut writer = BufWriter::new(output_file);
+                        match writer.write(svg_data) {
+                            Ok(_s) => {
+                                Ok(())
+                            },
+                            Err(e) => {
+                                eprintln!("[ERROR]: Error writing svg file: {e:?}.");
+                                Err(e)
+                            }
+                        }
+}
+
+fn export_png_file(flags: &Flags, output_path:&PathBuf, svg_data:&[u8]) -> std::result::Result<(), std::io::Error>{
+    let opt = usvg::Options::default();
+    let mut utree = usvg::Tree::from_data(&svg_data, &opt).unwrap();
+    let mut fontdb = usvg::fontdb::Database::new();
+    fontdb.load_system_fonts();
+    utree.convert_text(&fontdb);
+    let rtree = resvg::Tree::from_usvg(&utree);
+    let size = rtree.size.to_int_size();
+
+    let scale = match &flags.png_scale {
+        None => 1.0,
+        Some(scale) => {
+            match scale.parse::<f32>() {
+                Err(e) => {
+                    eprintln!("[ERROR]: Error parsing png_scale: {e:?}.");
+                    std::process::exit(1)
+                }
+                Ok(parsed_scale) => parsed_scale
+            }
+        }
+    };
+
+    let mut pixmap = resvg::tiny_skia::Pixmap::new((size.width() as f32 * scale) as u32, (size.height() as f32 * scale) as u32).unwrap();
+    rtree.render(usvg::Transform::from_scale(scale, scale), &mut pixmap.as_mut());
+
+    match pixmap.save_png(&output_path) {
+        Err(e) => { 
+            eprintln!("[ERROR]: Error Encoding png: {e:?}.");
+            std::process::exit(1)
+        }
+        Ok(()) => Ok(())
+    }
+}
+
 fn main() {
     let flags = Flags::get().unwrap_or_else(|err| {
         eprintln!("[ERROR]: {err}");
@@ -170,7 +229,7 @@ fn main() {
                 }
             }
         }
-        Some(input_path) => match std::fs::read_to_string(input_path) {
+        Some(ref input_path) => match std::fs::read_to_string(input_path) {
             Ok(content) => content,
             Err(err) => {
                 eprintln!("[ERROR]: Failed to read content from file. Reason: {err}");
@@ -211,66 +270,36 @@ fn main() {
 
     let Figure::Signal(figure) = figure;
     let assembled = figure.assemble_with_options(assemble_options);
+
+    let mut svg_data = BufWriter::new(Vec::new());
+    match assembled.write_svg_with_options(&mut svg_data, &render_options) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("[ERROR]: Failed to assemble figure. Reason: {e}");
+        }
+    }
     
     let result = match flags.output {
         None => {
             let mut writer = BufWriter::new(stdout().lock());
-            assembled.write_svg(&mut writer)
+            match writer.write(svg_data.buffer()) {
+                Ok(_s) => {
+                    Ok(())
+                },
+                Err(e) => {
+                    eprintln!("[ERROR]: Error writing svg file: {e:?}.");
+                    Err(e)
+                }
+            }
         }
-        Some(output_path) => {
+        Some(ref output_path) => {
             if let Some(extension) = get_file_extension(&output_path.as_os_str().to_str().unwrap()) {
                 match extension.to_lowercase().as_str() {
                     "svg" => {
-                        let output_file = match std::fs::OpenOptions::new()
-                            .write(true)
-                            .create(true)
-                            .truncate(true)
-                            .open(&output_path)
-                        {
-                            Ok(f) => f,
-                            Err(err) => {
-                                eprintln!("[ERROR]: Failed to open output file. Reason: {err}");
-                                std::process::exit(1);
-                            }
-                        };
-                        let mut writer = BufWriter::new(output_file);
-                        assembled.write_svg_with_options(&mut writer, &render_options)
+                        export_svg_file(output_path, &svg_data.buffer())
                     },
                     "png" => {
-                        let mut svg_data = BufWriter::new(Vec::new());
-                        assembled.write_svg_with_options(&mut svg_data, &render_options).unwrap();
-
-                        let opt = usvg::Options::default();
-                        let mut utree = usvg::Tree::from_data(&svg_data.buffer(), &opt).unwrap();
-                        let mut fontdb = usvg::fontdb::Database::new();
-                        fontdb.load_system_fonts();
-                        utree.convert_text(&fontdb);
-                        let rtree = resvg::Tree::from_usvg(&utree);
-                        let size = rtree.size.to_int_size();
-
-                        let scale = match flags.png_scale {
-                            None => 1.0,
-                            Some(scale) => {
-                                match scale.parse::<f32>() {
-                                    Err(e) => {
-                                        eprintln!("[ERROR]: Error parsing png_scale: {e:?}.");
-                                        std::process::exit(1)
-                                    }
-                                    Ok(parsed_scale) => parsed_scale
-                                }
-                            }
-                        };
-
-                        let mut pixmap = resvg::tiny_skia::Pixmap::new((size.width() as f32 * scale) as u32, (size.height() as f32 * scale) as u32).unwrap();
-                        rtree.render(usvg::Transform::from_scale(scale, scale), &mut pixmap.as_mut());
-
-                        match pixmap.save_png(&output_path) {
-                            Err(e) => { 
-                                eprintln!("[ERROR]: Error Encoding png: {e:?}.");
-                                std::process::exit(1)
-                            }
-                            Ok(()) => Ok(())
-                        }
+                        export_png_file(&flags, output_path, &svg_data.buffer())
                     },
                     _ => {
                         eprintln!("[ERROR]: Unsupported file extension in output path.");
@@ -285,7 +314,7 @@ fn main() {
     };
 
     if let Err(err) = result {
-        eprintln!("[ERROR]: Failed to write out svg. Reason: {err}");
+        eprintln!("[ERROR]: Failed to write output. Reason: {err}");
         std::process::exit(1);
     }
 }
