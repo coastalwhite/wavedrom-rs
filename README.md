@@ -8,7 +8,7 @@
 [Demo][demo] | [Tutorial][book]
 
 The `wavedrom-rs` crate provides an interface to shape beautiful [Digital Timing
-Diagrams][dtd] into an [SVG][svg]. It is almost completely compatible with the
+Diagrams][dtd] into a [SVG][svg] or [PNG][png] file. It is almost completely compatible with the
 [WaveDrom][wavedrom-js] project. It can be merged into document build tools,
 continuous integration or be used as a one off to generate beautiful
 diagrams.
@@ -84,6 +84,7 @@ Licensed under a [MIT License](./LICENSE). The demo website utilizes icons from
 
 [demo]: https://gburghoorn.com/wavedrom
 [svg]: https://en.wikipedia.org/wiki/SVG
+[png]: https://en.wikipedia.org/wiki/PNG
 [wavedrom-js]: https://wavedrom.com/
 [tutorial]: https://wavedrom.com/tutorial.html
 [lucide]: https://lucide.dev/

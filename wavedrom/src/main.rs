@@ -1,6 +1,10 @@
 use std::fmt::Display;
 use std::io::{stdin, stdout, BufWriter, Read};
 use std::path::PathBuf;
+use std::path::Path;
+
+use usvg::TreeParsing;
+use usvg::TreeTextToPath;
 
 use wavedrom::signal::options::{RenderOptions, PathAssembleOptions};
 use wavedrom::skin::Skin;
@@ -11,6 +15,7 @@ struct Flags {
     input: Option<PathBuf>,
     output: Option<PathBuf>,
     skin: Option<PathBuf>,
+    png_scale: Option<String>,
 }
 
 enum ParsingError {
@@ -47,6 +52,8 @@ impl Flags {
         r#"
 A Signal Diagram Generator from WaveJson.
 
+
+
 By default, this application attempts to read a file from STDIN and output to
 STDOUT. An input file can be given with the -i/--input flag and a output file
 can be passed with the -o/--output file.
@@ -61,9 +68,10 @@ Usage: wavedrom [FLAGS]
 Takes a wavejson file from the STDIN and outputs a SVG to the STDOUT.
 
 Flags:
--i/--input <path/to/input.json>: specify a path to a input wavejson file
--o/--output <path/to/output.svg>: specify a path to a output svg file
--s/--skin <path/to/skin.json>: specify a path to a skin file
+-i/--input <path/to/input.json>: specify a path to a input wavejson file.
+-o/--output <path/to/output.svg>: specify a path to a output svg or png file.
+-s/--skin <path/to/skin.json>: specify a path to a skin file.
+-p/--png_scale floating-point value to adjust the resolution of the output png file.
         "
         .trim()
     }
@@ -99,6 +107,13 @@ Flags:
                             .into(),
                     );
                 }
+                "-p" | "--png_scale" => {
+                    flags.png_scale = Some(
+                        args.next()
+                        .ok_or(ParsingError::MissingArgument(arg))?
+                        .into(),
+                    );
+                }
                 "-h" | "--help" => {
                     Self::print_metadata();
                     println!();
@@ -114,6 +129,16 @@ Flags:
         }
 
         Ok(flags)
+    }
+}
+
+
+
+fn get_file_extension(file_path: &str) -> Option<&str> {
+    if let Some(extension) = Path::new(file_path).extension() {
+        extension.to_str()
+    } else {
+        None
     }
 }
 
@@ -186,28 +211,76 @@ fn main() {
 
     let Figure::Signal(figure) = figure;
     let assembled = figure.assemble_with_options(assemble_options);
-
+    
     let result = match flags.output {
         None => {
             let mut writer = BufWriter::new(stdout().lock());
             assembled.write_svg(&mut writer)
         }
         Some(output_path) => {
-            let output_file = match std::fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .open(output_path)
-            {
-                Ok(f) => f,
-                Err(err) => {
-                    eprintln!("[ERROR]: Failed to open output file. Reason: {err}");
-                    std::process::exit(1);
-                }
-            };
+            if let Some(extension) = get_file_extension(&output_path.as_os_str().to_str().unwrap()) {
+                match extension.to_lowercase().as_str() {
+                    "svg" => {
+                        let output_file = match std::fs::OpenOptions::new()
+                            .write(true)
+                            .create(true)
+                            .truncate(true)
+                            .open(&output_path)
+                        {
+                            Ok(f) => f,
+                            Err(err) => {
+                                eprintln!("[ERROR]: Failed to open output file. Reason: {err}");
+                                std::process::exit(1);
+                            }
+                        };
+                        let mut writer = BufWriter::new(output_file);
+                        assembled.write_svg_with_options(&mut writer, &render_options)
+                    },
+                    "png" => {
+                        let mut svg_data = BufWriter::new(Vec::new());
+                        assembled.write_svg_with_options(&mut svg_data, &render_options).unwrap();
 
-            let mut writer = BufWriter::new(output_file);
-            assembled.write_svg_with_options(&mut writer, &render_options)
+                        let opt = usvg::Options::default();
+                        let mut utree = usvg::Tree::from_data(&svg_data.buffer(), &opt).unwrap();
+                        let mut fontdb = usvg::fontdb::Database::new();
+                        fontdb.load_system_fonts();
+                        utree.convert_text(&fontdb);
+                        let rtree = resvg::Tree::from_usvg(&utree);
+                        let size = rtree.size.to_int_size();
+
+                        let scale = match flags.png_scale {
+                            None => 1.0,
+                            Some(scale) => {
+                                match scale.parse::<f32>() {
+                                    Err(e) => {
+                                        eprintln!("[ERROR]: Error parsing png_scale: {e:?}.");
+                                        std::process::exit(1)
+                                    }
+                                    Ok(parsed_scale) => parsed_scale
+                                }
+                            }
+                        };
+
+                        let mut pixmap = resvg::tiny_skia::Pixmap::new((size.width() as f32 * scale) as u32, (size.height() as f32 * scale) as u32).unwrap();
+                        rtree.render(usvg::Transform::from_scale(scale, scale), &mut pixmap.as_mut());
+
+                        match pixmap.save_png(&output_path) {
+                            Err(e) => { 
+                                eprintln!("[ERROR]: Error Encoding png: {e:?}.");
+                                std::process::exit(1)
+                            }
+                            Ok(()) => Ok(())
+                        }
+                    },
+                    _ => {
+                        eprintln!("[ERROR]: Unsupported file extension in output path.");
+                        std::process::exit(1)
+                    }
+                }
+            } else {
+                eprintln!("[ERROR]: Output path has no file extension");
+                std::process::exit(1)
+            }
         }
     };
 
