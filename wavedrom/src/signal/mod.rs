@@ -11,7 +11,6 @@ mod render;
 pub use cycle_offset::{CycleOffset, InCycleOffset};
 pub use figure::{SignalFigure, SignalFigureSection, SignalFigureSectionGroup};
 pub use path::*;
-pub use render::*;
 
 use std::num::NonZeroU16;
 
