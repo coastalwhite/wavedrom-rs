@@ -3,7 +3,7 @@ use std::fmt::Display;
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
 use wavedrom::json5::Error as JsonError;
 use wavedrom::signal::options::{PathAssembleOptions, RenderOptions};
-use wavedrom::Figure;
+use wavedrom::{Figure, Font};
 
 #[derive(Debug)]
 pub enum InsertionError {
@@ -112,7 +112,7 @@ pub fn insert_wavedrom(
             let Figure::Signal(wavedrom_figure) = wavedrom_figure;
             wavedrom_figure
                 .assemble_with_options(assemble_options)
-                .write_svg_with_options(&mut wavedrom_code, render_options)
+                .write_svg_with_options(&mut wavedrom_code, Font::default(), render_options)
                 .map_err(|_| InsertionError::WriteSvg)?;
 
             let wavedrom_code =

@@ -12,6 +12,12 @@ pub struct Color {
     pub blue: u8,
 }
 
+impl Into<svdm::color::Color> for Color {
+    fn into(self) -> svdm::color::Color {
+        svdm::color::Color::rgb(self.red, self.green, self.blue)
+    }
+}
+
 #[cfg(feature = "serde")]
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(untagged)]
@@ -119,9 +125,17 @@ impl FromStr for Color {
 
 impl Color {
     /// The color white. Namely rgb(255, 255, 255)
-    pub const WHITE: Self = Color { red: 0xFF, green: 0xFF, blue: 0xFF };
+    pub const WHITE: Self = Color {
+        red: 0xFF,
+        green: 0xFF,
+        blue: 0xFF,
+    };
     /// The color black. Namely rgb(0, 0, 0)
-    pub const BLACK: Self = Color { red: 0x0, green: 0x0, blue: 0x0 };
+    pub const BLACK: Self = Color {
+        red: 0x0,
+        green: 0x0,
+        blue: 0x0,
+    };
 }
 
 impl Display for Color {

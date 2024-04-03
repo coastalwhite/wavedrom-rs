@@ -10,11 +10,14 @@ use self::edges::{write_edge_text, write_line_edge, write_line_edge_markers};
 use super::path::AssembledSignalPath;
 use super::AssembledFigure;
 
+use svdm::alignment::XAlignment;
+
 mod dimensions;
 mod edges;
 
 use super::options::{PathAssembleOptions, RenderOptions, SignalOptions};
 use dimensions::SvgDimensions;
+use svdm::linalg::Vec2;
 
 fn gap(
     writer: &mut impl io::Write,
@@ -22,12 +25,12 @@ fn gap(
     color: Color,
     background: Color,
 ) -> io::Result<()> {
-    let wave_height = f32::from(wave_height);
+    let wave_height = f64::from(wave_height);
 
-    let a: f32 = 8.0;
+    let a: f64 = 8.0;
     let b = wave_height / 2.0 + 6.0;
 
-    const DISTANCE: f32 = 4.0;
+    const DISTANCE: f64 = 4.0;
 
     let start = (-a, b);
     let end = (a, -b);
@@ -39,81 +42,107 @@ fn gap(
 
     let control_3 = (a / 2.0, -b);
 
+    let lp1x = start.0 - DISTANCE / 2.0;
+    let lp1y = start.1;
+    let lp2x = control_1.0 - DISTANCE / 2.0;
+    let lp2y = control_1.1;
+    let lp3x = control_2.0 - DISTANCE / 2.0;
+    let lp3y = control_2.1;
+    let lp4x = 0.0 - DISTANCE / 2.0;
+    let lp4y = 0.0;
+    let lp5x = control_3.0 - DISTANCE / 2.0;
+    let lp5y = control_3.1;
+    let lp6x = end.0 - DISTANCE / 2.0;
+    let lp6y = end.1;
+    let rp1x = end.0 + DISTANCE / 2.0;
+    let rp1y = end.1;
+    let rp2x = control_3.0 + DISTANCE / 2.0;
+    let rp2y = control_3.1;
+    let rp3x = -control_2.0 + DISTANCE / 2.0;
+    let rp3y = -control_2.1;
+    let rp4x = 0.0 + DISTANCE / 2.0;
+    let rp4y = 0.0;
+    let rp5x = control_1.0 + DISTANCE / 2.0;
+    let rp5y = control_1.1;
+    let rp6x = start.0 + DISTANCE / 2.0;
+    let rp6y = start.1;
+
+    let fill_path_data = svdm::path::PathBuilder::new()
+        .move_to([lp1x, lp1y])
+        .curve_to([lp4x, lp4y], [lp2x, lp2y], [lp3x, lp3y])
+        .string_curve_to([lp6x, lp6y], [lp5x, lp5y])
+        .horizontal_line_to(rp1x)
+        .curve_to([rp4x, rp4y], [rp2x, rp2y], [rp3x, rp3y])
+        .string_curve_to([rp6x, rp6y], [rp5x, rp5y])
+        .horizontal_line_to(lp1x)
+        .close_path()
+        .finalize();
+
+    let stroke_path_data = svdm::path::PathBuilder::new()
+        .move_to([lp1x, lp1y])
+        .curve_to([lp4x, lp4y], [lp2x, lp2y], [lp3x, lp3y])
+        .string_curve_to([lp6x, lp6y], [lp5x, lp5y])
+        .move_to([rp1x, rp1y])
+        .curve_to([rp4x, rp4y], [rp2x, rp2y], [rp3x, rp3y])
+        .string_curve_to([rp6x, rp6y], [rp5x, rp5y])
+        .finalize();
+
     write!(
         writer,
-        r##"<path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}H{rp1x}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}H{lp1x}z" fill="{background}" stroke="none"/><path d="M{lp1x},{lp1y}C{lp2x},{lp2y} {lp3x},{lp3y} {lp4x},{lp4y}S{lp5x},{lp5y} {lp6x},{lp6y}" fill="none" stroke="{color}" stroke-width="1"/><path d="M{rp1x},{rp1y}C{rp2x},{rp2y} {rp3x},{rp3y} {rp4x},{rp4y}S{rp5x},{rp5y} {rp6x},{rp6y}" fill="none" stroke="{color}" stroke-width="1"/>"##,
-        lp1x = start.0 - DISTANCE / 2.0,
-        lp1y = start.1,
-        lp2x = control_1.0 - DISTANCE / 2.0,
-        lp2y = control_1.1,
-        lp3x = control_2.0 - DISTANCE / 2.0,
-        lp3y = control_2.1,
-        lp4x = 0.0 - DISTANCE / 2.0,
-        lp4y = 0,
-        lp5x = control_3.0 - DISTANCE / 2.0,
-        lp5y = control_3.1,
-        lp6x = end.0 - DISTANCE / 2.0,
-        lp6y = end.1,
-        rp1x = end.0 + DISTANCE / 2.0,
-        rp1y = end.1,
-        rp2x = control_3.0 + DISTANCE / 2.0,
-        rp2y = control_3.1,
-        rp3x = -control_2.0 + DISTANCE / 2.0,
-        rp3y = -control_2.1,
-        rp4x = 0.0 + DISTANCE / 2.0,
-        rp4y = 0,
-        rp5x = control_1.0 + DISTANCE / 2.0,
-        rp5y = control_1.1,
-        rp6x = start.0 + DISTANCE / 2.0,
-        rp6y = start.1,
+        r##"<path d="{fill_path_data}" fill="{background}" stroke="none"/><path d="{stroke_path_data}" fill="none" stroke="{color}" stroke-width="1"/>"##,
     )
 }
 
 fn posedge_arrow(writer: &mut impl io::Write, wave_height: u32, color: Color) -> io::Result<()> {
-    let scale = i64::from(wave_height / 6);
+    let scale = f64::from(wave_height / 6);
+
+    let path_data = svdm::path::PathBuilder::new()
+        .move_to(Vec2 {
+            x: -scale,
+            y: scale,
+        })
+        .line_to(Vec2 { x: 0., y: -scale })
+        .line_to(Vec2 { x: scale, y: scale })
+        .horizontal_line_to(-scale * 2.)
+        .finalize();
 
     write!(
         writer,
-        r##"<path d="M{x1},{y1}L{x2},{y2}L{x3},{y3}H{hback}z" fill="{color}" stroke="none"/>"##,
-        x1 = -scale,
-        y1 = scale,
-        x2 = 0,
-        y2 = -scale,
-        x3 = scale,
-        y3 = scale,
-        hback = -scale * 2,
+        r##"<path d="{path_data}" fill="{color}" stroke="none"/>"##,
     )
 }
 
 fn negedge_arrow(writer: &mut impl io::Write, wave_height: u32, color: Color) -> io::Result<()> {
-    let scale = i64::from(wave_height / 6);
+    let scale = f64::from(wave_height / 6);
+
+    let path_data = svdm::path::PathBuilder::new()
+        .move_to([-scale, -scale])
+        .line_to([0.0, scale])
+        .line_to([scale, -scale])
+        .horizontal_line_to(-scale * 2.0)
+        .close_path()
+        .finalize();
 
     write!(
         writer,
-        r##"<path d="M{x1},{y1}L{x2},{y2}L{x3},{y3}H{hback}z" fill="{color}" stroke="none"/>"##,
-        x1 = -scale,
-        y1 = -scale,
-        x2 = 0,
-        y2 = scale,
-        x3 = scale,
-        y3 = -scale,
-        hback = -scale * 2,
+        r##"<path d="{path_data}" fill="{color}" stroke="none"/>"##,
     )
 }
 
 impl<'a> AssembledFigure<'a> {
     /// Render a [`AssembledFigure`] into a `writer`.
     #[inline]
-    pub fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
-        self.write_svg_with_options(writer, &RenderOptions::default())
+    pub fn write_svg(&self, writer: &mut impl io::Write, font: Font) -> io::Result<svdm::Figure> {
+        self.write_svg_with_options(writer, font, &RenderOptions::default())
     }
 
     /// Render a [`AssembledFigure`] into a `writer` with a set of options.
     pub fn write_svg_with_options(
         &self,
         writer: &mut impl io::Write,
+        font: Font,
         options: &RenderOptions,
-    ) -> io::Result<()> {
+    ) -> io::Result<svdm::Figure> {
         let RenderOptions {
             background,
             padding,
@@ -134,12 +163,13 @@ impl<'a> AssembledFigure<'a> {
         let signal_height = u32::from(signal_height);
         let cycle_width = u32::from(cycle_width);
 
-        let font = Font::default();
         let font_family = font
             .get_font_family_name()
             .unwrap_or_else(|| "helvetica".to_string());
 
         let dims = SvgDimensions::new(self, font, options, self.path_assemble_options);
+
+        let mut container = svdm::stacks::XYStack::vertical();
 
         write!(
             writer,
@@ -211,17 +241,15 @@ impl<'a> AssembledFigure<'a> {
 
         // Header Text
         if let Some(title) = self.header_text {
-            let title_font_size = header.font_size;
-            let title_color = header.color;
-
-            write!(
-                writer,
-                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{title_font_size}" fill="{title_color}" letter-spacing="0"><tspan>{text}</tspan></text>"##,
-                x = dims.header_x() + dims.header_width() / 2,
-                y = dims.header_y() + dims.header_height() / 2,
-                text = escape_str(title),
-            )?;
+            container.child(svdm::align(
+                XAlignment::Center,
+                svdm::text::Text::new(title, font.get_face())
+                    .size(header.font_size.into())
+                    .color(header.color.into()),
+            ));
         }
+
+        let mut content = svdm::stacks::XYStack::horizontal();
 
         // Top Cycle Enumeration Markers
         if let Some(cycle_marker) = self.top_cycle_marker {
@@ -363,20 +391,6 @@ impl<'a> AssembledFigure<'a> {
         }
         write!(writer, "</g>")?;
 
-        // Footer Text
-        if let Some(footer_text) = self.footer_text {
-            let footer_font_size = footer.font_size;
-            let footer_color = footer.color;
-
-            write!(
-                writer,
-                r##"<text x="{x}" y="{y}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{footer_font_size}" fill="{footer_color}" letter-spacing="0"><tspan>{text}</tspan></text>"##,
-                x = dims.footer_width() / 2,
-                y = dims.footer_y() + dims.footer_height() / 2,
-                text = escape_str(footer_text),
-            )?;
-        }
-
         // Bottom Cycle Enumeration Markers
         if let Some(cycle_marker) = self.bottom_cycle_marker {
             let start = cycle_marker.start();
@@ -459,9 +473,27 @@ impl<'a> AssembledFigure<'a> {
             write!(writer, "</g>")?;
         }
 
+        // Footer Text
+        if let Some(footer_text) = self.footer_text {
+            container.child(svdm::align(
+                XAlignment::Center,
+                svdm::text::Text::new(footer_text, font.get_face())
+                    .size(footer.font_size.into())
+                    .color(footer.color.into()),
+            ));
+        }
+
+
+        let mut container = svdm::Node::from(container);
+
+        if let Some(background) = background {
+            container =
+                svdm::zstack![svdm::rectangle::background((*background).into()), container,].into();
+        }
+
         write!(writer, "</svg>")?;
 
-        Ok(())
+        Ok(svdm::figure(container))
     }
 }
 

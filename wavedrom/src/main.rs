@@ -2,9 +2,10 @@ use std::fmt::Display;
 use std::io::{stdin, stdout, BufWriter, Read};
 use std::path::PathBuf;
 
-use wavedrom::signal::options::{RenderOptions, PathAssembleOptions};
+use svdm::commands::SvgRenderer;
+use wavedrom::signal::options::{PathAssembleOptions, RenderOptions};
 use wavedrom::skin::Skin;
-use wavedrom::Figure;
+use wavedrom::{Figure, Font};
 
 #[derive(Default)]
 struct Flags {
@@ -190,7 +191,7 @@ fn main() {
     let result = match flags.output {
         None => {
             let mut writer = BufWriter::new(stdout().lock());
-            assembled.write_svg(&mut writer)
+            assembled.write_svg(&mut writer, Font::default())
         }
         Some(output_path) => {
             let output_file = match std::fs::OpenOptions::new()
@@ -207,12 +208,17 @@ fn main() {
             };
 
             let mut writer = BufWriter::new(output_file);
-            assembled.write_svg_with_options(&mut writer, &render_options)
+            assembled.write_svg_with_options(&mut writer, Font::default(), &render_options)
         }
     };
 
-    if let Err(err) = result {
-        eprintln!("[ERROR]: Failed to write out svg. Reason: {err}");
-        std::process::exit(1);
+    match result {
+        Err(err) => {
+            eprintln!("[ERROR]: Failed to write out svg. Reason: {err}");
+            std::process::exit(1);
+        }
+        Ok(figure) => {
+            figure.render(SvgRenderer::new(&mut std::fs::File::create("test.svg").unwrap())).unwrap();
+        }
     }
 }

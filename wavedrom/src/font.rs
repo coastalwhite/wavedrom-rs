@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 #[cfg(feature = "embed_font")]
-static EMBEDDED_HELVETICA: std::sync::OnceLock<ttf_parser::Face<'static>> = std::sync::OnceLock::new(); 
+static EMBEDDED_HELVETICA: std::sync::OnceLock<svdm::Face<'static>> = std::sync::OnceLock::new(); 
 
 /// The font that is used by the svg assembler to calculate text widths.
 ///
@@ -70,14 +70,17 @@ impl Font {
     }
 }
 
-#[cfg(feature = "embed_font")]
 impl Font {
-    fn get_face(&self) -> &ttf_parser::Face<'static> {
+    /// Get the font face
+    pub fn get_face(self) -> &'static svdm::Face<'static> {
         EMBEDDED_HELVETICA.get_or_init(|| {
-            ttf_parser::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap()
+            svdm::Face::parse(include_bytes!("../helvetica.ttf"), 0).unwrap()
         })
     }
+}
 
+#[cfg(feature = "embed_font")]
+impl Font {
     #[inline]
     fn units_per_em(&self) -> u16 {
         self.get_face().units_per_em()

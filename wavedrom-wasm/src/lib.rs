@@ -1,5 +1,5 @@
 use wavedrom::wavejson::WaveJson;
-use wavedrom::Figure;
+use wavedrom::{Figure, Font};
 
 mod render_options;
 pub use render_options::{get_parameter, modify_parameter};
@@ -42,7 +42,7 @@ fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
         let assemble_options = get_assemble_options();
         let render_options = get_render_options();
         let Figure::Signal(figure) = figure;
-        let Ok(()) = figure.assemble_with_options(*assemble_options).write_svg_with_options(&mut buffer, render_options) else {
+        let Ok(_) = figure.assemble_with_options(*assemble_options).write_svg_with_options(&mut buffer, Font::default(), render_options) else {
             return Err(RenderError::WriteError);
         };
     }

@@ -11,7 +11,7 @@ mod json5 {
     use std::io;
 
     use crate::signal::options::{PathAssembleOptions, RenderOptions};
-    use crate::Figure;
+    use crate::{Figure, Font};
 
     /// An error with the [`render_json5`][crate::render_json5] or
     /// [`render_json5_with_options`][crate::render_json5_with_options] functions.
@@ -46,7 +46,7 @@ mod json5 {
         let Figure::Signal(figure) = figure;
 
         let assembled = figure.assemble_with_options(assemble_options);
-        assembled.write_svg_with_options(writer, render_options)?;
+        assembled.write_svg_with_options(writer, Font::default(), render_options)?;
 
         Ok(())
     }
