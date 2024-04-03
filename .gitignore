@@ -1,5 +1,4 @@
 /target
-/Cargo.lock
 /tests/**/*.svg
 /tests/result.html
 /wavedrom-wasm/index.css
