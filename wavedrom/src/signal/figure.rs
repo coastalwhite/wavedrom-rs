@@ -28,9 +28,10 @@ impl Default for SignalFigure {
 ///
 /// ```
 /// use std::fs::File;
-/// use wavedrom::{Figure, Signal, CycleState};
+/// use wavedrom::Figure;
+/// use wavedrom::signal::{Signal, SignalFigure, CycleState};
 ///
-/// let figure = Figure::new()
+/// let figure = SignalFigure::new()
 ///                  .header_text("Hello World!")
 ///                  .footer_text("Bye World!")
 ///                  .add_signals([

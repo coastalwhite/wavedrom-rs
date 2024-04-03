@@ -1326,6 +1326,7 @@ impl PathSegmentBackground {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::signal::cycle_offset::InCycleOffset;
 
     #[test]
     fn calculate_cycle_length() {
@@ -1337,7 +1338,7 @@ mod tests {
                     &[$(CycleState::$item),*],
                     &[],
                     period,
-                    $crate::CycleOffset::new($phase_index, $crate::InCycleOffset::$phase_in_offset),
+                    CycleOffset::new($phase_index, InCycleOffset::$phase_in_offset),
                 ).iter(options).last().map_or(0, |i| i.end_cycle.ceil_num_cycles());
                 assert_eq!(num_cycles, $result);
             };

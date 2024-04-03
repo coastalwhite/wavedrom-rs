@@ -43,9 +43,10 @@ wavedrom::render_json5(r##"
 //!
 //! ```
 //! use std::fs::File;
-//! use wavedrom::{Figure, Signal};
+//! use wavedrom::Figure;
+//! use wavedrom::signal::{Signal, SignalFigure};
 //!
-//! let figure = Figure::new()
+//! let figure = SignalFigure::new()
 //!                  .header_text("Timing Schema")
 //!                  .add_signals([
 //!                      Signal::with_cycle_str("p........").name("clk"),
@@ -57,6 +58,7 @@ wavedrom::render_json5(r##"
 //!                             "Idle", "Fetch", "Calculate", "Return", "Idle",
 //!                         ]),
 //!                  ]);
+//!
 //! let assembled_figure = figure.assemble();
 //!
 //! let path = "path/to/file.svg";
