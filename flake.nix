@@ -13,60 +13,58 @@
       let
         buildTarget = "wasm32-unknown-unknown";
         pkgs = import nixpkgs {
-			inherit system;
-            overlays = [ rust-overlay.overlays.default ];
-		};
+			    inherit system;
+          overlays = [ rust-overlay.overlays.default ];
+		    };
 
-		rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-			targets = [ buildTarget ];
-		};
+		    rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+			    targets = [ buildTarget ];
+		    };
 
         rustPlatform = pkgs.makeRustPlatform {
-            cargo = rustToolchain;
-            rustc = rustToolchain;
+          cargo = rustToolchain;
+          rustc = rustToolchain;
         };
       in rec {
-          # Build the wasm file for the online editor 
-		  packages.wavedrom-wasm = rustPlatform.buildRustPackage rec {
-              name = "wavedrom-wasm";
-              src = ./.;
+        # Build the wasm file for the online editor 
+		    packages.wavedrom-wasm = rustPlatform.buildRustPackage rec {
+          name = "wavedrom-wasm";
+          src = ./.;
 
-              cargoLock.lockFile = ./Cargo.lock;
+          cargoLock.lockFile = ./Cargo.lock;
 
-             buildPhase = ''
-               cargo build --release -p ${name} --target=${buildTarget}
-             '';
+          buildPhase = ''
+            cargo build --release -p ${name} --target=${buildTarget}
+          '';
 
-             installPhase = ''
-               mkdir -p $out/lib
-               cp target/${buildTarget}/release/*.wasm $out/lib/
-             '';
+          installPhase = ''
+            mkdir -p $out/lib
+            cp target/${buildTarget}/release/*.wasm $out/lib/
+          '';
 
-              doCheck = false;
-		  };
+          doCheck = false;
+		    };
 
-          # Build the all the files for the online editor 
-		  packages.editor = pkgs.stdenv.mkDerivation {
-              pname = "wavedrom-rs-editor";
-			  version = "0.1.0";
+        # Build the all the files for the online editor 
+        packages.editor = pkgs.stdenv.mkDerivation {
+          pname = "wavedrom-rs-editor";
+          version = "0.1.0";
 
-              src = ./.;
+          src = ./.;
 
-			  buildPhase = ''
-			  	cd wavedrom-wasm
+          buildPhase = ''
+            cd wavedrom-wasm
 
-			  	mkdir -p $out
+            mkdir -p $out
 
-			  	${pkgs.wabt}/bin/wasm-strip         -o $out/wavedrom.wasm    ${packages.wavedrom-wasm}/lib/wavedrom_wasm.wasm 
-			  	${pkgs.tailwindcss}/bin/tailwindcss -o $out/index.css     -i index.scss  --minify
-			  	${pkgs.minify}/bin/minify           -o $out/index.html       index.html
-			  	${pkgs.minify}/bin/minify           -o $out/index.js         index.js
+            ${pkgs.wabt}/bin/wasm-strip         -o $out/wavedrom.wasm    ${packages.wavedrom-wasm}/lib/wavedrom_wasm.wasm 
+            ${pkgs.tailwindcss}/bin/tailwindcss -o $out/index.css     -i index.scss  --minify
+            ${pkgs.minify}/bin/minify           -o $out/index.html       index.html
+            ${pkgs.minify}/bin/minify           -o $out/index.js         index.js
 
-				cp -r assets                           $out/assets
-			  '';
-
-              doCheck = false;
-		  };
-      }
-    );
+            cp -r assets                           $out/assets
+          '';
+        };
+    }
+  );
 }
