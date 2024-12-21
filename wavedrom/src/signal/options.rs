@@ -4,116 +4,17 @@ use crate::color::Color;
 
 define_options! {
     /// The options used while rendering a figure
-    RenderOptions,
+    SignalOptions,
 
     /// A subset of the [`RenderOptions`]
-    PartialRenderOptions {
-        /// The figure background
-        background: Option<Color> => Some(Color::WHITE),
-        /// The figure's paddings
-        padding: FigurePadding[PartialFigurePadding],
-        /// The figure's spacings
-        spacing: FigureSpacing[PartialFigureSpacing],
-        /// The figure's header options
-        header: HeaderOptions[PartialHeaderOptions],
-        /// The figure's footer options
-        footer: FooterOptions[PartialFooterOptions],
-        /// The signal options
-        signal: SignalOptions[PartialSignalOptions],
+    PartialSignalOptions {
         /// The group indicator
         group_indicator: GroupIndicatorOptions[PartialGroupIndicatorOptions],
         /// The arrow / edge options
         edge: EdgeOptions[PartialEdgeOptions],
-    }
-}
+        /// The path options
+        path: PathOptions[PartialPathOptions],
 
-define_options! {
-    /// The paddings of the figure
-    FigurePadding,
-
-    /// A subset of [`FigurePadding`]
-    PartialFigurePadding {
-        /// The padding at the top of the figure
-        figure_top: u32 => 8,
-        /// The padding at the bottom of the figure
-        figure_bottom: u32 => 8,
-        /// The padding at the left of the figure
-        figure_left: u32 => 8,
-        /// The padding at the right of the figure
-        figure_right: u32 => 8,
-
-        /// The padding at the top of the signal schema
-        schema_top: u32 => 8,
-        /// The padding at the bottom of the signal schema
-        schema_bottom: u32 => 8,
-    }
-}
-
-define_options! {
-    /// The spacings for the figure
-    FigureSpacing,
-
-    /// A subset of [`FigureSpacing`]
-    PartialFigureSpacing {
-        /// The spacing between the signal names and the signal schema
-        textbox_to_schema: u32 => 8,
-        /// The spacing group indicators and the signal names
-        groupbox_to_textbox: u32 => 8,
-        /// The between signal lines
-        line_to_line: u32 => 8,
-    }
-}
-
-define_options! {
-    /// The header options for the figure
-    HeaderOptions,
-
-    /// A subset of [`HeaderOptions`]
-    PartialHeaderOptions {
-        /// The header font size
-        font_size: u32 => 24,
-        /// The header height
-        height: u32 => 32,
-        /// The header text color
-        color: Color => Color::BLACK,
-
-        /// The cycle enumeration marker height
-        cycle_marker_height: u32 => 12,
-        /// The cycle enumeration marker font size
-        cycle_marker_fontsize: u32 => 12,
-        /// The cycle enumeration marker text color
-        cycle_marker_color: Color => Color::BLACK,
-    }
-}
-
-define_options! {
-    /// The footer options for the figure
-    FooterOptions,
-
-    /// A subset of [`FooterOptions`]
-    PartialFooterOptions {
-        /// The footer font size
-        font_size: u32 => 24,
-        /// The footer height
-        height: u32 => 32,
-        /// The footer text color
-        color: Color => Color::BLACK,
-
-        /// The cycle enumeration marker height
-        cycle_marker_height: u32 => 12,
-        /// The cycle enumeration marker font size
-        cycle_marker_fontsize: u32 => 12,
-        /// The cycle enumeration marker text color
-        cycle_marker_color: Color => Color::BLACK,
-    }
-}
-
-define_options! {
-    /// The signal options for the figure
-    SignalOptions,
-
-    /// A subset of [`SignalOptions`]
-    PartialSignalOptions {
         /// The font size of the data text marker
         marker_font_size: u32 => 14,
         /// The text color of the data text marker
@@ -137,20 +38,6 @@ define_options! {
 
         /// The line color of the undefined background pattern
         undefined_color: Color => Color::BLACK,
-        /// The background color of the undefined background pattern
-        undefined_background: Option<Color> => None,
-
-        /// The background colors for the Box2 to Box9 states
-        backgrounds: [Color; 8] => [
-                Color { red: 0xFF, green: 0xFF, blue: 0xFF },
-                Color { red: 0xF7, green: 0xF7, blue: 0xA1 },
-                Color { red: 0xF9, green: 0xD4, blue: 0x9F },
-                Color { red: 0xAD, green: 0xDE, blue: 0xFF },
-                Color { red: 0xAC, green: 0xD5, blue: 0xB6 },
-                Color { red: 0xA4, green: 0xAB, blue: 0xE1 },
-                Color { red: 0xE8, green: 0xA8, blue: 0xF0 },
-                Color { red: 0xFB, green: 0xDA, blue: 0xDA },
-        ],
     }
 }
 
@@ -217,11 +104,11 @@ define_options! {
     /// The options that are used during assembly of a
     /// [`SignalFigure`][crate::signal::SignalFigure] or [`SignalPath`].
     #[derive(Copy)]
-    PathAssembleOptions,
+    PathOptions,
 
     /// A subset of the [`PathAssembleOptions`]
     #[derive(Copy)]
-    PartialPathAssembleOptions {
+    PartialPathOptions {
         /// The height of a single signal bar
         signal_height: u16 => 24,
         /// The width of a single cycle

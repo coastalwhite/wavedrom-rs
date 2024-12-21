@@ -10,8 +10,7 @@ mod json5 {
     use std::fmt::Display;
     use std::io;
 
-    use crate::signal::options::{PathAssembleOptions, RenderOptions};
-    use crate::Figure;
+    use crate::{Figure, Options};
 
     /// An error with the [`render_json5`][crate::render_json5] or
     /// [`render_json5_with_options`][crate::render_json5_with_options] functions.
@@ -26,28 +25,22 @@ mod json5 {
     /// Render the contents of a json5 file to a `writer`.
     #[inline]
     pub fn render_json5(json: &str, writer: &mut impl io::Write) -> Result<(), RenderJson5Error> {
-        render_json5_with_options(
-            json,
-            writer,
-            PathAssembleOptions::default(),
-            &RenderOptions::default(),
-        )
+        render_json5_with_options(json, writer, &Options::default())
     }
 
     /// Render the contents of a json5 file to a `writer` with a specific set of options.
     pub fn render_json5_with_options(
         json: &str,
         writer: &mut impl io::Write,
-        assemble_options: PathAssembleOptions,
-        render_options: &RenderOptions,
+        options: &Options,
     ) -> Result<(), RenderJson5Error> {
         let figure = Figure::from_json5(json)?;
 
         match figure {
             Figure::Signal(figure) => {
-                let assembled = figure.assemble_with_options(assemble_options);
-                assembled.write_svg_with_options(writer, render_options)?;
-            },
+                let assembled = figure.assemble_with_options(options);
+                assembled.write_svg_with_options(writer, options)?;
+            }
             Figure::Register(register) => {
                 register.write_svg(writer)?;
             }
@@ -88,8 +81,8 @@ mod serde_json {
     use std::fmt::Display;
     use std::io;
 
-    use crate::signal::options::{PathAssembleOptions, RenderOptions};
     use crate::Figure;
+    use crate::Options;
 
     /// An error with the [`render_json`][crate::render_json] or
     /// [`render_json_with_options`][crate::render_json_with_options] functions.
@@ -104,28 +97,22 @@ mod serde_json {
     /// Render the contents of a json file to a `writer`.
     #[inline]
     pub fn render_json(json: &str, writer: &mut impl io::Write) -> Result<(), RenderJsonError> {
-        render_json_with_options(
-            json,
-            writer,
-            PathAssembleOptions::default(),
-            &RenderOptions::default(),
-        )
+        render_json_with_options(json, writer, &Options::default())
     }
 
     /// Render the contents of a json file to a `writer` with a specific set of options.
     pub fn render_json_with_options(
         json: &str,
         writer: &mut impl io::Write,
-        assemble_options: PathAssembleOptions,
-        render_options: &RenderOptions,
+        options: &Options,
     ) -> Result<(), RenderJsonError> {
         let figure = Figure::from_json(json)?;
 
         match figure {
             Figure::Signal(figure) => {
-                let assembled = figure.assemble_with_options(assemble_options);
-                assembled.write_svg_with_options(writer, render_options)?;
-            },
+                let assembled = figure.assemble_with_options(options);
+                assembled.write_svg_with_options(writer, options)?;
+            }
             Figure::Register(register) => {
                 register.write_svg(writer)?;
             }

@@ -200,11 +200,11 @@ function encode_string(str, memory, malloc) {
 
     const memorySize = memory.buffer.byteLength;
 
-    const size = new Blob([str]).size * 2;
-    const ptr = malloc(size);
+    const capacity = new Blob([str]).size * 2;
+    const ptr = malloc(capacity);
 
     // Claim memory that will hold the UTF-8 string
-    const array = new Uint8Array(memory.buffer, ptr, size);
+    const array = new Uint8Array(memory.buffer, ptr, capacity);
 
     // Write UTF-8 form into memory
     const { read, written } = text_encoder.encodeInto(str, array);
@@ -215,7 +215,7 @@ function encode_string(str, memory, malloc) {
     }
 
     // Return the address + length of the string in memory
-    return [ptr, written];
+    return [ptr, written, capacity];
 }
 
 function decode_string(memory, addr, length) {
@@ -230,9 +230,9 @@ function decode_string(memory, addr, length) {
 }
 
 function render_svg(input, output, error, memory, malloc, free, render) {
-    const [ptr, length] = encode_string(input.value, memory, malloc);
-    const rptr = render(ptr, length);
-    const array = new Uint8Array(memory.buffer, rptr, 5);
+    const [ptr, length, capacity] = encode_string(input.value, memory, malloc);
+    const rptr = render(ptr, length, capacity);
+    const array = new Uint8Array(memory.buffer, rptr, 9);
 
     const return_code = Math.min(array[0], ERROR_MSGS.length - 1);
 
@@ -242,12 +242,15 @@ function render_svg(input, output, error, memory, malloc, free, render) {
         makeVisible("success-icon");
         makeInvisible("failure-icon");
 
-        const size =
+        const capacity =
             (array[1] << 24) | (array[2] << 16) | (array[3] << 8) | array[4];
-        const out = decode_string(memory, rptr + 5, size);
+        const size =
+            (array[5] << 24) | (array[6] << 16) | (array[7] << 8) | array[8];
+
+        const out = decode_string(memory, rptr + 9, size);
         output.innerHTML = out;
 
-        free(rptr, size + 5);
+        free(rptr, capacity);
     } else {
         makeInvisible("success-icon");
         makeVisible("failure-icon");
@@ -415,8 +418,8 @@ fetch("./wavedrom.wasm")
                 reader.readAsText(file);
 
                 reader.onload = function() {
-                    const [ptr, length] = encode_string(reader.result, memory, malloc);
-                    const result = merge_in_skin(ptr, length);
+                    const [ptr, length, capacity] = encode_string(reader.result, memory, malloc);
+                    const result = merge_in_skin(ptr, length, capacity);
 
                     if (result != 0) {
                         error.innerHTML = "Invalid skin file";

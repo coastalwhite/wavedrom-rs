@@ -1,4 +1,6 @@
 /target
+/result
+/**/result
 /tests/**/*.svg
 /tests/result.html
 /wavedrom-wasm/index.css

@@ -61,16 +61,15 @@ fn handle_supports(pre: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
 
     // Signal whether the renderer is supported by exiting with 1 or 0.
     if supported {
-        process::exit(0);
+        process::exit(0)
     } else {
-        process::exit(1);
+        process::exit(1)
     }
 }
 
 mod nop_lib {
     use mdbook::BookItem;
     use mdbook_wavedrom_rs::insert_wavedrom;
-    use wavedrom::signal::options::{PathAssembleOptions, RenderOptions};
     use wavedrom::skin::Skin;
 
     use super::*;
@@ -89,14 +88,13 @@ mod nop_lib {
         }
 
         fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book, Error> {
-            let mut assemble_options = PathAssembleOptions::default();
-            let mut render_options = RenderOptions::default();
+            let mut options = wavedrom::Options::default();
 
             if let Some(config) = ctx.config.get_preprocessor(self.name()) {
                 if let Some(skin_path) = config.get("skin") {
                     let Some(skin_path) = skin_path.as_str() else {
                         eprintln!("[ERROR]: WaveDrom skin has invalid value type");
-                        std::process::exit(1);
+                        std::process::exit(1)
                     };
 
                     let skin = match std::fs::read_to_string(skin_path) {
@@ -108,15 +106,7 @@ mod nop_lib {
                     };
 
                     match Skin::from_json5(&skin) {
-                        Ok(skin) => {
-                            if let Some(assemble) = skin.assemble {
-                                assemble_options.merge_in(assemble);
-                            }
-
-                            if let Some(render) = skin.render {
-                                render_options.merge_in(render);
-                            }
-                        }
+                        Ok(skin) => options.merge_in(skin.0),
                         Err(err) => {
                             eprintln!(
                                 "[ERROR]: Failed to parse WaveDrom skin content. Reason: {err}"
@@ -130,7 +120,7 @@ mod nop_lib {
             book.for_each_mut(|item| match item {
                 BookItem::Separator | BookItem::PartTitle(_) => {}
                 BookItem::Chapter(chapter) => {
-                    match insert_wavedrom(&chapter.content, assemble_options, &render_options) {
+                    match insert_wavedrom(&chapter.content, &options) {
                         Ok(new_content) => chapter.content = new_content,
                         Err(err) => {
                             eprintln!("Failed to render wavedrom. Reason: {err}");

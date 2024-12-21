@@ -28,7 +28,19 @@ macro_rules! replace_merge {
 }
 
 macro_rules! define_options {
-    ( $(#[$struct_doc:meta])* $([$copy:meta])? $struct_name:ident, $(#[$opt_struct_doc:meta])* $opt_struct_name:ident { $( $(#[$property_doc:meta])* $property_name:ident: $property_type:ty$([$opt_property_type:ty])? $(=> $property_default_value:expr)?),+ $(,)? } ) => (
+    (
+        $(#[$struct_doc:meta])*
+        $([$copy:meta])?
+        $struct_name:ident,
+
+        $(#[$opt_struct_doc:meta])*
+        $opt_struct_name:ident {
+            $(
+                $(#[$property_doc:meta])*
+                $property_name:ident: $property_type:ty$([$opt_property_type:ty])? $(=> $property_default_value:expr)?
+            ),+ $(,)?
+        }
+    ) => (
         #[derive(Debug, Clone)]
         $(
         #[$struct_doc]

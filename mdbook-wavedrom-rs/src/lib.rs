@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
 use wavedrom::json5::Error as JsonError;
-use wavedrom::signal::options::{PathAssembleOptions, RenderOptions};
 use wavedrom::Figure;
 
 #[derive(Debug)]
@@ -35,8 +34,7 @@ impl std::error::Error for InsertionError {}
 
 pub fn insert_wavedrom(
     content: &str,
-    assemble_options: PathAssembleOptions,
-    render_options: &RenderOptions,
+    options: &wavedrom::Options,
 ) -> Result<String, InsertionError> {
     let mut opts = Options::empty();
     opts.insert(Options::ENABLE_TABLES);
@@ -112,8 +110,8 @@ pub fn insert_wavedrom(
             match wavedrom_figure {
                 Figure::Signal(wavedrom_figure) => {
                     wavedrom_figure
-                        .assemble_with_options(assemble_options)
-                        .write_svg_with_options(&mut wavedrom_code, render_options)
+                        .assemble_with_options(options)
+                        .write_svg_with_options(&mut wavedrom_code, options)
                         .map_err(|_| InsertionError::WriteSvg)?;
                 }
                 Figure::Register(register) => todo!(),
@@ -187,22 +185,21 @@ mod tests {
 ```
         "#;
 
-        let replaced_content = insert_wavedrom(
-            content,
-            PathAssembleOptions::default(),
-            &RenderOptions::default(),
-        )
-        .unwrap();
+        let replaced_content = insert_wavedrom(content, &wavedrom::Options::default()).unwrap();
 
         assert_ne!(content, &replaced_content);
 
         let replaced_content = replace_between(&replaced_content, "<svg", "</svg>", "<svg/>");
 
-        assert_eq!(replaced_content.trim(), r#"
+        assert_eq!(
+            replaced_content.trim(),
+            r#"
 # Header
 
 <pre class="wavedrom"><svg/></pre>
-        "#.trim())
+        "#
+            .trim()
+        )
     }
 
     #[test]
@@ -225,18 +222,15 @@ ABC:
 ```
         "#;
 
-        let replaced_content = insert_wavedrom(
-            content,
-            PathAssembleOptions::default(),
-            &RenderOptions::default(),
-        )
-        .unwrap();
+        let replaced_content = insert_wavedrom(content, &wavedrom::Options::default()).unwrap();
 
         assert_ne!(content, &replaced_content);
 
         let replaced_content = replace_between(&replaced_content, "<svg ", "</svg>", "<svg/>");
 
-        assert_eq!(replaced_content.trim(), r#"
+        assert_eq!(
+            replaced_content.trim(),
+            r#"
 # Header
 
 <pre class="wavedrom"><svg/></pre>
@@ -244,6 +238,8 @@ ABC:
 ABC:
 
 <pre class="wavedrom"><svg/></pre>
-        "#.trim())
+        "#
+            .trim()
+        )
     }
 }

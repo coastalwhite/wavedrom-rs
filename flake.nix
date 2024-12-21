@@ -19,6 +19,7 @@
 
 		    rustToolchain = pkgs.rust-bin.stable.latest.default.override {
 			    targets = [ buildTarget ];
+          extensions = [ "rust-analyzer" "rust-src" ];
 		    };
 
         rustPlatform = pkgs.makeRustPlatform {
@@ -63,6 +64,19 @@
             ${pkgs.minify}/bin/minify           -o $out/index.js         index.js
 
             cp -r assets                           $out/assets
+          '';
+        };
+
+        devShells.default = pkgs.mkShell {
+          packages = with pkgs; [
+            wabt
+            tailwindcss
+            minify
+            rustToolchain
+          ];
+
+          shellHook = ''
+            export RUST_SRC_BIN="${rustToolchain}/lib/rustlib/src/rust/library";
           '';
         };
     }

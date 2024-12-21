@@ -3,7 +3,7 @@ use std::io;
 use super::markers::ClockEdge;
 use super::path::{PathCommand, PathSegmentBackground};
 use crate::escape::escape_str;
-use crate::{Color, Font};
+use crate::{Color, Font, Options};
 
 use self::edges::{write_edge_text, write_line_edge, write_line_edge_markers};
 
@@ -13,7 +13,7 @@ use super::AssembledFigure;
 mod dimensions;
 mod edges;
 
-use super::options::{PathAssembleOptions, RenderOptions, SignalOptions};
+use super::options::{PathOptions, SignalOptions};
 use dimensions::SvgDimensions;
 
 fn gap(
@@ -105,27 +105,31 @@ impl<'a> AssembledFigure<'a> {
     /// Render a [`AssembledFigure`] into a `writer`.
     #[inline]
     pub fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
-        self.write_svg_with_options(writer, &RenderOptions::default())
+        self.write_svg_with_options(writer, &Options::default())
     }
 
     /// Render a [`AssembledFigure`] into a `writer` with a set of options.
     pub fn write_svg_with_options(
         &self,
         writer: &mut impl io::Write,
-        options: &RenderOptions,
+        options: &Options,
     ) -> io::Result<()> {
-        let RenderOptions {
+        let Options {
             background,
             padding,
             spacing,
-            signal,
-            group_indicator,
             header,
             footer,
-            edge,
+            signal,
+            reg: _,
+            ..
         } = options;
-
-        let PathAssembleOptions {
+        let SignalOptions {
+            group_indicator,
+            edge,
+            ..
+        } = signal;
+        let PathOptions {
             signal_height,
             cycle_width,
             transition_offset: _,
@@ -139,7 +143,7 @@ impl<'a> AssembledFigure<'a> {
             .get_font_family_name()
             .unwrap_or_else(|| "helvetica".to_string());
 
-        let dims = SvgDimensions::new(self, font, options, self.path_assemble_options);
+        let dims = SvgDimensions::new(self, font, options);
 
         write!(
             writer,
@@ -156,7 +160,7 @@ impl<'a> AssembledFigure<'a> {
                 r##"<pattern id="x-bg" patternUnits="userSpaceOnUse" width="4" height="10" patternTransform="rotate(45)">"##,
             )?;
 
-            if let Some(background) = signal.undefined_background {
+            if let Some(background) = options.undefined_background {
                 write!(
                     writer,
                     r##"<rect x="0" y="0" width="4" height="10" fill="{background}"/>"##
@@ -353,10 +357,10 @@ impl<'a> AssembledFigure<'a> {
                     r##"<g transform="translate({schema_x})">"##,
                     schema_x = dims.schema_x() - dims.textbox_x()
                 )?;
-                write_signal(&line.path, writer, signal, self.hscale)?;
+                write_signal(&line.path, writer, options, self.hscale)?;
                 write!(writer, r##"</g>"##)?;
             } else {
-                write_signal(&line.path, writer, signal, self.hscale)?;
+                write_signal(&line.path, writer, options, self.hscale)?;
             }
 
             write!(writer, r##"</g>"##)?;
@@ -413,7 +417,6 @@ impl<'a> AssembledFigure<'a> {
                     writer,
                     line_edge.clone(),
                     &dims,
-                    self.path_assemble_options,
                     options,
                     &font,
                 )?);
@@ -430,7 +433,6 @@ impl<'a> AssembledFigure<'a> {
                     line_edge.clone(),
                     middle,
                     &dims,
-                    self.path_assemble_options,
                     options,
                     &font,
                 )?;
@@ -490,10 +492,10 @@ fn draw_dashed_horizontal_line(writer: &mut impl io::Write, dx: i32) -> io::Resu
 fn write_signal(
     wave_path: &AssembledSignalPath,
     writer: &mut impl io::Write,
-    options: &SignalOptions,
+    options: &Options,
     hscale: u16,
 ) -> io::Result<()> {
-    let PathAssembleOptions {
+    let PathOptions {
         signal_height,
         cycle_width,
         transition_offset: _,
@@ -563,7 +565,7 @@ fn write_signal(
         write!(
             writer,
             r##"" stroke-width="1" stroke="{path_color}"/>"##,
-            path_color = options.path_color
+            path_color = options.signal.path_color
         )?;
 
         if let Some(marker_text) = segment.marker_text() {
@@ -575,9 +577,9 @@ fn write_signal(
                     .as_ref()
                     .map(|s| &s[..])
                     .unwrap_or("Helvetica"),
-                font_size = options.marker_font_size,
+                font_size = options.signal.marker_font_size,
                 text = marker_text,
-                color = options.marker_color,
+                color = options.signal.marker_color,
                 x = segment.x() + segment.width() / 2,
                 y = signal_height / 2,
             )?;

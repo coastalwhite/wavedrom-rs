@@ -3,12 +3,14 @@ use serde::{Deserialize, Serialize};
 use crate::reg::{Lane, LaneBitRange, RegisterFigure, FieldString};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct RegJson {
     pub reg: Vec<RegItem>,
     pub config: Option<RegJsonConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct RegItem {
     bits: u32,
     name: Option<RegFieldString>,
@@ -18,6 +20,7 @@ pub struct RegItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[serde(untagged)]
 pub enum RegFieldString {
     Text(String),
@@ -25,6 +28,7 @@ pub enum RegFieldString {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct RegJsonConfig {
     vspace: Option<u32>,
     hspace: Option<u32>,
@@ -41,6 +45,7 @@ pub struct RegJsonConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[serde(untagged)]
 pub enum RegItemAttribute {
     One(RegFieldString),

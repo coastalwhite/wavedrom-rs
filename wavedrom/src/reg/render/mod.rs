@@ -1,9 +1,8 @@
 use std::io;
 
-use crate::Font;
 use crate::escape::escape_str;
+use crate::{Font, Options};
 
-use super::options::RegisterRenderOptions;
 use super::{FieldString, Lane, LaneBitRange, RegisterFigure};
 
 const DISPLAY_PRECISION: u8 = 3;
@@ -26,37 +25,39 @@ fn to_display_num(n: f64) -> f64 {
 
 impl RegisterFigure {
     pub fn write_svg(&self, writer: &mut impl io::Write) -> io::Result<()> {
-        self.write_svg_with_options(writer, &RegisterRenderOptions::default())
+        self.write_svg_with_options(writer, &Options::default())
     }
 
     pub fn write_svg_with_options(
         &self,
         writer: &mut impl io::Write,
-        options: &RegisterRenderOptions,
+        options: &Options,
     ) -> io::Result<()> {
-        let mut height = f64::from(options.padding.top + options.padding.bottom);
+        let mut height = f64::from(options.reg.padding.top + options.reg.padding.bottom);
         let mut displayed_lanes = 0;
         for lane in &self.lanes {
             if lane.is_empty() {
-                height += f64::from(options.spacing.lane_spacing);
+                height += f64::from(options.reg.spacing.lane_spacing);
 
                 continue;
             }
 
             displayed_lanes += 1;
-            height += lane.display_height(options, self.vspace) + f64::from(options.spacing.lane_spacing);
+            height += lane.display_height(options, self.vspace)
+                + f64::from(options.reg.spacing.lane_spacing);
         }
 
         let height = if displayed_lanes == 0 {
             0.
         } else {
-            height - f64::from(options.spacing.lane_spacing)
+            height - f64::from(options.reg.spacing.lane_spacing)
         };
 
         write!(
             writer,
             r#"<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 {figure_width} {figure_height}" overflow="hidden" width="{figure_width}" height="{figure_height}">"#,
-            figure_width = options.padding.left + options.padding.right + options.bar_width,
+            figure_width =
+                options.reg.padding.left + options.reg.padding.right + options.reg.bar_width,
             figure_height = to_display_num(height),
         )?;
 
@@ -68,15 +69,15 @@ impl RegisterFigure {
         write!(
             writer,
             r##"<defs><g id="bm"><path d="M0,0v{hint_indent}m0,{jump}v{hint_indent}" stroke="#000" fill="none"/></g></defs>"##,
-            jump = options.bar_height - 2 * options.hint_indent,
-            hint_indent = options.hint_indent,
+            jump = options.reg.bar_height - 2 * options.reg.hint_indent,
+            hint_indent = options.reg.hint_indent,
         )?;
 
-        let mut y = f64::from(options.padding.top);
+        let mut y = f64::from(options.reg.padding.top);
 
         for lane in &self.lanes {
             if lane.is_empty() {
-                y += f64::from(options.spacing.lane_spacing);
+                y += f64::from(options.reg.spacing.lane_spacing);
 
                 continue;
             }
@@ -84,14 +85,14 @@ impl RegisterFigure {
             write!(
                 writer,
                 r##"<g transform="translate({x},{y})">"##,
-                x = options.padding.left,
+                x = options.reg.padding.left,
             )?;
 
             lane.write_svg(writer, options)?;
 
             let lane_height = lane.display_height(options, self.vspace);
 
-            y += lane_height + f64::from(options.spacing.lane_spacing);
+            y += lane_height + f64::from(options.reg.spacing.lane_spacing);
 
             write!(writer, "</g>")?;
         }
@@ -102,18 +103,14 @@ impl RegisterFigure {
 }
 
 impl Lane {
-    fn write_svg(
-        &self,
-        writer: &mut impl io::Write,
-        options: &RegisterRenderOptions,
-    ) -> io::Result<()> {
+    fn write_svg(&self, writer: &mut impl io::Write, options: &Options) -> io::Result<()> {
         if self.width == 0 {
             return Ok(());
         }
 
-        let bar_width = options.bar_width;
-        let bar_height = options.bar_height;
-        let bar_y = options.bit_marker_fontsize + options.offset.bit_marker_y;
+        let bar_width = options.reg.bar_width;
+        let bar_height = options.reg.bar_height;
+        let bar_y = options.reg.bit_marker_fontsize + options.reg.offset.bit_marker_y;
 
         let mut offset = 0;
         for bit_range in &self.bit_ranges {
@@ -174,9 +171,9 @@ impl Lane {
         Ok(())
     }
 
-    pub fn display_height(&self, options: &RegisterRenderOptions, vspace: Option<u32>) -> f64 {
-        let bit_marker_height = options.bit_marker_fontsize + options.offset.bit_marker_y;
-        let bar_height = vspace.unwrap_or(options.bar_height);
+    pub fn display_height(&self, options: &Options, vspace: Option<u32>) -> f64 {
+        let bit_marker_height = options.reg.bit_marker_fontsize + options.reg.offset.bit_marker_y;
+        let bar_height = vspace.unwrap_or(options.reg.bar_height);
         let max_attributes = self
             .bit_ranges
             .iter()
@@ -186,9 +183,9 @@ impl Lane {
         let attributes_height = if max_attributes == 0 {
             0
         } else {
-            max_attributes * options.attribute_fontsize
-                + ((max_attributes - 1) * options.spacing.attribute_spacing)
-                + options.offset.attribute_y
+            max_attributes * options.reg.attribute_fontsize
+                + ((max_attributes - 1) * options.reg.spacing.attribute_spacing)
+                + options.reg.offset.attribute_y
         };
 
         f64::from(bit_marker_height + bar_height + attributes_height)
@@ -202,7 +199,7 @@ impl LaneBitRange {
         offset: u32,
         bit_width: u32,
         start_bit: u32,
-        options: &RegisterRenderOptions,
+        options: &Options,
     ) -> io::Result<()> {
         if self.length == 0 {
             return Ok(());
@@ -214,9 +211,9 @@ impl LaneBitRange {
             .get_font_family_name()
             .unwrap_or_else(|| String::from("Helvetica"));
 
-        let bar_width = options.bar_width;
-        let bar_height = options.bar_height;
-        let bar_y = options.bit_marker_fontsize + options.offset.bit_marker_y;
+        let bar_width = options.reg.bar_width;
+        let bar_height = options.reg.bar_height;
+        let bar_y = options.reg.bit_marker_fontsize + options.reg.offset.bit_marker_y;
 
         let bar_middle = f64::from(bar_y + bar_y + bar_height) / 2.;
 
@@ -274,14 +271,14 @@ impl LaneBitRange {
                             f64::from(bar_width)
                                 - offset_center * f64::from(bar_width) / f64::from(bit_width)
                         ),
-                        fontsize = options.name_fontsize,
+                        fontsize = options.reg.name_fontsize,
                     )?;
                 }
                 FieldString::Binary(mut binary) => {
                     write!(
                         writer,
                         r##"<text y="{bar_middle}" text-anchor="middle" dominant-baseline="middle" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0">"##,
-                        fontsize = options.name_fontsize,
+                        fontsize = options.reg.name_fontsize,
                     )?;
                     for i in 0..self.length {
                         write!(
@@ -312,8 +309,8 @@ impl LaneBitRange {
                     f64::from(bar_width)
                         - (offset_center * f64::from(bar_width)) / f64::from(bit_width)
                 ),
-                y = options.bit_marker_fontsize,
-                fontsize = options.bit_marker_fontsize,
+                y = options.reg.bit_marker_fontsize,
+                fontsize = options.reg.bit_marker_fontsize,
                 bit_idx = start_bit + offset_start,
             )?;
         } else {
@@ -323,10 +320,10 @@ impl LaneBitRange {
                 x = to_display_num(
                     f64::from(bar_width)
                         - f64::from(offset_start) * f64::from(bar_width) / f64::from(bit_width)
-                        - f64::from(options.offset.bit_marker_x)
+                        - f64::from(options.reg.offset.bit_marker_x)
                 ),
-                y = options.bit_marker_fontsize,
-                fontsize = options.bit_marker_fontsize,
+                y = options.reg.bit_marker_fontsize,
+                fontsize = options.reg.bit_marker_fontsize,
                 text = start_bit + offset_start,
             )?;
             write!(
@@ -335,10 +332,10 @@ impl LaneBitRange {
                 x = to_display_num(
                     f64::from(bar_width)
                         - f64::from(offset_end) * f64::from(bar_width) / f64::from(bit_width)
-                        + f64::from(options.offset.bit_marker_x)
+                        + f64::from(options.reg.offset.bit_marker_x)
                 ),
-                y = options.bit_marker_fontsize,
-                fontsize = options.bit_marker_fontsize,
+                y = options.reg.bit_marker_fontsize,
+                fontsize = options.reg.bit_marker_fontsize,
                 text = start_bit + offset_end - 1,
             )?;
         }
@@ -363,9 +360,11 @@ impl LaneBitRange {
                         ),
                         y = bar_y
                             + bar_height
-                            + options.offset.attribute_y
-                            + (options.attribute_fontsize + options.spacing.attribute_spacing) * i,
-                        fontsize = options.attribute_fontsize,
+                            + options.reg.offset.attribute_y
+                            + (options.reg.attribute_fontsize
+                                + options.reg.spacing.attribute_spacing)
+                                * i,
+                        fontsize = options.reg.attribute_fontsize,
                     )?;
                 }
                 FieldString::Binary(mut binary) => {
@@ -374,9 +373,11 @@ impl LaneBitRange {
                         r##"<text y="{y}" text-anchor="middle" dominant-baseline="hanging" font-family="{font_family}" font-size="{fontsize}" fill="#000" letter-spacing="0">"##,
                         y = bar_y
                             + bar_height
-                            + options.offset.attribute_y
-                            + (options.attribute_fontsize + options.spacing.attribute_spacing) * i,
-                        fontsize = options.attribute_fontsize,
+                            + options.reg.offset.attribute_y
+                            + (options.reg.attribute_fontsize
+                                + options.reg.spacing.attribute_spacing)
+                                * i,
+                        fontsize = options.reg.attribute_fontsize,
                     )?;
                     for j in 0..self.length {
                         write!(
