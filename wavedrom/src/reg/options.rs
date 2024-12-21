@@ -1,9 +1,9 @@
 define_options! {
     /// The options used while rendering a register figure
-    RegisterRenderOptions,
+    RegisterOptions,
 
     /// A subset of the [`RegisterRenderOptions`]
-    PartialRegisterRenderOptions {
+    PartialRegisterOptions {
         padding: RegisterPaddings[PartialRegisterPaddings],
         spacing: RegisterSpacings[PartialRegisterSpacings],
         offset: RegisterOffsets[PartialRegisterOffsets],

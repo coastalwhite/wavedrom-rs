@@ -1,25 +1,25 @@
+use std::alloc::Layout;
+
 use wavedrom::wavejson::WaveJson;
 use wavedrom::Figure;
 
-mod render_options;
-pub use render_options::{get_parameter, modify_parameter};
+mod options;
+pub use options::{get_parameter, modify_parameter, OPTIONS};
 
-use crate::render_options::{get_assemble_options, get_render_options};
-
-use self::render_options::merge_in_skin_internal;
+use self::options::merge_in_skin_internal;
 
 /// # Safety
 /// Free afterwards
 #[no_mangle]
-pub unsafe extern "C" fn malloc(size: usize) -> *const u8 {
-    Vec::with_capacity(size).leak().as_ptr() as *const u8
+pub unsafe extern "C" fn malloc(size: usize) -> *mut u8 {
+    unsafe { std::alloc::alloc(Layout::array::<u8>(size).unwrap()) }
 }
 
 /// # Safety
 /// Only call on malloced chunks
 #[no_mangle]
 pub unsafe extern "C" fn free(ptr: *mut u8, size: usize) {
-    unsafe { Vec::from_raw_parts(ptr, 0, size) };
+    unsafe { std::alloc::dealloc(ptr, Layout::array::<u8>(size).unwrap()) }
 }
 
 #[repr(u8)]
@@ -36,30 +36,35 @@ fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
 
     let figure = Figure::from(wavejson);
 
-    let mut buffer = vec![0; 5];
+    let mut buffer = vec![0; 9];
 
     {
-        let assemble_options = get_assemble_options();
-        let render_options = get_render_options();
+        let options = &*OPTIONS.lock().unwrap();
         match figure {
             Figure::Signal(figure) => {
-                let Ok(_) = figure.assemble_with_options(*assemble_options).write_svg_with_options(&mut buffer, render_options) else {
+                let Ok(_) = figure
+                    .assemble_with_options(options)
+                    .write_svg_with_options(&mut buffer, options)
+                else {
                     return Err(RenderError::WriteError);
                 };
             }
             Figure::Register(figure) => {
-                let Ok(_) = figure.write_svg(&mut buffer) else {
+                let Ok(_) = figure.write_svg_with_options(&mut buffer, options) else {
                     return Err(RenderError::WriteError);
                 };
-            },
+            }
         }
     }
 
-    let size = buffer.len() - 5;
-    let bs = size.to_be_bytes();
+    let size = buffer.len() - 9;
+    let capacity = buffer.capacity();
 
-    for (i, b) in bs.into_iter().take(4).enumerate() {
+    for (i, b) in capacity.to_be_bytes().into_iter().enumerate() {
         buffer[i + 1] = b;
+    }
+    for (i, b) in size.to_be_bytes().into_iter().enumerate() {
+        buffer[i + 5] = b;
     }
 
     Ok(buffer)
@@ -68,8 +73,8 @@ fn render_internal(json: &str) -> Result<Vec<u8>, RenderError> {
 /// # Safety
 /// Always give valid ptr
 #[no_mangle]
-pub unsafe extern "C" fn render(ptr: *mut u8, size: usize) -> *const u8 {
-    let bytes = unsafe { Vec::from_raw_parts(ptr, size, size) };
+pub unsafe extern "C" fn render(ptr: *mut u8, size: usize, capacity: usize) -> *const u8 {
+    let bytes = unsafe { Vec::from_raw_parts(ptr, size, capacity) };
     let Ok(json) = String::from_utf8(bytes) else {
         return Box::leak(Box::new(RenderError::InvalidUtf8 as u8)) as *const u8;
     };
@@ -83,8 +88,8 @@ pub unsafe extern "C" fn render(ptr: *mut u8, size: usize) -> *const u8 {
 /// # Safety
 /// Always give valid ptr
 #[no_mangle]
-pub unsafe extern "C" fn merge_in_skin(ptr: *mut u8, size: usize) -> u8 {
-    let bytes = unsafe { Vec::from_raw_parts(ptr, size, size) };
+pub unsafe extern "C" fn merge_in_skin(ptr: *mut u8, size: usize, capacity: usize) -> u8 {
+    let bytes = unsafe { Vec::from_raw_parts(ptr, size, capacity) };
     let Ok(json) = String::from_utf8(bytes) else {
         return 1;
     };
@@ -97,12 +102,12 @@ pub unsafe extern "C" fn merge_in_skin(ptr: *mut u8, size: usize) -> u8 {
 
 #[no_mangle]
 pub extern "C" fn reset_parameters() {
-    render_options::reset()
+    options::reset()
 }
 
 #[no_mangle]
 pub extern "C" fn export_parameters() -> *const u8 {
-    match render_options::export() {
+    match options::export() {
         Ok(v) => {
             let mut out = Vec::with_capacity(v.len() + 5);
             out.push(0u8);

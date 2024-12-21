@@ -1,23 +1,15 @@
-use crate::signal::{
-    options::{PathAssembleOptions, RenderOptions},
-    AssembledFigure,
-};
-use crate::Font;
+use crate::signal::options::SignalOptions;
+use crate::signal::AssembledFigure;
+use crate::{Font, Options};
 
 pub struct SvgDimensions<'a> {
     figure: &'a AssembledFigure<'a>,
-    options: &'a RenderOptions,
-    assemble_options: PathAssembleOptions,
+    options: &'a Options,
     textbox_width: Option<u32>,
 }
 
 impl<'a> SvgDimensions<'a> {
-    pub fn new(
-        figure: &'a AssembledFigure<'a>,
-        font: Font,
-        options: &'a RenderOptions,
-        assemble_options: PathAssembleOptions,
-    ) -> Self {
+    pub fn new(figure: &'a AssembledFigure<'a>, font: Font, options: &'a Options) -> Self {
         let has_textbox = !figure.lines.iter().all(|line| line.text.is_empty());
         let textbox_width = has_textbox.then(|| {
             figure
@@ -31,13 +23,12 @@ impl<'a> SvgDimensions<'a> {
         Self {
             figure,
             options,
-            assemble_options,
             textbox_width,
         }
     }
 
     pub fn inner_width(&self) -> u32 {
-        let RenderOptions { spacing, .. } = self.options;
+        let Options { spacing, .. } = self.options;
 
         let mut width = self.schema_width();
 
@@ -59,13 +50,13 @@ impl<'a> SvgDimensions<'a> {
 
     #[inline]
     pub fn figure_width(&self) -> u32 {
-        let RenderOptions { padding, .. } = self.options;
+        let Options { padding, .. } = self.options;
         padding.figure_left + padding.figure_right + self.inner_width()
     }
 
     #[inline]
     pub fn figure_height(&self) -> u32 {
-        let RenderOptions { padding, .. } = self.options;
+        let Options { padding, .. } = self.options;
 
         padding.figure_top
             + self.header_height()
@@ -81,7 +72,7 @@ impl<'a> SvgDimensions<'a> {
 
     #[inline]
     pub fn header_height(&self) -> u32 {
-        let RenderOptions { header, .. } = self.options;
+        let Options { header, .. } = self.options;
 
         let mut height = 0;
 
@@ -113,7 +104,7 @@ impl<'a> SvgDimensions<'a> {
 
     #[inline]
     pub fn footer_height(&self) -> u32 {
-        let RenderOptions { footer, .. } = self.options;
+        let Options { footer, .. } = self.options;
 
         let mut height = 0;
 
@@ -152,7 +143,8 @@ impl<'a> SvgDimensions<'a> {
             + if idx == 0 {
                 0
             } else {
-                (u32::from(self.assemble_options.signal_height) + self.options.spacing.line_to_line)
+                (u32::from(self.options.signal.path.signal_height)
+                    + self.options.spacing.line_to_line)
                     * idx
             }
     }
@@ -200,9 +192,9 @@ impl<'a> SvgDimensions<'a> {
             return 0;
         }
 
-        let RenderOptions {
+        let SignalOptions {
             group_indicator, ..
-        } = self.options;
+        } = &self.options.signal;
 
         let sum_indicator_widths = max_group_depth * group_indicator.width;
         let spacing = (max_group_depth - 1) * group_indicator.spacing;
@@ -252,7 +244,7 @@ impl<'a> SvgDimensions<'a> {
             return 0;
         }
 
-        let RenderOptions {
+        let Options {
             padding, spacing, ..
         } = self.options;
 
@@ -266,12 +258,12 @@ impl<'a> SvgDimensions<'a> {
 
     #[inline]
     pub fn cycle_width(&self) -> u32 {
-        (self.figure.hscale * self.assemble_options.cycle_width).into()
+        (self.figure.hscale * self.options.signal.path.cycle_width).into()
     }
 
     #[inline]
     pub fn wave_height(&self) -> u32 {
-        self.assemble_options.signal_height.into()
+        self.options.signal.path.signal_height.into()
     }
 
     #[inline]

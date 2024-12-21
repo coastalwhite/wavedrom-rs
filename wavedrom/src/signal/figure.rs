@@ -1,6 +1,7 @@
+use crate::Options;
+
 use super::edges::{EdgeDefinition, EdgeVariant, LineEdgeMarkersBuilder};
 use super::markers::{CycleEnumerationMarker, GroupMarker};
-use super::options::PathAssembleOptions;
 use super::{AssembledFigure, AssembledLine, CycleState, DefinitionTracker, Signal, SignalPath};
 
 impl Default for SignalFigure {
@@ -244,7 +245,7 @@ impl SignalFigure {
     /// detailed description can be found in the [root level documentation][crate].
     ///
     /// [dtd]: https://en.wikipedia.org/wiki/Digital_timing_diagram
-    pub fn assemble_with_options(&self, mut options: PathAssembleOptions) -> AssembledFigure {
+    pub fn assemble_with_options(&self, options: &Options) -> AssembledFigure {
         let top_cycle_marker = self.top_cycle_marker;
         let bottom_cycle_marker = self.bottom_cycle_marker;
         let hscale = self.hscale;
@@ -252,6 +253,7 @@ impl SignalFigure {
         let header_text = self.header_text.as_ref().map(|s| &s[..]);
         let footer_text = self.footer_text.as_ref().map(|s| &s[..]);
 
+        let mut options = options.signal.path;
         options.cycle_width *= hscale;
 
         let mut lines = Vec::with_capacity(self.sections.len());
@@ -377,7 +379,7 @@ impl SignalFigure {
     /// [dtd]: https://en.wikipedia.org/wiki/Digital_timing_diagram
     #[inline]
     pub fn assemble(&self) -> AssembledFigure {
-        self.assemble_with_options(PathAssembleOptions::default())
+        self.assemble_with_options(&Options::default())
     }
 }
 
@@ -419,11 +421,11 @@ impl<'a> Iterator for SectionIterator<'a> {
                 let _ = self.sections.pop()?;
                 SectionItem::GroupEnd(depth)
             }
-            Some(SignalFigureSection::Group(group)) => {
+            Some(SignalFigureSection::Group(ref group)) => {
                 self.sections.push(group.1.iter());
                 SectionItem::GroupStart(depth + 1, group)
             }
-            Some(SignalFigureSection::Signal(signal)) => SectionItem::Signal(depth, signal),
+            Some(SignalFigureSection::Signal(ref signal)) => SectionItem::Signal(depth, signal),
         })
     }
 }

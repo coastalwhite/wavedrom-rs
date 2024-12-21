@@ -1,9 +1,8 @@
 use std::fmt::Display;
 use std::fs::File;
-use std::io::{stdin, stdout, BufWriter, Read, self, StdoutLock};
+use std::io::{self, stdin, stdout, BufWriter, Read, StdoutLock};
 use std::path::PathBuf;
 
-use wavedrom::signal::options::{RenderOptions, PathAssembleOptions};
 use wavedrom::skin::Skin;
 use wavedrom::Figure;
 
@@ -176,8 +175,8 @@ fn main() {
         },
     };
 
-    let (assemble_options, render_options) = match flags.skin {
-        None => (PathAssembleOptions::default(), RenderOptions::default()),
+    let options = match flags.skin {
+        None => wavedrom::Options::default(),
         Some(ref skin_path) => {
             let skin = match std::fs::read_to_string(skin_path) {
                 Ok(content) => content,
@@ -207,9 +206,7 @@ fn main() {
     };
 
     let mut writer = BufWriter::new(match flags.output {
-        None => {
-            OutputWriter::Stdio(stdout().lock())
-        }
+        None => OutputWriter::Stdio(stdout().lock()),
         Some(output_path) => {
             let output_file = match std::fs::OpenOptions::new()
                 .write(true)
@@ -228,15 +225,12 @@ fn main() {
         }
     });
 
-
     let result = match figure {
         Figure::Signal(figure) => {
-            let assembled = figure.assemble_with_options(assemble_options);
-            assembled.write_svg_with_options(&mut writer, &render_options)
+            let assembled = figure.assemble_with_options(&options);
+            assembled.write_svg_with_options(&mut writer, &options)
         }
-        Figure::Register(register) => {
-            register.write_svg(&mut writer)
-        }
+        Figure::Register(register) => register.write_svg(&mut writer),
     };
 
     if let Err(err) = result {

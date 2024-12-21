@@ -1,6 +1,6 @@
 use std::num::NonZeroU16;
 
-use super::options::PathAssembleOptions;
+use super::options::PathOptions;
 use super::markers::{ClockEdge, ClockEdgeMarker};
 use super::CycleOffset;
 
@@ -174,7 +174,7 @@ struct PathData {
 #[derive(Debug, Clone)]
 pub struct AssembledSignalPath {
     end_offset: CycleOffset,
-    options: PathAssembleOptions,
+    options: PathOptions,
     segments: Vec<SignalPathSegment>,
 }
 
@@ -190,7 +190,7 @@ impl AssembledSignalPath {
     }
 
     /// Returns the options used by a [`AssembledSignalPath`].
-    pub fn options(&self) -> &PathAssembleOptions {
+    pub fn options(&self) -> &PathOptions {
         &self.options
     }
 }
@@ -261,7 +261,7 @@ pub struct SignalSegmentIter<'a> {
     clock_edge_markers: Vec<ClockEdgeMarker>,
     gaps: Vec<CycleOffset>,
 
-    options: PathAssembleOptions,
+    options: PathOptions,
 }
 
 /// A item given by the [`SignalSegmentIter`]
@@ -1093,7 +1093,7 @@ impl<'a> SignalPath<'a> {
     }
 
     /// Assemble the [`SignalPath`] into a [`AssembledSignalPath`] with a set of options.
-    pub fn assemble_with_options(&self, options: PathAssembleOptions) -> AssembledSignalPath {
+    pub fn assemble_with_options(&self, options: PathOptions) -> AssembledSignalPath {
         let mut end_offset = CycleOffset::default();
         let segments = self
             .iter(options)
@@ -1113,11 +1113,11 @@ impl<'a> SignalPath<'a> {
     /// Assemble the [`SignalPath`] into a [`AssembledSignalPath`] with the default options.
     #[inline]
     pub fn assemble(&self) -> AssembledSignalPath {
-        self.assemble_with_options(PathAssembleOptions::default())
+        self.assemble_with_options(PathOptions::default())
     }
 
     /// Get a iterator over assembled signal segments
-    pub fn iter(&'a self, options: PathAssembleOptions) -> SignalSegmentIter<'a> {
+    pub fn iter(&'a self, options: PathOptions) -> SignalSegmentIter<'a> {
         let mut iter = SignalSegmentIter {
             inner: self.states.iter(),
 
@@ -1333,7 +1333,7 @@ mod tests {
         macro_rules! assert_cycle_length {
             ([$($item:ident),* $(,)?], $period:literal, ($phase_index:literal, $phase_in_offset:ident) => $result:literal) => {
                 let period = NonZeroU16::new($period).unwrap();
-                let options = PathAssembleOptions::default();
+                let options = PathOptions::default();
                 let num_cycles = SignalPath::new(
                     &[$(CycleState::$item),*],
                     &[],

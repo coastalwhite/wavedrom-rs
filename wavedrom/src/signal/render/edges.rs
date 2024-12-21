@@ -4,11 +4,10 @@ use std::io;
 use super::dimensions::SvgDimensions;
 
 use crate::escape::escape_str;
-use crate::signal::{
-    edges::{EdgeArrowType, EdgeVariant, LineEdge, SharpEdgeVariant, SplineEdgeVariant},
-    options::{PathAssembleOptions, RenderOptions},
+use crate::signal::edges::{
+    EdgeArrowType, EdgeVariant, LineEdge, SharpEdgeVariant, SplineEdgeVariant,
 };
-use crate::{Color, Font};
+use crate::{Color, Font, Options};
 
 /// A f64 type that automatically rounds when formatting
 struct SVGF64(pub f64);
@@ -45,24 +44,24 @@ pub fn write_line_edge(
     writer: &mut impl io::Write,
     edge: LineEdge,
     dims: &SvgDimensions,
-    assemble_options: PathAssembleOptions,
-    render_options: &RenderOptions,
+    options: &Options,
     font: &Font,
 ) -> io::Result<(f64, f64)> {
-    let edge_options = &render_options.edge;
+    let path_options = options.signal.path;
+    let edge_options = &options.signal.edge;
 
     let from = edge.from();
     let to = edge.to();
 
-    let from_x = dims.schema_x() + from.x().width_offset(assemble_options.cycle_width.into());
-    let from_y = dims.signal_top(from.y()) + u32::from(assemble_options.signal_height / 2);
+    let from_x = dims.schema_x() + from.x().width_offset(path_options.cycle_width.into());
+    let from_y = dims.signal_top(from.y()) + u32::from(path_options.signal_height / 2);
 
     if from == to {
         return Ok((f64::from(from_x), f64::from(from_y)));
     }
 
-    let to_x = dims.schema_x() + to.x().width_offset(assemble_options.cycle_width.into());
-    let to_y = dims.signal_top(to.y()) + u32::from(assemble_options.signal_height / 2);
+    let to_x = dims.schema_x() + to.x().width_offset(path_options.cycle_width.into());
+    let to_y = dims.signal_top(to.y()) + u32::from(path_options.signal_height / 2);
 
     let from_bbox = edge
         .from_marker()
@@ -421,12 +420,11 @@ pub fn write_line_edge_markers(
     edge: LineEdge,
     middle: (f64, f64),
     dims: &SvgDimensions,
-    assemble_options: PathAssembleOptions,
-    render_options: &RenderOptions,
+    options: &Options,
     font: &Font,
 ) -> io::Result<()> {
-    let assemble_options = assemble_options;
-    let edge_options = &render_options.edge;
+    let path_options = options.signal.path;
+    let edge_options = &options.signal.edge;
 
     let from = edge.from();
     let to = edge.to();
@@ -435,11 +433,11 @@ pub fn write_line_edge_markers(
         return Ok(());
     }
 
-    let from_x = dims.schema_x() + from.x().width_offset(assemble_options.cycle_width.into());
-    let from_y = dims.signal_top(from.y()) + u32::from(assemble_options.signal_height / 2);
+    let from_x = dims.schema_x() + from.x().width_offset(path_options.cycle_width.into());
+    let from_y = dims.signal_top(from.y()) + u32::from(path_options.signal_height / 2);
 
-    let to_x = dims.schema_x() + to.x().width_offset(assemble_options.cycle_width.into());
-    let to_y = dims.signal_top(to.y()) + u32::from(assemble_options.signal_height / 2);
+    let to_x = dims.schema_x() + to.x().width_offset(path_options.cycle_width.into());
+    let to_y = dims.signal_top(to.y()) + u32::from(path_options.signal_height / 2);
 
     let middle_x = middle.0;
     let middle_y = middle.1;

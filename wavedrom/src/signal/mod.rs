@@ -11,14 +11,13 @@ mod render;
 pub use cycle_offset::{CycleOffset, InCycleOffset};
 pub use figure::{SignalFigure, SignalFigureSection, SignalFigureSectionGroup};
 pub use path::*;
-pub use render::*;
 
 use std::num::NonZeroU16;
 
 use edges::LineEdgeMarkers;
 use markers::{CycleEnumerationMarker, GroupMarker};
 
-use self::options::PathAssembleOptions;
+use self::options::PathOptions;
 
 /// A diagram signal line with a set of cycles.
 #[derive(Debug, Clone)]
@@ -69,7 +68,7 @@ pub struct AssembledFigure<'a> {
     top_cycle_marker: Option<CycleEnumerationMarker>,
     bottom_cycle_marker: Option<CycleEnumerationMarker>,
 
-    path_assemble_options: PathAssembleOptions,
+    path_assemble_options: PathOptions,
 
     lines: Vec<AssembledLine<'a>>,
     group_markers: Vec<GroupMarker<'a>>,
